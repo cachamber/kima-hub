@@ -2271,23 +2271,28 @@ class SpotifyImportService {
                 `Saving pending tracks: ${pendingTracksToSave.length}`
             );
 
-            // Fetch Deezer previews in parallel for all pending tracks
+            // Fetch Deezer previews with concurrency limit to avoid overwhelming API
+            const DEEZER_PREVIEW_CONCURRENCY = 5;
+            const previewQueue = new PQueue({ concurrency: DEEZER_PREVIEW_CONCURRENCY });
+
             const pendingTracksWithPreviews = await Promise.all(
-                pendingTracksToSave.map(async (track) => {
-                    let deezerPreviewUrl: string | null = null;
-                    try {
-                        deezerPreviewUrl = await deezerService.getTrackPreview(
-                            track.artist,
-                            track.title
-                        );
-                    } catch (e) {
-                        // Preview not critical, continue without it
-                    }
-                    return {
-                        ...track,
-                        deezerPreviewUrl,
-                    };
-                })
+                pendingTracksToSave.map((track) =>
+                    previewQueue.add(async () => {
+                        let deezerPreviewUrl: string | null = null;
+                        try {
+                            deezerPreviewUrl = await deezerService.getTrackPreview(
+                                track.artist,
+                                track.title
+                            );
+                        } catch (e) {
+                            // Preview not critical, continue without it
+                        }
+                        return {
+                            ...track,
+                            deezerPreviewUrl,
+                        };
+                    })
+                )
             );
 
             const previewsFound = pendingTracksWithPreviews.filter(
