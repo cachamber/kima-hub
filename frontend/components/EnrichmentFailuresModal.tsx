@@ -28,6 +28,7 @@ export function EnrichmentFailuresModal({
         new Set()
     );
     const [currentPage, setCurrentPage] = useState(1);
+    const [showClearConfirm, setShowClearConfirm] = useState(false);
     const pageSize = 20;
     const queryClient = useQueryClient();
 
@@ -106,6 +107,21 @@ export function EnrichmentFailuresModal({
         },
     });
 
+    // Clear all mutation
+    const clearAllMutation = useMutation({
+        mutationFn: (entityType?: "artist" | "track" | "audio") =>
+            enrichmentApi.clearAllFailures(entityType),
+        onSuccess: () => {
+            queryClient.invalidateQueries({
+                queryKey: ["enrichment-failures"],
+            });
+            queryClient.invalidateQueries({
+                queryKey: ["enrichment-failure-counts"],
+            });
+            setSelectedFailures(new Set());
+        },
+    });
+
     const toggleFailureSelection = (id: string) => {
         const newSelected = new Set(selectedFailures);
         if (newSelected.has(id)) {
@@ -157,12 +173,24 @@ export function EnrichmentFailuresModal({
                             {totalFailures !== 1 ? "s" : ""} to review
                         </p>
                     </div>
-                    <button
-                        onClick={onClose}
-                        className="p-2 hover:bg-white/10 rounded-lg transition-colors"
-                    >
-                        <X className="w-5 h-5 text-white/70" />
-                    </button>
+                    <div className="flex items-center gap-2">
+                        {totalFailures > 0 && (
+                            <button
+                                onClick={() => setShowClearConfirm(true)}
+                                disabled={clearAllMutation.isPending}
+                                className="px-3 py-1.5 text-sm bg-red-600 text-white rounded-lg
+                                    hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                            >
+                                {clearAllMutation.isPending ? "Clearing..." : "Clear All"}
+                            </button>
+                        )}
+                        <button
+                            onClick={onClose}
+                            className="p-2 hover:bg-white/10 rounded-lg transition-colors"
+                        >
+                            <X className="w-5 h-5 text-white/70" />
+                        </button>
+                    </div>
                 </div>
 
                 {/* Filter Tabs */}
@@ -368,6 +396,44 @@ export function EnrichmentFailuresModal({
                     </div>
                 )}
             </div>
+
+            {/* Clear All Confirmation Dialog */}
+            {showClearConfirm && (
+                <div className="fixed inset-0 bg-black/80 z-[60] flex items-center justify-center p-4">
+                    <div className="bg-[#1a1a1a] rounded-lg p-6 max-w-md border border-white/10">
+                        <h3 className="text-lg font-bold text-white mb-2">
+                            Clear All Failures?
+                        </h3>
+                        <p className="text-sm text-white/70 mb-4">
+                            This will permanently delete {selectedType === "all" ? "all" : selectedType}{" "}
+                            {selectedType === "all" ? totalFailures : counts?.[selectedType] || 0} failure
+                            {(selectedType === "all" ? totalFailures : counts?.[selectedType] || 0) !== 1 ? "s" : ""}.
+                            This action cannot be undone.
+                        </p>
+                        <div className="flex justify-end gap-2">
+                            <button
+                                onClick={() => setShowClearConfirm(false)}
+                                className="px-4 py-2 text-sm bg-white/10 text-white/70 rounded-lg
+                                    hover:bg-white/20 transition-colors"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={() => {
+                                    clearAllMutation.mutate(
+                                        selectedType === "all" ? undefined : selectedType
+                                    );
+                                    setShowClearConfirm(false);
+                                }}
+                                className="px-4 py-2 text-sm bg-red-600 text-white rounded-lg
+                                    hover:bg-red-700 transition-colors"
+                            >
+                                Clear All
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
