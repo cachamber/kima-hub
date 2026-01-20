@@ -53,17 +53,13 @@ export default function LibraryPage() {
 
     // Use React Query hooks for cached data fetching
     // Only fetch data for active tab to prevent unnecessary API calls
-    const artistsQuery = useLibraryArtistsQuery(
-        {
+    const artistsQuery = useLibraryArtistsQuery({
             filter,
             sortBy,
             limit: itemsPerPage,
             page: currentPage,
-        },
-        {
             enabled: activeTab === "artists",
-        }
-    );
+        });
 
     const albumsQuery = useLibraryAlbumsQuery(
         {
