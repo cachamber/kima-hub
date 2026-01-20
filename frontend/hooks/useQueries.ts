@@ -386,7 +386,7 @@ export function useLibraryAlbumsInfiniteQuery(
         limit = 40,
         enabled = true,
     }: Omit<LibraryAlbumsParams, 'page'> & { enabled?: boolean } = {},
-    options: Omit<UseInfiniteQueryOptions, 'queryKey' | 'queryFn'> = {}
+    options: Omit<UseInfiniteQueryOptions, 'queryKey' | 'queryFn' | 'getNextPageParam' | 'initialPageParam'> = {}
 ) {
     return useInfiniteQuery({
         queryKey: queryKeys.libraryAlbums({ filter, sortBy, limit }),
@@ -435,7 +435,7 @@ export function useLibraryArtistsInfiniteQuery(
         limit = 40,
         enabled = true,
     }: Omit<LibraryArtistsParams, 'page'> & { enabled?: boolean } = {},
-    options: Omit<UseInfiniteQueryOptions, 'queryKey' | 'queryFn'> = {}
+    options: Omit<UseInfiniteQueryOptions, 'queryKey' | 'queryFn' | 'getNextPageParam' | 'initialPageParam'> = {}
 ) {
     return useInfiniteQuery({
         queryKey: queryKeys.libraryArtists({ filter, sortBy, limit }),
@@ -522,7 +522,7 @@ export function useLibraryTracksInfiniteQuery(
         limit = 40,
         enabled = true,
     }: Omit<LibraryTracksParams, 'page'> & { enabled?: boolean } = {},
-    options: Omit<UseInfiniteQueryOptions, 'queryKey' | 'queryFn'> = {}
+    options: Omit<UseInfiniteQueryOptions, 'queryKey' | 'queryFn' | 'getNextPageParam' | 'initialPageParam'> = {}
 ) {
     return useInfiniteQuery({
         queryKey: queryKeys.libraryTracks({ sortBy, limit }),
