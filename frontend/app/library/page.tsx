@@ -54,25 +54,23 @@ export default function LibraryPage() {
     // Use React Query hooks for cached data fetching
     // Only fetch data for active tab to prevent unnecessary API calls
     const artistsQuery = useLibraryArtistsQuery({
-            filter,
-            sortBy,
-            limit: itemsPerPage,
-            page: currentPage,
-            enabled: activeTab === "artists",
-        });
-
-    const albumsQuery = useLibraryAlbumsQuery({
         filter,
         sortBy,
         limit: itemsPerPage,
         page: currentPage,
+        enabled: activeTab === "artists",
+    });
+
+    const albumsQuery = useLibraryAlbumsInfiniteQuery({
+        filter,
+        sortBy,
+        limit: itemsPerPage,
         enabled: activeTab === "albums",
     });
 
-    const tracksQuery = useLibraryTracksQuery({
+    const tracksQuery = useLibraryTracksInfiniteQuery({
         sortBy,
         limit: itemsPerPage,
-        page: currentPage,
         enabled: activeTab === "tracks",
     });
 
@@ -83,12 +81,12 @@ export default function LibraryPage() {
         [activeTab, artistsQuery.data?.artists],
     );
     const albums = useMemo(
-        () => (activeTab === "albums" ? (albumsQuery.data?.albums ?? []) : []),
-        [activeTab, albumsQuery.data?.albums],
+        () => (activeTab === "albums" ? (albumsQuery.data?.pages.flatMap(page => page.albums) ?? []) : []),
+        [activeTab, albumsQuery.data?.pages],
     );
     const tracks = useMemo(
-        () => (activeTab === "tracks" ? (tracksQuery.data?.tracks ?? []) : []),
-        [activeTab, tracksQuery.data?.tracks],
+        () => (activeTab === "tracks" ? (tracksQuery.data?.pages.flatMap(page => page.tracks) ?? []) : []),
+        [activeTab, tracksQuery.data?.pages],
     );
 
     // Loading state based on active tab
@@ -99,24 +97,22 @@ export default function LibraryPage() {
 
     // Pagination from active query
     const pagination = useMemo(
-        () => ({
-            total:
+        () => {
+            // Get the total from the first page of data
+            const total = 
                 activeTab === "artists" ? (artistsQuery.data?.total ?? 0)
-                : activeTab === "albums" ? (albumsQuery.data?.total ?? 0)
-                : (tracksQuery.data?.total ?? 0),
-            offset:
-                activeTab === "artists" ? (artistsQuery.data?.offset ?? 0)
-                : activeTab === "albums" ? (albumsQuery.data?.offset ?? 0)
-                : (tracksQuery.data?.offset ?? 0),
-            limit: itemsPerPage,
-            totalPages: Math.ceil(
-                (activeTab === "artists" ? (artistsQuery.data?.total ?? 0)
-                : activeTab === "albums" ? (albumsQuery.data?.total ?? 0)
-                : (tracksQuery.data?.total ?? 0)) / itemsPerPage,
-            ),
-            currentPage,
-            itemsPerPage,
-        }),
+                : activeTab === "albums" ? (albumsQuery.data?.pages[0]?.total ?? 0)
+                : (tracksQuery.data?.pages[0]?.total ?? 0);
+            
+            return {
+                total,
+                offset: 0, // offset is not used with infinite query
+                limit: itemsPerPage,
+                totalPages: Math.ceil(total / itemsPerPage),
+                currentPage,
+                itemsPerPage,
+            };
+        },
         [
             activeTab,
             artistsQuery.data,
