@@ -124,14 +124,18 @@ class HowlerEngine {
                 const targetVolume = this.state.isMuted ? 0 : this.state.volume;
                 this.howl.volume(targetVolume);
 
-                // Mark as loaded and emit
+                // Mark as loaded and emit asynchronously
+                // IMPORTANT: Must be async so callers can register listeners before event fires
                 this.isLoading = false;
                 this.state.duration = this.howl.duration() || 0;
-                this.emit("load", { duration: this.state.duration });
 
-                if (autoplay) {
-                    this.play();
-                }
+                // Use setTimeout to emit after caller registers listeners
+                setTimeout(() => {
+                    this.emit("load", { duration: this.state.duration });
+                    if (autoplay) {
+                        this.play();
+                    }
+                }, 0);
                 return;
             }
         }
