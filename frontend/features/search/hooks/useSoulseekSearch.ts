@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { api } from "@/lib/api";
-import { useToast } from "@/lib/toast-context";
+import { toast } from "sonner";
 import type { SoulseekResult } from "../types";
 
 interface UseSoulseekSearchProps {
@@ -20,18 +20,17 @@ export function useSoulseekSearch({
     query,
 }: UseSoulseekSearchProps): UseSoulseekSearchReturn {
     const [soulseekResults, setSoulseekResults] = useState<SoulseekResult[]>(
-        []
+        [],
     );
     const [isSoulseekSearching, setIsSoulseekSearching] = useState(false);
     const [isSoulseekPolling, setIsSoulseekPolling] = useState(false);
     const [soulseekSearchId, setSoulseekSearchId] = useState<string | null>(
-        null
+        null,
     );
     const [soulseekEnabled, setSoulseekEnabled] = useState(false);
     const [downloadingFiles, setDownloadingFiles] = useState<Set<string>>(
-        new Set()
+        new Set(),
     );
-    const { toast } = useToast();
 
     // Check if Soulseek is configured (has credentials)
     // Use the public /soulseek/status endpoint instead of admin-only /system-settings
@@ -58,49 +57,36 @@ export function useSoulseekSearch({
             return;
         }
 
-        // Track if this effect has been cancelled
-        let cancelled = false;
         let pollInterval: NodeJS.Timeout | null = null;
-        let searchId: string | null = null;
 
         const timer = setTimeout(async () => {
-            if (cancelled) return;
-
             setIsSoulseekSearching(true);
             setIsSoulseekPolling(true);
 
             try {
-                const response = await api.searchSoulseek(query);
-                if (cancelled) return;
-
-                searchId = response.searchId;
+                const { searchId } = await api.searchSoulseek(query);
                 setSoulseekSearchId(searchId);
                 setSoulseekResults([]);
 
+                // Poll for results - Soulseek search takes ~45 seconds to complete
+                // Poll for up to 60 seconds to ensure we catch results
                 let pollCount = 0;
-                const maxPolls = 30;
+                const maxPolls = 30; // 30 polls * 2s = 60 seconds max
 
-                // Wait 3 seconds before starting to poll
+                // Wait 3 seconds before starting to poll (give search time to start collecting)
                 await new Promise((resolve) => setTimeout(resolve, 3000));
-                if (cancelled) return;
-
-                setIsSoulseekSearching(false);
+                setIsSoulseekSearching(false); // Initial search request complete
 
                 pollInterval = setInterval(async () => {
-                    if (cancelled) {
-                        if (pollInterval) clearInterval(pollInterval);
-                        return;
-                    }
-
                     try {
-                        const { results } = await api.getSoulseekResults(searchId!);
-                        if (cancelled) return;
+                        const { results } =
+                            await api.getSoulseekResults(searchId);
 
                         if (results && results.length > 0) {
                             setSoulseekResults(results);
+                            // If we have enough results, we can stop polling early
                             if (results.length >= 10) {
                                 if (pollInterval) clearInterval(pollInterval);
-                                pollInterval = null;
                                 setIsSoulseekPolling(false);
                             }
                         }
@@ -109,31 +95,32 @@ export function useSoulseekSearch({
 
                         if (pollCount >= maxPolls) {
                             if (pollInterval) clearInterval(pollInterval);
-                            pollInterval = null;
                             setIsSoulseekPolling(false);
                         }
                     } catch (error) {
                         console.error("Error polling Soulseek results:", error);
                         if (pollInterval) clearInterval(pollInterval);
-                        pollInterval = null;
                         setIsSoulseekPolling(false);
                     }
                 }, 2000);
             } catch (error) {
-                if (cancelled) return;
-                console.error("Error starting Soulseek search:", error);
+                console.error("Soulseek search error:", error);
+                if (
+                    error instanceof Error &&
+                    error.message?.includes("not enabled")
+                ) {
+                    setSoulseekEnabled(false);
+                }
                 setIsSoulseekSearching(false);
                 setIsSoulseekPolling(false);
             }
         }, 800);
 
         return () => {
-            cancelled = true;
             clearTimeout(timer);
             if (pollInterval) {
                 clearInterval(pollInterval);
             }
-            setIsSoulseekSearching(false);
             setIsSoulseekPolling(false);
         };
     }, [query, soulseekEnabled]);
@@ -149,7 +136,7 @@ export function useSoulseekSearch({
                 result.filename,
                 result.size,
                 result.parsedArtist,
-                result.parsedAlbum
+                result.parsedAlbum,
             );
 
             // Use the activity sidebar (Active tab) instead of a toast/modal
@@ -157,7 +144,7 @@ export function useSoulseekSearch({
                 window.dispatchEvent(
                     new CustomEvent("set-activity-panel-tab", {
                         detail: { tab: "active" },
-                    })
+                    }),
                 );
                 window.dispatchEvent(new CustomEvent("open-activity-panel"));
                 window.dispatchEvent(new CustomEvent("notifications-changed"));
@@ -173,9 +160,9 @@ export function useSoulseekSearch({
         } catch (error) {
             console.error("Download error:", error);
             const message =
-                error instanceof Error
-                    ? error.message
-                    : "Failed to start download";
+                error instanceof Error ?
+                    error.message
+                :   "Failed to start download";
             toast.error(message);
             setDownloadingFiles((prev) => {
                 const newSet = new Set(prev);
@@ -183,7 +170,7 @@ export function useSoulseekSearch({
                 return newSet;
             });
         }
-    }, [toast]);
+    }, []);
 
     return {
         soulseekResults,

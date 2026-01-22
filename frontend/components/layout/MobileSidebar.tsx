@@ -3,22 +3,12 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-import {
-    Settings,
-    RefreshCw,
-    LogOut,
-    Compass,
-    X,
-    Radio,
-} from "lucide-react";
+import { Settings, RefreshCw, LogOut, Compass, X, Radio } from "lucide-react";
 import { cn } from "@/utils/cn";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth-context";
 import { useToast } from "@/lib/toast-context";
 import Image from "next/image";
-
-// Delay before resetting sync button state (ms)
-const SYNC_BUTTON_RESET_DELAY = 2000;
 
 interface MobileSidebarProps {
     isOpen: boolean;
@@ -50,7 +40,7 @@ export function MobileSidebar({ isOpen, onClose }: MobileSidebarProps) {
             console.error("Failed to sync library:", error);
             toast.error("Failed to start scan. Please try again.");
         } finally {
-            setTimeout(() => setIsSyncing(false), SYNC_BUTTON_RESET_DELAY);
+            setTimeout(() => setIsSyncing(false), 2000);
         }
     };
 
@@ -79,7 +69,7 @@ export function MobileSidebar({ isOpen, onClose }: MobileSidebarProps) {
 
             {/* Sidebar Drawer */}
             <div
-                className="fixed inset-y-0 left-0 w-[280px] bg-[#0a0a0a] z-[100] flex flex-col overflow-hidden transform transition-transform border-r border-white/[0.06]"
+                className="fixed inset-y-0 left-0 w-[280px] bg-[#0a0a0a] z-50 flex flex-col overflow-hidden transform transition-transform border-r border-white/[0.06] z-100"
                 style={{
                     paddingTop: "env(safe-area-inset-top)",
                 }}
@@ -131,9 +121,9 @@ export function MobileSidebar({ isOpen, onClose }: MobileSidebarProps) {
                             aria-label="Discover"
                             className={cn(
                                 "flex items-center gap-3 px-3 py-3 rounded-lg transition-colors",
-                                pathname === "/discover"
-                                    ? "bg-white/10 text-white"
-                                    : "text-gray-400 hover:text-white hover:bg-white/5"
+                                pathname === "/discover" ?
+                                    "bg-white/10 text-white"
+                                :   "text-gray-400 hover:text-white hover:bg-white/5",
                             )}
                         >
                             <Compass className="w-5 h-5" />
@@ -150,9 +140,9 @@ export function MobileSidebar({ isOpen, onClose }: MobileSidebarProps) {
                             aria-label="Radio"
                             className={cn(
                                 "flex items-center gap-3 px-3 py-3 rounded-lg transition-colors",
-                                pathname === "/radio"
-                                    ? "bg-white/10 text-white"
-                                    : "text-gray-400 hover:text-white hover:bg-white/5"
+                                pathname === "/radio" ?
+                                    "bg-white/10 text-white"
+                                :   "text-gray-400 hover:text-white hover:bg-white/5",
                             )}
                         >
                             <Radio className="w-5 h-5" />
@@ -160,7 +150,6 @@ export function MobileSidebar({ isOpen, onClose }: MobileSidebarProps) {
                                 Radio
                             </span>
                         </Link>
-
                     </div>
 
                     {/* Actions Section */}
@@ -174,15 +163,15 @@ export function MobileSidebar({ isOpen, onClose }: MobileSidebarProps) {
                             disabled={isSyncing}
                             className={cn(
                                 "w-full flex items-center gap-3 px-3 py-3 rounded-lg transition-colors text-left",
-                                isSyncing
-                                    ? "text-green-400"
-                                    : "text-gray-400 hover:text-white hover:bg-white/5"
+                                isSyncing ? "text-green-400" : (
+                                    "text-gray-400 hover:text-white hover:bg-white/5"
+                                ),
                             )}
                         >
                             <RefreshCw
                                 className={cn(
                                     "w-5 h-5",
-                                    isSyncing && "animate-spin"
+                                    isSyncing && "animate-spin",
                                 )}
                             />
                             <span className="text-[15px] font-medium">
@@ -197,9 +186,9 @@ export function MobileSidebar({ isOpen, onClose }: MobileSidebarProps) {
                             }
                             className={cn(
                                 "flex items-center gap-3 px-3 py-3 rounded-lg transition-colors",
-                                pathname === "/settings"
-                                    ? "bg-white/10 text-white"
-                                    : "text-gray-400 hover:text-white hover:bg-white/5"
+                                pathname === "/settings" ?
+                                    "bg-white/10 text-white"
+                                :   "text-gray-400 hover:text-white hover:bg-white/5",
                             )}
                         >
                             <Settings className="w-5 h-5" />

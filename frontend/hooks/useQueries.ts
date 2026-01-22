@@ -428,6 +428,10 @@ export function useLibraryArtistsQuery({
         }),
         staleTime: 2 * 60 * 1000,
         enabled,
+        // Add structural sharing to prevent unnecessary re-renders
+        structuralSharing: true,
+        // Use placeholder data for better perceived performance
+        placeholderData: (previousData) => previousData,
     });
 }
 

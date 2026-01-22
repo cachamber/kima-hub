@@ -7,14 +7,11 @@ import { Plus, Settings, RefreshCw } from "lucide-react";
 import { cn } from "@/utils/cn";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth-context";
-import { useAudioState } from "@/lib/audio-state-context";
+import { useAudio } from "@/lib/audio-context";
 import { useIsMobile, useIsTablet } from "@/hooks/useMediaQuery";
 import { useToast } from "@/lib/toast-context";
 import Image from "next/image";
 import { MobileSidebar } from "./MobileSidebar";
-
-// Delay before resetting sync button state (ms)
-const SYNC_BUTTON_RESET_DELAY = 2000;
 
 const navigation = [
     { name: "Library", href: "/library" },
@@ -39,11 +36,10 @@ export function Sidebar() {
     const { isAuthenticated } = useAuth();
     const { toast } = useToast();
     const { currentTrack, currentAudiobook, currentPodcast, playbackType } =
-        useAudioState();
+        useAudio();
     const isMobile = useIsMobile();
     const isTablet = useIsTablet();
     const isMobileOrTablet = isMobile || isTablet;
-
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const [playlists, setPlaylists] = useState<Playlist[]>([]);
     const [isLoadingPlaylists, setIsLoadingPlaylists] = useState(false);
@@ -64,7 +60,7 @@ export function Sidebar() {
             toast.error("Failed to start scan. Please try again.");
         } finally {
             // Keep syncing for a bit to show the animation
-            setTimeout(() => setIsSyncing(false), SYNC_BUTTON_RESET_DELAY);
+            setTimeout(() => setIsSyncing(false), 2000);
         }
     };
 
@@ -172,31 +168,38 @@ export function Sidebar() {
                             <h2 className="text-2xl font-black text-white tracking-tight">
                                 Lidify
                             </h2>
-                            {!currentTrack &&
-                            !currentAudiobook &&
-                            !currentPodcast ? (
+                            {(
+                                !currentTrack &&
+                                !currentAudiobook &&
+                                !currentPodcast
+                            ) ?
                                 <p className="text-sm text-gray-400 font-medium">
                                     Stream Your Way
                                 </p>
-                            ) : (
-                                <div className="text-xs text-gray-400 truncate">
+                            :   <div className="text-xs text-gray-400 truncate">
                                     <span className="text-gray-500">
                                         Listening to:{" "}
                                     </span>
                                     <span className="text-white font-medium">
-                                        {playbackType === "track" &&
-                                        currentTrack
-                                            ? `${currentTrack.artist?.name} - ${currentTrack.album?.title}`
-                                            : playbackType === "audiobook" &&
-                                              currentAudiobook
-                                            ? currentAudiobook.title
-                                            : playbackType === "podcast" &&
-                                              currentPodcast
-                                            ? currentPodcast.podcastTitle
-                                            : ""}
+                                        {(
+                                            playbackType === "track" &&
+                                            currentTrack
+                                        ) ?
+                                            `${currentTrack.artist?.name} - ${currentTrack.album?.title}`
+                                        : (
+                                            playbackType === "audiobook" &&
+                                            currentAudiobook
+                                        ) ?
+                                            currentAudiobook.title
+                                        : (
+                                            playbackType === "podcast" &&
+                                            currentPodcast
+                                        ) ?
+                                            currentPodcast.podcastTitle
+                                        :   ""}
                                     </span>
                                 </div>
-                            )}
+                            }
                         </div>
                     </div>
 
@@ -207,17 +210,19 @@ export function Sidebar() {
                             disabled={isSyncing}
                             className={cn(
                                 "w-10 h-10 flex items-center justify-center rounded-full transition-all duration-300",
-                                isSyncing
-                                    ? "bg-[#1DB954] text-black"
-                                    : "bg-white/10 text-white hover:bg-white/15 active:scale-95"
+                                isSyncing ?
+                                    "bg-[#1DB954] text-black"
+                                :   "bg-white/10 text-white hover:bg-white/15 active:scale-95",
                             )}
-                            aria-label={isSyncing ? "Syncing library" : "Sync library"}
+                            aria-label={
+                                isSyncing ? "Syncing library" : "Sync library"
+                            }
                             title={isSyncing ? "Syncing..." : "Sync Library"}
                         >
                             <RefreshCw
                                 className={cn(
                                     "w-4 h-4 transition-transform",
-                                    isSyncing && "animate-spin"
+                                    isSyncing && "animate-spin",
                                 )}
                             />
                         </button>
@@ -226,9 +231,9 @@ export function Sidebar() {
                             href="/settings"
                             className={cn(
                                 "w-10 h-10 flex items-center justify-center rounded-full transition-all",
-                                pathname === "/settings"
-                                    ? "bg-white text-black"
-                                    : "bg-white/10 text-gray-400 hover:text-white hover:bg-white/15 active:scale-95"
+                                pathname === "/settings" ?
+                                    "bg-white text-black"
+                                :   "bg-white/10 text-gray-400 hover:text-white hover:bg-white/15 active:scale-95",
                             )}
                             aria-label="Settings"
                             title="Settings"
@@ -243,7 +248,7 @@ export function Sidebar() {
             <nav
                 className={cn(
                     "pt-6 space-y-1",
-                    isMobileOrTablet ? "px-6" : "px-3"
+                    isMobileOrTablet ? "px-6" : "px-3",
                 )}
                 role="navigation"
                 aria-label="Main navigation"
@@ -261,19 +266,19 @@ export function Sidebar() {
                             className={cn(
                                 "block rounded-lg transition-all duration-200 group relative overflow-hidden",
                                 isMobileOrTablet ? "px-4 py-3.5" : "px-4 py-3",
-                                isActive
-                                    ? "bg-white/10 text-white"
-                                    : "text-gray-400 hover:text-white hover:bg-white/5 active:bg-white/[0.07]"
+                                isActive ?
+                                    "bg-white/10 text-white"
+                                :   "text-gray-400 hover:text-white hover:bg-white/5 active:bg-white/[0.07]",
                             )}
                         >
                             <div className="relative z-10 flex items-center gap-2">
                                 <span
                                     className={cn(
                                         "font-semibold transition-all duration-200",
-                                        isMobileOrTablet
-                                            ? "text-base"
-                                            : "text-sm",
-                                        isActive && "text-white"
+                                        isMobileOrTablet ? "text-base" : (
+                                            "text-sm"
+                                        ),
+                                        isActive && "text-white",
                                     )}
                                 >
                                     {item.name}
@@ -294,7 +299,7 @@ export function Sidebar() {
                 <div
                     className={cn(
                         "mb-4 flex items-center justify-between group",
-                        isMobileOrTablet ? "px-6" : "px-4"
+                        isMobileOrTablet ? "px-6" : "px-4",
                     )}
                 >
                     <Link
@@ -320,10 +325,10 @@ export function Sidebar() {
                 <div
                     className={cn(
                         "flex-1 overflow-y-auto space-y-1 scrollbar-thin scrollbar-thumb-[#1c1c1c] scrollbar-track-transparent",
-                        isMobileOrTablet ? "px-6" : "px-3"
+                        isMobileOrTablet ? "px-6" : "px-3",
                     )}
                 >
-                    {isLoadingPlaylists ? (
+                    {isLoadingPlaylists ?
                         // Loading skeleton with shimmer
                         <>
                             {[1, 2, 3, 4, 5].map((i) => (
@@ -342,7 +347,7 @@ export function Sidebar() {
                                 </div>
                             ))}
                         </>
-                    ) : playlists.filter((p) => !p.isHidden).length > 0 ? (
+                    : playlists.filter((p) => !p.isHidden).length > 0 ?
                         playlists
                             .filter((p) => !p.isHidden) // Filter out hidden playlists
                             .map((playlist) => {
@@ -356,9 +361,9 @@ export function Sidebar() {
                                         prefetch={false}
                                         className={cn(
                                             "block px-3 py-2.5 rounded-lg transition-all duration-300 group relative overflow-hidden",
-                                            isActive
-                                                ? "bg-gradient-to-r from-purple-500/10 to-transparent text-white border-l-2 border-purple-500 shadow-md shadow-purple-500/5"
-                                                : "text-gray-400 hover:text-white hover:bg-white/[0.05] border-l-2 border-transparent hover:border-l-2 hover:border-purple-500/30"
+                                            isActive ?
+                                                "bg-gradient-to-r from-purple-500/10 to-transparent text-white border-l-2 border-purple-500 shadow-md shadow-purple-500/5"
+                                            :   "text-gray-400 hover:text-white hover:bg-white/[0.05] border-l-2 border-transparent hover:border-l-2 hover:border-purple-500/30",
                                         )}
                                     >
                                         {/* Hover shimmer effect */}
@@ -370,9 +375,8 @@ export function Sidebar() {
                                             <div
                                                 className={cn(
                                                     "text-sm font-medium truncate relative z-10 transition-all duration-200 flex-1",
-                                                    isActive
-                                                        ? "font-semibold"
-                                                        : "group-hover:translate-x-0.5"
+                                                    isActive ? "font-semibold"
+                                                    :   "group-hover:translate-x-0.5",
                                                 )}
                                             >
                                                 {playlist.name}
@@ -391,27 +395,26 @@ export function Sidebar() {
                                         <div
                                             className={cn(
                                                 "text-xs truncate relative z-10 mt-0.5 transition-colors duration-200",
-                                                isActive
-                                                    ? "text-gray-400"
-                                                    : "text-gray-500 group-hover:text-gray-400"
+                                                isActive ? "text-gray-400" : (
+                                                    "text-gray-500 group-hover:text-gray-400"
+                                                ),
                                             )}
                                         >
-                                            {isShared
-                                                ? `by ${
-                                                      playlist.user?.username ||
-                                                      "Shared"
-                                                  }`
-                                                : "Playlist"}{" "}
+                                            {isShared ?
+                                                `by ${
+                                                    playlist.user?.username ||
+                                                    "Shared"
+                                                }`
+                                            :   "Playlist"}{" "}
                                             • {playlist.trackCount} track
-                                            {playlist.trackCount !== 1
-                                                ? "s"
-                                                : ""}
+                                            {playlist.trackCount !== 1 ?
+                                                "s"
+                                            :   ""}
                                         </div>
                                     </Link>
                                 );
                             })
-                    ) : (
-                        <div className="px-4 py-8 text-center">
+                    :   <div className="px-4 py-8 text-center">
                             <div className="text-sm text-gray-500 mb-2">
                                 No playlists yet
                             </div>
@@ -419,7 +422,7 @@ export function Sidebar() {
                                 Create your first playlist to get started
                             </div>
                         </div>
-                    )}
+                    }
                 </div>
             </div>
         </>

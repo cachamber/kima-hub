@@ -1,5 +1,4 @@
 import { logger } from "../utils/logger";
-import path from "path";
 
 /**
  * Soulseek routes - Direct connection via slsk-client
@@ -107,7 +106,7 @@ router.post(
                 details: error.message,
             });
         }
-    }
+    },
 );
 
 /**
@@ -139,7 +138,7 @@ router.post(
             }
 
             logger.debug(
-                `[Soulseek] Starting general search: "${searchQuery}"`
+                `[Soulseek] Starting general search: "${searchQuery}"`,
             );
 
             // Create search session
@@ -158,7 +157,7 @@ router.post(
                     const session = searchSessions.get(searchId);
                     if (session && result.found && result.allMatches) {
                         logger.debug(
-                            `[Soulseek] Search ${searchId} found ${result.allMatches.length} matches`
+                            `[Soulseek] Search ${searchId} found ${result.allMatches.length} matches`,
                         );
                         // Store all matches for polling
                         session.results = result.allMatches.map((match) => ({
@@ -170,18 +169,18 @@ router.post(
                             speed: 0,
                         }));
                         logger.debug(
-                            `[Soulseek] Search ${searchId} session updated with ${session.results.length} results`
+                            `[Soulseek] Search ${searchId} session updated with ${session.results.length} results`,
                         );
                     } else {
                         logger.debug(
-                            `[Soulseek] Search ${searchId} completed with no matches (found: ${result.found})`
+                            `[Soulseek] Search ${searchId} completed with no matches (found: ${result.found})`,
                         );
                     }
                 })
                 .catch((err) => {
                     logger.error(
                         `[Soulseek] Search ${searchId} failed:`,
-                        err.message
+                        err.message,
                     );
                 });
 
@@ -196,7 +195,7 @@ router.post(
                 details: error.message,
             });
         }
-    }
+    },
 );
 
 /**
@@ -219,20 +218,19 @@ router.get("/search/:searchId", requireAuth, async (req, res) => {
         // Format results for frontend
         const formattedResults = session.results.map((r) => {
             const filename = r.file.split(/[/\\]/).pop() || r.file;
-            const format = filename.toLowerCase().endsWith(".flac")
-                ? "flac"
-                : "mp3";
+            const format =
+                filename.toLowerCase().endsWith(".flac") ? "flac" : "mp3";
 
             // Try to parse artist and album from path
             const pathParts = r.file.split(/[/\\]/);
             const parsedArtist =
-                pathParts.length > 2
-                    ? pathParts[pathParts.length - 3]
-                    : undefined;
+                pathParts.length > 2 ?
+                    pathParts[pathParts.length - 3]
+                :   undefined;
             const parsedAlbum =
-                pathParts.length > 1
-                    ? pathParts[pathParts.length - 2]
-                    : undefined;
+                pathParts.length > 1 ?
+                    pathParts[pathParts.length - 2]
+                :   undefined;
 
             return {
                 username: r.user,
@@ -269,8 +267,14 @@ router.post(
     requireSoulseekConfigured,
     async (req, res) => {
         try {
-            const { artist, title, album, username, filepath, filename, size } =
-                req.body;
+            const { artist, title, album } = req.body;
+
+            if (!artist || !title) {
+                return res.status(400).json({
+                    error: "Artist and title are required",
+                });
+            }
+
             const settings = await getSystemSettings();
             const musicPath = settings?.musicPath;
 
@@ -280,117 +284,13 @@ router.post(
                 });
             }
 
-            // Case 1: Direct download (we have the file info)
-            if (username && filepath && filename) {
-                logger.debug(
-                    `[Soulseek] Direct download: "${filename}" from ${username}`
-                );
-
-                const sanitize = (name: string) =>
-                    name.replace(/[<>:"/\\|?*]/g, "_").trim();
-
-                const artistName = artist || "Unknown Artist";
-                const albumName = album || "Unknown Album";
-
-                const destPath = path.join(
-                    musicPath,
-                    "Singles",
-                    sanitize(artistName),
-                    sanitize(albumName),
-                    sanitize(filename)
-                );
-
-                const match = {
-                    username,
-                    filename,
-                    fullPath: filepath,
-                    size: size || 0,
-                    quality: "Unknown",
-                    score: 0,
-                };
-
-                // Try primary user first
-                let result = await soulseekService.downloadTrack(
-                    match,
-                    destPath
-                );
-
-                // If primary download fails, try to find alternative users with same file
-                if (!result.success) {
-                    logger.debug(
-                        `[Soulseek] Primary download failed (${result.error}), searching for alternatives...`
-                    );
-
-                    // Quick search for the filename to find other users
-                    const searchQuery = filename
-                        .replace(/\.(mp3|flac|m4a|ogg|wav)$/i, "")
-                        .replace(/[_-]/g, " ");
-                    const searchResult = await soulseekService.searchTrack(
-                        searchQuery,
-                        "",
-                        false,
-                        10000 // 10 second quick search
-                    );
-
-                    if (searchResult.found && searchResult.allMatches.length > 0) {
-                        // Filter to matches from different users with similar filename
-                        const alternatives = searchResult.allMatches.filter(
-                            (m) =>
-                                m.username !== username &&
-                                m.filename.toLowerCase().includes(
-                                    filename.toLowerCase().replace(/\.(mp3|flac|m4a|ogg|wav)$/i, "").substring(0, 20)
-                                )
-                        );
-
-                        logger.debug(
-                            `[Soulseek] Found ${alternatives.length} alternative sources`
-                        );
-
-                        // Try up to 3 alternatives
-                        for (const alt of alternatives.slice(0, 3)) {
-                            logger.debug(
-                                `[Soulseek] Trying alternative: ${alt.username}`
-                            );
-                            result = await soulseekService.downloadTrack(
-                                alt,
-                                destPath
-                            );
-                            if (result.success) {
-                                break;
-                            }
-                        }
-                    }
-                }
-
-                if (result.success) {
-                    return res.json({
-                        success: true,
-                        filePath: destPath,
-                    });
-                } else {
-                    return res.status(500).json({
-                        success: false,
-                        error: result.error || "Download failed",
-                    });
-                }
-            }
-
-            // Case 2: Search and download (we only have metadata)
-            if (!artist || !title) {
-                return res.status(400).json({
-                    error: "Artist and title are required",
-                });
-            }
-
-            logger.debug(
-                `[Soulseek] Search and download: "${artist} - ${title}"`
-            );
+            logger.debug(`[Soulseek] Downloading: "${artist} - ${title}"`);
 
             const result = await soulseekService.searchAndDownload(
                 artist,
                 title,
                 album || "Unknown Album",
-                musicPath
+                musicPath,
             );
 
             if (result.success) {
@@ -411,7 +311,7 @@ router.post(
                 details: error.message,
             });
         }
-    }
+    },
 );
 
 /**

@@ -81,6 +81,10 @@ export default function LibraryPage() {
         () => (activeTab === "artists" ? (artistsQuery.data?.artists ?? []) : []),
         [activeTab, artistsQuery.data?.artists],
     );
+
+
+
+
     const albums = useMemo(
         () => (activeTab === "albums" ? (albumsQuery.data?.albums ?? []) : []),
         [activeTab, albumsQuery.data?.albums],
@@ -95,6 +99,9 @@ export default function LibraryPage() {
         (activeTab === "artists" && artistsQuery.isLoading) ||
         (activeTab === "albums" && albumsQuery.isLoading) ||
         (activeTab === "tracks" && tracksQuery.isLoading);
+
+    // Memoize the loading state to prevent unnecessary re-renders
+    const memoizedIsLoading = useMemo(() => isLoading, [isLoading]);
 
     // Pagination from active query
     const pagination = useMemo(
@@ -422,7 +429,7 @@ export default function LibraryPage() {
                 {activeTab === "artists" && (
                     <ArtistsGrid
                         artists={artists}
-                        isLoading={isLoading}
+                        isLoading={memoizedIsLoading}
                         onPlay={playArtist}
                         onDelete={handleDeleteArtist}
                     />

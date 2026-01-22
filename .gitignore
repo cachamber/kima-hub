@@ -409,3 +409,9 @@ CLAUDE.md
 # Coding Partner Documentation (keep locally, don't push to GitHub)
 # =============================================================================
 README_CODING_PARTNER.md
+
+# =============================================================================
+# Development/Debug Test Files (keep locally, don't push to GitHub)
+# =============================================================================
+frontend/test-*.tsx
+frontend/features/library/components/LazyArtistCard.tsx

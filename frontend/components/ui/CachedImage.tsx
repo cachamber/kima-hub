@@ -21,7 +21,13 @@ const CachedImage = memo(function CachedImage({
         return null;
     }
 
-    return <Image src={src} alt={alt} unoptimized {...props} />;
+    // Add lazy loading by default for better performance
+    const imageProps = {
+        ...props,
+        loading: props.loading || 'lazy',
+    };
+
+    return <Image src={src} alt={alt} unoptimized {...imageProps} />;
 });
 
 export { CachedImage };

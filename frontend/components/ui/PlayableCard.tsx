@@ -1,6 +1,6 @@
 "use client";
 
-import { ReactNode, memo } from "react";
+import { ReactNode, memo, useMemo } from "react";
 import Link from "next/link";
 import { Play, Pause, Check, Download } from "lucide-react";
 import { Card, CardProps } from "./Card";
@@ -48,6 +48,8 @@ const PlayableCard = memo(function PlayableCard({
     tvCardIndex,
     ...props
 }: PlayableCardProps) {
+    // Memoize the image source to prevent unnecessary re-renders
+    const memoizedCoverArt = useMemo(() => coverArt, [coverArt]);
     // Handle Link click to prevent navigation when clicking on interactive elements
     const handleLinkClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
         const target = e.target as HTMLElement;
@@ -67,9 +69,9 @@ const PlayableCard = memo(function PlayableCard({
                     )}
                     style={{ contain: "content" }}
                 >
-                    {coverArt ?
+                    {memoizedCoverArt ?
                         <CachedImage
-                            src={coverArt}
+                            src={memoizedCoverArt}
                             alt={title}
                             fill
                             className="object-cover group-hover:scale-105 transition-transform"

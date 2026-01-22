@@ -1,4 +1,4 @@
-import React, { memo, useCallback } from "react";
+import React, { memo, useCallback, useMemo } from "react";
 import { Music, Trash2 } from "lucide-react";
 import { Artist } from "../types";
 import { PlayableCard } from "@/components/ui/PlayableCard";
@@ -45,11 +45,17 @@ const ArtistCardItem = memo(
             [artist.id, artist.name, onDelete],
         );
 
+        // Memoize the cover art URL to prevent unnecessary re-renders
+        const coverArtUrl = useMemo(
+            () => getArtistImageSrc(artist.coverArt),
+            [artist.coverArt],
+        );
+
         return (
             <div className="relative group h-full">
                 <PlayableCard
                     href={`/artist/${artist.mbid || artist.id}`}
-                    coverArt={getArtistImageSrc(artist.coverArt)}
+                    coverArt={coverArtUrl}
                     title={artist.name}
                     subtitle={`${artist.albumCount || 0} albums`}
                     placeholderIcon={
