@@ -28,6 +28,7 @@ Thanks for your patience while I work through this.
 -   [Mobile Support](#mobile-support)
 -   [Quick Start](#quick-start)
 -   [Configuration](#configuration)
+-   [CLAP Audio Analysis](#clap-audio-analysis)
 -   [Integrations](#integrations)
 -   [Using Lidify](#using-lidify)
 -   [Administration](#administration)
@@ -413,6 +414,46 @@ openssl rand -base64 32
 -   Lidify is designed for self-hosted LAN use
 -   For external access, use a reverse proxy with HTTPS
 -   Configure `ALLOWED_ORIGINS` for your domain
+
+---
+
+## CLAP Audio Analysis
+
+The CLAP (Contrastive Language-Audio Pretraining) service generates embeddings for audio similarity search, powering the Vibe button's track matching feature.
+
+### Requirements
+
+-   PostgreSQL with pgvector extension (included in `pgvector/pgvector:pg16` image)
+-   2-4GB RAM per worker
+-   CLAP model downloads automatically on first build (~700MB)
+
+### Configuration
+
+Environment variables in docker-compose.yml:
+
+| Variable                  | Default | Description                                |
+| ------------------------- | ------- | ------------------------------------------ |
+| `CLAP_WORKERS`            | `2`     | Number of analysis workers (1-8)           |
+| `CLAP_THREADS_PER_WORKER` | `1`     | CPU threads per worker (1-4)               |
+| `CLAP_SLEEP_INTERVAL`     | `5`     | Queue poll interval in seconds             |
+
+### Usage
+
+Enable with the audio-analysis profile:
+
+```bash
+docker compose --profile audio-analysis up -d
+```
+
+The vibe button uses CLAP embeddings for finding similar tracks. Text-based vibe search is available at `/api/vibe/search`.
+
+### API Endpoints
+
+| Endpoint                       | Method | Description                                |
+| ------------------------------ | ------ | ------------------------------------------ |
+| `/api/vibe/similar/:trackId`   | GET    | Get tracks similar to the given track      |
+| `/api/vibe/search`             | POST   | Search tracks by text description          |
+| `/api/vibe/status`             | GET    | Get embedding progress                     |
 
 ---
 
