@@ -1035,6 +1035,12 @@ export async function getEnrichmentProgress() {
         where: { analysisStatus: "failed" },
     });
 
+    // CLAP embedding progress (for vibe similarity)
+    const clapEmbeddingCount = await prisma.$queryRaw<{ count: bigint }[]>`
+        SELECT COUNT(*) as count FROM track_embeddings
+    `;
+    const clapCompleted = Number(clapEmbeddingCount[0]?.count || 0);
+
     // Core enrichment is complete when artists and track tags are done
     // Audio analysis is separate - it runs in background and doesn't block
     const coreComplete =
@@ -1076,6 +1082,18 @@ export async function getEnrichmentProgress() {
                     Math.round((audioCompleted / trackTotal) * 100)
                 :   0,
             isBackground: true, // Flag to indicate this runs separately
+        },
+
+        // CLAP embeddings (for vibe similarity search)
+        clapEmbeddings: {
+            total: trackTotal,
+            completed: clapCompleted,
+            pending: trackTotal - clapCompleted,
+            progress:
+                trackTotal > 0 ?
+                    Math.round((clapCompleted / trackTotal) * 100)
+                :   0,
+            isBackground: true,
         },
 
         // Overall status

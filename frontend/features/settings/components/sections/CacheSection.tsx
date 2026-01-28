@@ -16,6 +16,7 @@ import {
     Play,
     StopCircle,
     AlertTriangle,
+    Waves,
 } from "lucide-react";
 import { EnrichmentFailuresModal } from "@/components/EnrichmentFailuresModal";
 
@@ -562,6 +563,19 @@ export function CacheSection({ settings, onUpdate }: CacheSectionProps) {
                                     {resettingAudio ? "Resetting..." : "Re-run"}
                                 </button>
                             </div>
+
+                            {/* CLAP Embeddings (Vibe Similarity) */}
+                            {enrichmentProgress.clapEmbeddings && (
+                                <EnrichmentStage
+                                    icon={Waves}
+                                    label="Vibe Embeddings"
+                                    description="CLAP audio embeddings for similarity search"
+                                    completed={enrichmentProgress.clapEmbeddings.completed}
+                                    total={enrichmentProgress.clapEmbeddings.total}
+                                    progress={enrichmentProgress.clapEmbeddings.progress}
+                                    isBackground={true}
+                                />
+                            )}
                         </div>
 
                         {/* Control Buttons */}

@@ -1524,6 +1524,13 @@ class ApiClient {
                 progress: number;
                 isBackground: boolean;
             };
+            clapEmbeddings: {
+                total: number;
+                completed: number;
+                pending: number;
+                progress: number;
+                isBackground: boolean;
+            };
             coreComplete: boolean;
             isFullyComplete: boolean;
         }>("/enrichment/progress");
