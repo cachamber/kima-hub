@@ -32,6 +32,12 @@ router.get("/status", requireAuth, async (req, res) => {
         // Get queue length from Redis
         const queueLength = await redisClient.lLen(ANALYSIS_QUEUE);
 
+        // Get CLAP embedding count
+        const embeddingCount = await prisma.$queryRaw<{ count: bigint }[]>`
+            SELECT COUNT(*) as count FROM track_embeddings
+        `;
+        const withEmbeddings = Number(embeddingCount[0]?.count || 0);
+
         const progress = total > 0 ? Math.round((completed / total) * 100) : 0;
 
         res.json({
@@ -43,6 +49,10 @@ router.get("/status", requireAuth, async (req, res) => {
             queueLength,
             progress,
             isComplete: pending === 0 && processing === 0 && queueLength === 0,
+            clap: {
+                withEmbeddings,
+                embeddingProgress: total > 0 ? Math.round((withEmbeddings / total) * 100) : 0,
+            },
         });
     } catch (error: any) {
         logger.error("Analysis status error:", error);
