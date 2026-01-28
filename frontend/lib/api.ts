@@ -67,6 +67,41 @@ export interface SavedMoodMixResponse {
     mix: MoodBucketMix & { generatedAt: string };
 }
 
+// Vibe (CLAP Similarity) Types
+export interface SimilarTrack {
+    id: string;
+    title: string;
+    duration: number;
+    trackNo: number;
+    distance: number;
+    album: {
+        id: string;
+        title: string;
+        coverUrl: string | null;
+    };
+    artist: {
+        id: string;
+        name: string;
+    };
+}
+
+export interface SimilarTracksResponse {
+    sourceTrackId: string;
+    tracks: SimilarTrack[];
+}
+
+export interface VibeSearchResponse {
+    query: string;
+    tracks: SimilarTrack[];
+}
+
+export interface VibeStatusResponse {
+    totalTracks: number;
+    embeddedTracks: number;
+    progress: number;
+    isComplete: boolean;
+}
+
 // Dynamically determine API URL based on configuration
 const getApiBaseUrl = () => {
     // Server-side rendering
@@ -1699,6 +1734,63 @@ class ApiClient {
 
     async clearAllDownloadHistory(): Promise<{ success: boolean }> {
         return this.post("/notifications/downloads/clear-all");
+    }
+
+    // Vibe (CLAP Similarity) API
+    async getVibeSimilarTracks(trackId: string, limit = 20) {
+        return this.request<{
+            sourceTrackId: string;
+            tracks: Array<{
+                id: string;
+                title: string;
+                duration: number;
+                trackNo: number;
+                distance: number;
+                album: {
+                    id: string;
+                    title: string;
+                    coverUrl: string | null;
+                };
+                artist: {
+                    id: string;
+                    name: string;
+                };
+            }>;
+        }>(`/vibe/similar/${trackId}?limit=${limit}`);
+    }
+
+    async vibeSearch(query: string, limit = 20) {
+        return this.request<{
+            query: string;
+            tracks: Array<{
+                id: string;
+                title: string;
+                duration: number;
+                trackNo: number;
+                distance: number;
+                album: {
+                    id: string;
+                    title: string;
+                    coverUrl: string | null;
+                };
+                artist: {
+                    id: string;
+                    name: string;
+                };
+            }>;
+        }>("/vibe/search", {
+            method: "POST",
+            body: JSON.stringify({ query, limit }),
+        });
+    }
+
+    async getVibeStatus() {
+        return this.request<{
+            totalTracks: number;
+            embeddedTracks: number;
+            progress: number;
+            isComplete: boolean;
+        }>("/vibe/status");
     }
 
     async retryFailedDownload(

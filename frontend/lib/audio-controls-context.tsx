@@ -82,24 +82,7 @@ interface AudioControlsContextType {
     toggleMute: () => void;
 
     // Vibe mode controls
-    startVibeMode: (sourceFeatures: {
-        bpm?: number | null;
-        energy?: number | null;
-        valence?: number | null;
-        arousal?: number | null;
-        danceability?: number | null;
-        keyScale?: string | null;
-        instrumentalness?: number | null;
-        analysisMode?: string | null;
-        // ML Mood predictions
-        moodHappy?: number | null;
-        moodSad?: number | null;
-        moodRelaxed?: number | null;
-        moodAggressive?: number | null;
-        moodParty?: number | null;
-        moodAcoustic?: number | null;
-        moodElectronic?: number | null;
-    }, queueIds: string[]) => void;
+    startVibeMode: () => Promise<{ success: boolean; trackCount: number }>;
     stopVibeMode: () => void;
 }
 
@@ -794,39 +777,67 @@ export function AudioControlsProvider({ children }: { children: ReactNode }) {
         state.setIsMuted((prev) => !prev);
     }, [state]);
 
-    // Vibe mode controls
-    const startVibeMode = useCallback(
-        (
-            sourceFeatures: {
-                bpm?: number | null;
-                energy?: number | null;
-                valence?: number | null;
-                arousal?: number | null;
-                danceability?: number | null;
-                keyScale?: string | null;
-                instrumentalness?: number | null;
-                analysisMode?: string | null;
-                // ML Mood predictions
-                moodHappy?: number | null;
-                moodSad?: number | null;
-                moodRelaxed?: number | null;
-                moodAggressive?: number | null;
-                moodParty?: number | null;
-                moodAcoustic?: number | null;
-                moodElectronic?: number | null;
-            },
-            queueIds: string[]
-        ) => {
-            // Disable shuffle when vibe mode starts - vibe queue is sorted by match %
+    // Vibe mode controls - uses CLAP similarity API
+    const startVibeMode = useCallback(async (): Promise<{
+        success: boolean;
+        trackCount: number;
+    }> => {
+        const currentTrack = state.currentTrack;
+        if (!currentTrack?.id) {
+            return { success: false, trackCount: 0 };
+        }
+
+        try {
+            const response = await api.getVibeSimilarTracks(currentTrack.id, 50);
+
+            if (!response.tracks || response.tracks.length === 0) {
+                return { success: false, trackCount: 0 };
+            }
+
+            // Disable shuffle when vibe mode starts - vibe queue is sorted by similarity
             state.setIsShuffle(false);
             state.setShuffleIndices([]);
 
+            // Build queue IDs including current track
+            const queueIds = [
+                currentTrack.id,
+                ...response.tracks.map((t) => t.id),
+            ];
+
+            // Map API response to Track format for the queue
+            const vibeTracks: Track[] = response.tracks.map((t) => ({
+                id: t.id,
+                title: t.title,
+                duration: t.duration,
+                artist: { name: t.artist.name, id: t.artist.id },
+                album: {
+                    title: t.album.title,
+                    coverArt: t.album.coverUrl || undefined,
+                    id: t.album.id,
+                },
+            }));
+
+            // Set vibe mode state
             state.setVibeMode(true);
-            state.setVibeSourceFeatures(sourceFeatures);
+            state.setVibeSourceFeatures(currentTrack.audioFeatures || null);
             state.setVibeQueueIds(queueIds);
-        },
-        [state]
-    );
+
+            // Build new queue: current track + similar tracks
+            state.setQueue((prev) => {
+                const current = prev[state.currentIndex];
+                if (!current) return [currentTrack, ...vibeTracks];
+                return [current, ...vibeTracks];
+            });
+
+            // Reset index to 0 (current track is now at index 0)
+            state.setCurrentIndex(0);
+
+            return { success: true, trackCount: response.tracks.length };
+        } catch (error) {
+            console.error("[Vibe] Failed to get similar tracks:", error);
+            return { success: false, trackCount: 0 };
+        }
+    }, [state]);
 
     const stopVibeMode = useCallback(() => {
         state.setVibeMode(false);

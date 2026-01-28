@@ -84,7 +84,6 @@ export function FullPlayer() {
         toggleMute,
         toggleShuffle,
         toggleRepeat,
-        setUpcoming,
         startVibeMode,
         stopVibeMode,
     } = useAudioControls();
@@ -109,46 +108,11 @@ export function FullPlayer() {
         // Otherwise, start vibe mode
         setIsVibeLoading(true);
         try {
-            const response = await api.getRadioTracks(
-                "vibe",
-                currentTrack.id,
-                50
-            );
+            const result = await startVibeMode();
 
-            if (response.tracks && response.tracks.length > 0) {
-                // Get the source track's features from the API response
-                const sf = (response as any).sourceFeatures;
-                const sourceFeatures = {
-                    bpm: sf?.bpm,
-                    energy: sf?.energy,
-                    valence: sf?.valence,
-                    arousal: sf?.arousal,
-                    danceability: sf?.danceability,
-                    keyScale: sf?.keyScale,
-                    instrumentalness: sf?.instrumentalness,
-                    analysisMode: sf?.analysisMode,
-                    // ML Mood predictions
-                    moodHappy: sf?.moodHappy,
-                    moodSad: sf?.moodSad,
-                    moodRelaxed: sf?.moodRelaxed,
-                    moodAggressive: sf?.moodAggressive,
-                    moodParty: sf?.moodParty,
-                    moodAcoustic: sf?.moodAcoustic,
-                    moodElectronic: sf?.moodElectronic,
-                };
-
-                // Start vibe mode with the queue IDs (include current track)
-                const queueIds = [
-                    currentTrack.id,
-                    ...response.tracks.map((t: any) => t.id),
-                ];
-                startVibeMode(sourceFeatures, queueIds);
-
-                // Add vibe tracks as upcoming (after current song finishes)
-                setUpcoming(response.tracks, true); // preserveOrder=true for vibe mode
-
+            if (result.success && result.trackCount > 0) {
                 toast.success(`Vibe mode on`, {
-                    description: `${response.tracks.length} matching tracks queued up next`,
+                    description: `${result.trackCount} similar tracks queued up next`,
                     icon: <AudioWaveform className="w-4 h-4 text-[#ecb200]" />,
                 });
             } else {
