@@ -262,6 +262,36 @@ services:
         profiles:
             - audio-analysis
 
+    # CLAP Audio Analyzer - Generates embeddings for similarity search
+    audio-analyzer-clap:
+        build:
+            context: ./services/audio-analyzer-clap
+        container_name: lidify_audio_analyzer_clap
+        environment:
+            REDIS_URL: redis://redis:6379
+            DATABASE_URL: postgresql://${POSTGRES_USER:-lidifydb}:${POSTGRES_PASSWORD:-changeme}@postgres:5432/${POSTGRES_DB:-lidify}
+            MUSIC_PATH: /music
+            SLEEP_INTERVAL: ${CLAP_SLEEP_INTERVAL:-5}
+            NUM_WORKERS: ${CLAP_WORKERS:-2}
+            THREADS_PER_WORKER: ${CLAP_THREADS_PER_WORKER:-1}
+        volumes:
+            - ${MUSIC_PATH:-./music}:/music:ro
+        depends_on:
+            postgres:
+                condition: service_healthy
+            redis:
+                condition: service_healthy
+        restart: unless-stopped
+        deploy:
+            resources:
+                limits:
+                    memory: 4G
+                    cpus: "4"
+                reservations:
+                    memory: 2G
+        profiles:
+            - audio-analysis
+
 volumes:
     # Lidify core
     postgres_data:
