@@ -197,6 +197,9 @@ model Track {
   instrumentalness   Float?
   acousticness       Float?
   speechiness        Float?
+  // Legacy mood fields - populated by MusiCNN analyzer
+  // These may be derived from CLAP text-anchor similarity in future
+  // Consider removing in v2.0 if vibe similarity fully replaces mood-based features
   moodHappy          Float?
   moodSad            Float?
   moodRelaxed        Float?
