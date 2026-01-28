@@ -366,4 +366,72 @@ router.put("/workers", requireAuth, requireAdmin, async (req, res) => {
     }
 });
 
+/**
+ * GET /api/analysis/clap-workers
+ * Get current CLAP analyzer worker configuration
+ */
+router.get("/clap-workers", requireAuth, requireAdmin, async (req, res) => {
+    try {
+        const settings = await getSystemSettings();
+        const cpuCores = os.cpus().length;
+        const currentWorkers = settings?.clapWorkers || 2;
+
+        // Recommended: 25% of CPU cores for CLAP (more memory intensive), min 1, max 4
+        const recommended = Math.max(1, Math.min(4, Math.floor(cpuCores / 4)));
+
+        res.json({
+            workers: currentWorkers,
+            cpuCores,
+            recommended,
+            description: `Using ${currentWorkers} of ${cpuCores} available CPU cores`,
+        });
+    } catch (error: any) {
+        logger.error("Get CLAP workers config error:", error);
+        res.status(500).json({ error: "Failed to get CLAP worker configuration" });
+    }
+});
+
+/**
+ * PUT /api/analysis/clap-workers
+ * Update CLAP analyzer worker count
+ */
+router.put("/clap-workers", requireAuth, requireAdmin, async (req, res) => {
+    try {
+        const { workers } = req.body;
+
+        if (typeof workers !== 'number' || workers < 1 || workers > 4) {
+            return res.status(400).json({
+                error: "CLAP workers must be a number between 1 and 4"
+            });
+        }
+
+        // Update SystemSettings
+        await prisma.systemSettings.update({
+            where: { id: "default" },
+            data: { clapWorkers: workers },
+        });
+
+        // Publish control signal to Redis for CLAP analyzer to pick up
+        await redisClient.publish(
+            "audio:clap:control",
+            JSON.stringify({ command: "set_workers", count: workers })
+        );
+
+        const cpuCores = os.cpus().length;
+        const recommended = Math.max(1, Math.min(4, Math.floor(cpuCores / 4)));
+
+        logger.info(`CLAP analyzer workers updated to ${workers}`);
+
+        res.json({
+            workers,
+            cpuCores,
+            recommended,
+            description: `Using ${workers} of ${cpuCores} available CPU cores`,
+        });
+    } catch (error: any) {
+        logger.error("Update CLAP workers config error:", error);
+        res.status(500).json({ error: "Failed to update CLAP worker configuration" });
+    }
+});
+
 export default router;

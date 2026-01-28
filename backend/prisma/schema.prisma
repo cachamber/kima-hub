@@ -102,6 +102,7 @@ model SystemSettings {
   enrichmentConcurrency       Int      @default(1)
   lidarrWebhookSecret         String?
   audioAnalyzerWorkers        Int      @default(2)
+  clapWorkers                 Int      @default(2)
   lastfmApiKey                String?
   soulseekConcurrentDownloads Int      @default(4)
 }

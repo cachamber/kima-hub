@@ -63,6 +63,7 @@ NUM_WORKERS = int(os.getenv('NUM_WORKERS', '2'))
 ANALYSIS_QUEUE = 'audio:analysis:queue'
 TEXT_EMBED_CHANNEL = 'audio:text:embed'
 TEXT_EMBED_RESPONSE_PREFIX = 'audio:text:embed:response:'
+CONTROL_CHANNEL = 'audio:clap:control'
 
 # Model version identifier
 MODEL_VERSION = 'laion-clap-music-v1'
@@ -492,6 +493,71 @@ class TextEmbedHandler:
             traceback.print_exc()
 
 
+class ControlHandler:
+    """
+    Handles control messages from Redis pub/sub.
+
+    Listens for worker count changes and other control commands.
+    Note: Worker count changes require a container restart to take effect.
+    """
+
+    def __init__(self, stop_event: threading.Event):
+        self.stop_event = stop_event
+        self.redis_client = None
+        self.pubsub = None
+
+    def start(self):
+        """Start listening for control messages"""
+        logger.info("ControlHandler starting...")
+
+        try:
+            self.redis_client = redis.from_url(REDIS_URL)
+            self.pubsub = self.redis_client.pubsub()
+            self.pubsub.subscribe(CONTROL_CHANNEL)
+            logger.info(f"Subscribed to control channel: {CONTROL_CHANNEL}")
+
+            while not self.stop_event.is_set():
+                try:
+                    message = self.pubsub.get_message(
+                        ignore_subscribe_messages=True,
+                        timeout=1.0
+                    )
+
+                    if message and message['type'] == 'message':
+                        self._handle_message(message)
+
+                except Exception as e:
+                    logger.error(f"ControlHandler error: {e}")
+                    traceback.print_exc()
+                    time.sleep(1)
+
+        finally:
+            if self.pubsub:
+                self.pubsub.close()
+            logger.info("ControlHandler stopped")
+
+    def _handle_message(self, message):
+        """Handle a control message"""
+        try:
+            data = message['data']
+            if isinstance(data, bytes):
+                data = data.decode('utf-8')
+
+            control = json.loads(data)
+            command = control.get('command')
+
+            if command == 'set_workers':
+                new_count = control.get('count', NUM_WORKERS)
+                logger.info(f"Received worker count change request: {NUM_WORKERS} -> {new_count}")
+                logger.info("Note: Restart the CLAP analyzer container to apply the new worker count")
+            else:
+                logger.warning(f"Unknown control command: {command}")
+
+        except Exception as e:
+            logger.error(f"Failed to handle control message: {e}")
+            traceback.print_exc()
+
+
 def main():
     """Main entry point"""
     logger.info("=" * 60)
@@ -536,6 +602,14 @@ def main():
     text_thread.start()
     threads.append(text_thread)
     logger.info("Started text embed handler thread")
+
+    # Start control handler thread (listens for worker count changes)
+    control_handler = ControlHandler(stop_event)
+    control_thread = threading.Thread(target=control_handler.start, name="ControlHandler")
+    control_thread.daemon = True
+    control_thread.start()
+    threads.append(control_thread)
+    logger.info("Started control handler thread")
 
     # Wait for shutdown signal
     try:
