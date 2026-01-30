@@ -32,32 +32,30 @@ router.get("/similar/:trackId", requireAuth, async (req, res) => {
             100
         );
 
-        // Fetch source track embedding
-        const embeddingResult = await prisma.$queryRaw<
-            { embedding: number[] }[]
-        >`
-            SELECT embedding::float[] as embedding
-            FROM track_embeddings
-            WHERE track_id = ${trackId}
+        // Check if source track has an embedding
+        const hasEmbedding = await prisma.$queryRaw<{ count: bigint }[]>`
+            SELECT COUNT(*) as count FROM track_embeddings WHERE track_id = ${trackId}
         `;
 
-        if (!embeddingResult || embeddingResult.length === 0) {
+        if (!hasEmbedding || Number(hasEmbedding[0]?.count) === 0) {
             return res.status(404).json({
                 error: "Track not analyzed yet",
                 message: "This track has not been processed for vibe similarity",
             });
         }
 
-        const sourceEmbedding = embeddingResult[0].embedding;
-
         // Query for similar tracks using pgvector cosine distance
+        // Using CTE to fetch source embedding once instead of twice
         const similarTracks = await prisma.$queryRaw<SimilarTrackResult[]>`
+            WITH source_embedding AS (
+                SELECT embedding FROM track_embeddings WHERE track_id = ${trackId}
+            )
             SELECT
                 t.id,
                 t.title,
                 t.duration,
                 t."trackNo",
-                te.embedding <=> ${sourceEmbedding}::vector AS distance,
+                te.embedding <=> (SELECT embedding FROM source_embedding) AS distance,
                 a.id as "albumId",
                 a.title as "albumTitle",
                 a."coverUrl" as "albumCoverUrl",
@@ -68,7 +66,7 @@ router.get("/similar/:trackId", requireAuth, async (req, res) => {
             JOIN "Album" a ON t."albumId" = a.id
             JOIN "Artist" ar ON a."artistId" = ar.id
             WHERE te.track_id != ${trackId}
-            ORDER BY te.embedding <=> ${sourceEmbedding}::vector
+            ORDER BY te.embedding <=> (SELECT embedding FROM source_embedding)
             LIMIT ${limit}
         `;
 
