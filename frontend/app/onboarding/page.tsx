@@ -5,9 +5,11 @@ import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
 import Image from "next/image";
 import { GradientSpinner } from "@/components/ui/GradientSpinner";
+import { useFeatures } from "@/lib/features-context";
 
 export default function OnboardingPage() {
     const router = useRouter();
+    const { musicCNN, vibeEmbeddings, loading: featuresLoading } = useFeatures();
     const [step, setStep] = useState(1);
     const [loading, setLoading] = useState(false);
     const [initialLoading, setInitialLoading] = useState(true);
@@ -56,8 +58,6 @@ export default function OnboardingPage() {
         enabled: false,
     });
 
-    // Step 3: Enrichment
-    const [enrichmentEnabled, setEnrichmentEnabled] = useState(true);
 
     const handleRegister = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -162,12 +162,7 @@ export default function OnboardingPage() {
                 ]);
                 setStep(3);
             } else if (step === 3) {
-                // Save enrichment preference and complete
-                await api.post("/onboarding/enrichment", {
-                    enabled: enrichmentEnabled,
-                });
                 await api.post("/onboarding/complete");
-                // Redirect to sync page
                 router.push("/sync");
             }
         } catch (err: any) {
@@ -581,15 +576,53 @@ export default function OnboardingPage() {
                                     <div className="space-y-6">
                                         <div>
                                             <h2 className="text-2xl font-bold text-white mb-1">
-                                                Artist Enrichment
+                                                Analysis Features
                                             </h2>
                                             <p className="text-white/60">
-                                                Enhance your library with
-                                                additional metadata
+                                                Advanced audio analysis capabilities detected
                                             </p>
                                         </div>
 
                                         <div className="bg-[#0f0f0f] border border-white/10 rounded-lg p-6 mt-8">
+                                            <h3 className="text-lg font-semibold text-white mb-4">
+                                                Detected Analysis Features
+                                            </h3>
+
+                                            {featuresLoading ? (
+                                                <div className="flex items-center gap-3 text-gray-400">
+                                                    <GradientSpinner size="sm" />
+                                                    <span>Detecting available features...</span>
+                                                </div>
+                                            ) : (
+                                                <ul className="space-y-3">
+                                                    <li className="flex items-center gap-3">
+                                                        <span className={musicCNN ? "text-green-400" : "text-gray-500"}>
+                                                            {musicCNN ? "\u2713" : "\u2014"}
+                                                        </span>
+                                                        <span className={musicCNN ? "text-white" : "text-gray-500"}>
+                                                            Audio Analysis (BPM, key, mood, energy)
+                                                        </span>
+                                                    </li>
+                                                    <li className="flex items-center gap-3">
+                                                        <span className={vibeEmbeddings ? "text-green-400" : "text-gray-500"}>
+                                                            {vibeEmbeddings ? "\u2713" : "\u2014"}
+                                                        </span>
+                                                        <span className={vibeEmbeddings ? "text-white" : "text-gray-500"}>
+                                                            Vibe Similarity Search
+                                                        </span>
+                                                    </li>
+                                                </ul>
+                                            )}
+
+                                            <p className="text-sm text-gray-400 mt-6">
+                                                Features are determined by which Docker profile you deployed with.
+                                                To change, redeploy with a different{" "}
+                                                <code className="bg-gray-700 px-1.5 py-0.5 rounded text-xs">--profile</code>{" "}
+                                                flag.
+                                            </p>
+                                        </div>
+
+                                        <div className="bg-[#0f0f0f] border border-white/10 rounded-lg p-6">
                                             <div className="flex items-start gap-4">
                                                 <div className="w-12 h-12 bg-[#fca200]/10 border border-[#fca200]/20 rounded-lg flex items-center justify-center flex-shrink-0">
                                                     <svg
@@ -608,134 +641,20 @@ export default function OnboardingPage() {
                                                 </div>
                                                 <div>
                                                     <h3 className="text-lg font-bold text-white mb-2">
-                                                        What is enrichment?
+                                                        Artist Enrichment
                                                     </h3>
                                                     <p className="text-white/60 text-sm leading-relaxed">
-                                                        Enrichment fetches
-                                                        additional metadata like
-                                                        artist bios,
-                                                        high-quality images,
-                                                        genres, and
-                                                        relationships from
-                                                        external sources. This
-                                                        powers smart features
-                                                        and provides a richer
-                                                        listening experience.
+                                                        Enrichment automatically fetches additional metadata like
+                                                        artist bios, high-quality images, genres, and relationships
+                                                        from external sources. This powers smart features and provides
+                                                        a richer listening experience.
                                                     </p>
                                                 </div>
                                             </div>
-
-                                            <div className="grid grid-cols-2 gap-3 mt-6">
-                                                <div className="flex items-center gap-2 text-sm">
-                                                    <div className="w-5 h-5 bg-white/10 rounded-full flex items-center justify-center flex-shrink-0 border border-white/10">
-                                                        <svg
-                                                            className="w-3 h-3 text-white/70"
-                                                            fill="none"
-                                                            stroke="currentColor"
-                                                            viewBox="0 0 24 24"
-                                                        >
-                                                            <path
-                                                                strokeLinecap="round"
-                                                                strokeLinejoin="round"
-                                                                strokeWidth={3}
-                                                                d="M5 13l4 4L19 7"
-                                                            />
-                                                        </svg>
-                                                    </div>
-                                                    <span className="text-white/80">
-                                                        Better artist matching
-                                                    </span>
-                                                </div>
-                                                <div className="flex items-center gap-2 text-sm">
-                                                    <div className="w-5 h-5 bg-amber-500/20 rounded-full flex items-center justify-center flex-shrink-0">
-                                                        <svg
-                                                            className="w-3 h-3 text-brand"
-                                                            fill="none"
-                                                            stroke="currentColor"
-                                                            viewBox="0 0 24 24"
-                                                        >
-                                                            <path
-                                                                strokeLinecap="round"
-                                                                strokeLinejoin="round"
-                                                                strokeWidth={3}
-                                                                d="M5 13l4 4L19 7"
-                                                            />
-                                                        </svg>
-                                                    </div>
-                                                    <span className="text-white/80">
-                                                        Discover Weekly
-                                                    </span>
-                                                </div>
-                                                <div className="flex items-center gap-2 text-sm">
-                                                    <div className="w-5 h-5 bg-amber-500/20 rounded-full flex items-center justify-center flex-shrink-0">
-                                                        <svg
-                                                            className="w-3 h-3 text-brand"
-                                                            fill="none"
-                                                            stroke="currentColor"
-                                                            viewBox="0 0 24 24"
-                                                        >
-                                                            <path
-                                                                strokeLinecap="round"
-                                                                strokeLinejoin="round"
-                                                                strokeWidth={3}
-                                                                d="M5 13l4 4L19 7"
-                                                            />
-                                                        </svg>
-                                                    </div>
-                                                    <span className="text-white/80">
-                                                        Similar artists
-                                                    </span>
-                                                </div>
-                                                <div className="flex items-center gap-2 text-sm">
-                                                    <div className="w-5 h-5 bg-white/10 rounded-full flex items-center justify-center flex-shrink-0">
-                                                        <span className="text-white/40 text-xs">
-                                                            !
-                                                        </span>
-                                                    </div>
-                                                    <span className="text-white/50">
-                                                        Uses internet data
-                                                    </span>
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        <div className="flex items-center justify-between p-5 bg-white/5 border border-white/10 rounded-lg ">
-                                            <div>
-                                                <h3 className="text-white font-medium">
-                                                    Enable artist enrichment
-                                                </h3>
-                                                <p className="text-sm text-white/50 mt-0.5">
-                                                    Recommended for the best
-                                                    experience
-                                                </p>
-                                            </div>
-                                            <button
-                                                onClick={() =>
-                                                    setEnrichmentEnabled(
-                                                        !enrichmentEnabled
-                                                    )
-                                                }
-                                                onKeyDown={(e) => e.key === 'Enter' && setEnrichmentEnabled(!enrichmentEnabled)}
-                                                tabIndex={0}
-                                                className={`relative w-12 h-6 rounded-lg transition-all ${
-                                                    enrichmentEnabled
-                                                        ? "bg-[#fca200]"
-                                                        : "bg-white/20"
-                                                } focus:outline-none focus:ring-2 focus:ring-brand/30`}
-                                            >
-                                                <div
-                                                    className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-lg transition-all shadow-lg ${
-                                                        enrichmentEnabled
-                                                            ? "translate-x-6"
-                                                            : ""
-                                                    }`}
-                                                />
-                                            </button>
                                         </div>
 
                                         {error && (
                                             <div className="flex items-center gap-2 p-4 bg-red-500/10 border border-red-500/20 rounded-lg">
-                                                <span className="text-red-500"></span>
                                                 <p className="text-red-500 text-sm">
                                                     {error}
                                                 </p>
@@ -744,32 +663,10 @@ export default function OnboardingPage() {
 
                                         <div className="flex gap-3 mt-8">
                                             <button
-                                                onClick={async () => {
-                                                    await api.post(
-                                                        "/onboarding/enrichment",
-                                                        { enabled: false }
-                                                    );
-                                                    await api.post(
-                                                        "/onboarding/complete"
-                                                    );
-                                                    router.push("/");
-                                                }}
-                                                onKeyDown={async (e) => {
-                                                    if (e.key === 'Enter') {
-                                                        await api.post("/onboarding/enrichment", { enabled: false });
-                                                        await api.post("/onboarding/complete");
-                                                        router.push("/");
-                                                    }
-                                                }}
-                                                className="flex-1 bg-white/5 border border-white/10 text-white/70 font-medium py-3.5 rounded-lg hover:bg-white/10 transition-all"
-                                            >
-                                                Skip Enrichment
-                                            </button>
-                                            <button
                                                 onClick={handleNextStep}
                                                 onKeyDown={(e) => e.key === 'Enter' && !loading && handleNextStep()}
                                                 disabled={loading}
-                                                className="flex-1 py-3.5 bg-amber-500 text-black font-bold rounded-lg hover:bg-amber-400 transition-all duration-200 disabled:opacity-50 disabled:hover:scale-100 relative group overflow-hidden"
+                                                className="w-full py-3.5 bg-[#fca200] text-black font-bold rounded-lg hover:bg-[#e69200] transition-all duration-200 disabled:opacity-50 disabled:hover:scale-100 relative group overflow-hidden focus:outline-none focus:ring-2 focus:ring-brand/30"
                                             >
                                                 <span className="relative z-10 flex items-center justify-center gap-2">
                                                     {loading ? (
