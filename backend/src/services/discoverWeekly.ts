@@ -14,6 +14,7 @@
 import { logger } from "../utils/logger";
 import { Prisma } from "@prisma/client";
 import { prisma } from "../utils/db";
+import axios from "axios";
 import { lastFmService } from "./lastfm";
 import { musicBrainzService } from "./musicbrainz";
 import { lidarrService } from "./lidarr";
@@ -24,6 +25,7 @@ import { discoveryLogger } from "./discoveryLogger";
 import { acquisitionService } from "./acquisitionService";
 import { shuffleArray } from "../utils/shuffle";
 import { updateArtistCounts } from "./artistCountsService";
+import { config as appConfig } from "../config";
 
 interface SeedArtist {
     name: string;
@@ -171,7 +173,6 @@ export class DiscoverWeeklyService {
                     album.lidarrAlbumId
                 ) {
                     try {
-                        const axios = (await import("axios")).default;
                         await axios.delete(
                             `${settings.lidarrUrl}/api/v1/album/${album.lidarrAlbumId}`,
                             {
@@ -395,6 +396,10 @@ export class DiscoverWeeklyService {
 
             // Step 4: Create batch and jobs in a transaction
             discoveryLogger.section("STEP 4: CREATE BATCH & JOBS");
+
+            // Get music path from settings (already fetched at line 276) with fallback to app config
+            const musicPath = settings?.musicPath || appConfig.music.musicPath;
+
             const batch = await prisma.$transaction(async (tx) => {
                 // Create discovery batch
                 const newBatch = await tx.discoveryBatch.create({
@@ -455,7 +460,7 @@ export class DiscoverWeeklyService {
                             discoveryBatchId: newBatch.id,
                             metadata: {
                                 downloadType: "discovery",
-                                rootFolderPath: "/music",
+                                rootFolderPath: musicPath,
                                 artistName: album.artistName,
                                 artistMbid: album.artistMbid,
                                 albumTitle: album.albumTitle,
@@ -1824,7 +1829,6 @@ export class DiscoverWeeklyService {
             }
 
             // Get Lidarr queue
-            const { default: axios } = await import("axios");
             const queueResponse = await axios.get(
                 `${settings.lidarrUrl}/api/v1/queue`,
                 {
@@ -2015,8 +2019,6 @@ export class DiscoverWeeklyService {
         logger.debug(
             `\n[CLEANUP] Removing ${extraJobs.length} extra albums from Lidarr and filesystem...`
         );
-
-        const { lidarrService } = await import("./lidarr");
 
         // Track artists to potentially remove (if they have no other albums)
         const artistsToCheck = new Set<string>();
