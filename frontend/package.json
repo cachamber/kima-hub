@@ -14,6 +14,9 @@
     "start": "next start -H 0.0.0.0 -p 3030",
     "lint": "eslint",
     "test:e2e": "playwright test",
+    "test:predeploy": "playwright test tests/e2e/predeploy --reporter=list",
+    "test:predeploy:ui": "playwright test tests/e2e/predeploy --ui",
+    "test:predeploy:headed": "playwright test tests/e2e/predeploy --headed",
     "analyze": "ANALYZE=true next build --webpack"
   },
   "dependencies": {
