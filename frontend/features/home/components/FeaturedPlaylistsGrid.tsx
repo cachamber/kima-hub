@@ -3,7 +3,7 @@
 import { Music2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { HorizontalCarousel, CarouselItem } from "@/components/ui/HorizontalCarousel";
-import { memo } from "react";
+import { memo, useCallback } from "react";
 
 interface PlaylistPreview {
     id: string;
@@ -30,7 +30,7 @@ const DeezerIcon = ({ className }: { className?: string }) => (
 
 interface PlaylistCardProps {
     playlist: PlaylistPreview;
-    onClick: () => void;
+    onClick: (playlistId: string) => void;
 }
 
 const PlaylistCard = memo(function PlaylistCard({ 
@@ -40,7 +40,7 @@ const PlaylistCard = memo(function PlaylistCard({
     return (
         <CarouselItem>
             <div
-                onClick={onClick}
+                onClick={() => onClick(playlist.id)}
                 className="p-3 rounded-md group cursor-pointer hover:bg-white/5 transition-colors"
             >
                 <div className="relative aspect-square mb-3 rounded-md overflow-hidden bg-[#282828] shadow-lg">
@@ -79,12 +79,14 @@ const PlaylistCard = memo(function PlaylistCard({
     );
 });
 
-export function FeaturedPlaylistsGrid({ playlists }: FeaturedPlaylistsGridProps) {
+export const FeaturedPlaylistsGrid = memo(function FeaturedPlaylistsGrid({
+    playlists
+}: FeaturedPlaylistsGridProps) {
     const router = useRouter();
 
-    const handlePlaylistClick = (playlist: PlaylistPreview) => {
-        router.push(`/browse/playlists/${playlist.id}`);
-    };
+    const handlePlaylistClick = useCallback((playlistId: string) => {
+        router.push(`/browse/playlists/${playlistId}`);
+    }, [router]);
 
     if (!playlists || playlists.length === 0) {
         return null;
@@ -93,12 +95,12 @@ export function FeaturedPlaylistsGrid({ playlists }: FeaturedPlaylistsGridProps)
     return (
         <HorizontalCarousel>
             {playlists.slice(0, 20).map((playlist, index) => (
-                <PlaylistCard 
+                <PlaylistCard
                     key={`home-playlist-${playlist.id}-${index}`}
-                    playlist={playlist} 
-                    onClick={() => handlePlaylistClick(playlist)} 
+                    playlist={playlist}
+                    onClick={handlePlaylistClick}
                 />
             ))}
         </HorizontalCarousel>
     );
-}
+});
