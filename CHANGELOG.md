@@ -5,6 +5,70 @@ All notable changes to Lidify will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+#### CLAP Audio Analyzer (Major Feature)
+
+New ML-based audio analysis using CLAP (Contrastive Language-Audio Pretraining) embeddings for semantic audio understanding.
+
+- **CLAP Analyzer Service:** Python-based analyzer using Microsoft's CLAP model for generating audio embeddings
+- **pgvector Integration:** Added PostgreSQL vector extension for efficient similarity search on embeddings
+- **Vibe Similarity:** "Find similar tracks" feature using hybrid similarity (CLAP embeddings + BPM/key matching)
+- **Vibe Explorer UI:** Test page for exploring audio similarity at `/vibe-ui-test`
+- **Settings Integration:** CLAP embeddings progress display and configurable worker count in Settings
+- **Enrichment Phase 4:** CLAP embedding generation integrated into enrichment pipeline
+
+#### Feature Detection
+
+Automatic detection of available analyzers with graceful degradation.
+
+- **Feature Detection Service:** Backend service that monitors analyzer availability via Redis heartbeats
+- **Features API:** New `/api/system/features` endpoint exposes available features to frontend
+- **FeaturesProvider:** React context for feature availability throughout the app
+- **Graceful UI:** Vibe button hidden when embeddings unavailable; analyzer controls greyed out in Settings
+- **Onboarding:** Shows detected features instead of manual toggles
+
+#### Docker & Deployment
+
+- **Lite Mode:** New `docker-compose.lite.yml` override for running without optional analyzers
+- **All-in-One Image:** CLAP analyzer and pgvector included in main Docker image
+- **Analyzer Profiles:** Optional services can be enabled/disabled via compose overrides
+
+#### Other
+
+- **Local Image Storage:** Artist images stored locally with artist counts
+- **Hybrid Similarity Service:** Combines CLAP embeddings with BPM and musical key for better matches
+- **BPM/Key Similarity Functions:** Database functions for musical attribute matching
+
+### Fixed
+
+- **CLAP Queue Name:** Corrected queue name to `audio:clap:queue`
+- **CLAP Large Files:** Handle large audio files by chunking to avoid memory issues
+- **CLAP Dependencies:** Added missing torchvision dependency and fixed model path
+- **Embedding Index:** Added missing IVFFlat index to embedding migration for query performance
+- **Library Page Performance:** Artist images now cache properly - removed JWT tokens from cover-art URLs that were breaking Service Worker and HTTP cache (tokens only added for CORS canvas access on detail pages)
+- **Service Worker:** Increased image cache limit from 500 to 2000 entries for better coverage of large libraries
+
+### Performance
+
+- **CLAP Extraction:** Always extract middle 60s of audio for efficient embedding generation
+- **CLAP Duration:** Pass duration from database to avoid file probe overhead
+- **Vibe Query:** Use CTE to avoid duplicate embedding lookup in similarity queries
+- **PopularArtistsGrid:** Added `memo()` wrapper to prevent unnecessary re-renders when parent state changes
+- **FeaturedPlaylistsGrid:** Added `memo()` wrapper and `useCallback` for click handler to ensure child `PlaylistCard` memoization works correctly
+- **Scan Reconciliation:** Fixed N+1 database query pattern - replaced per-job album lookups with single batched query, reducing ~250 queries to ~3 queries for 100 pending jobs
+
+### Security
+
+- **Vibe API:** Added internal auth to vibe failure endpoint
+
+### Changed
+
+- **Docker Profiles:** Replaced Docker profiles with override file approach for better compatibility
+- **Mood Columns:** Marked as legacy in schema - may be derived from CLAP embeddings in future
+
 ## [1.3.3] - 2026-01-18
 
 Comprehensive patch release addressing critical stability issues, performance improvements, and production readiness fixes. This release includes community-contributed fixes and extensive internal code quality improvements.
