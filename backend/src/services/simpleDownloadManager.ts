@@ -17,6 +17,7 @@ import { notificationService } from "./notificationService";
 import { notificationPolicyService } from "./notificationPolicyService";
 import { sessionLog } from "../utils/playlistLogger";
 import { config } from "../config";
+import { eventBus } from "./eventBus";
 import axios from "axios";
 import * as crypto from "crypto";
 
@@ -274,6 +275,14 @@ class SimpleDownloadManager {
                     },
                 });
 
+                if (job) {
+                    eventBus.emit({
+                        type: "download:failed",
+                        userId: job.userId,
+                        payload: { jobId: job.id, subject: job.subject, error: error.message || "Download failed" },
+                    });
+                }
+
                 // Check batch completion for discovery jobs
                 if (job?.discoveryBatchId) {
                     const { discoverWeeklyService } = await import(
@@ -334,6 +343,14 @@ class SimpleDownloadManager {
                     },
                 },
             });
+
+            if (job) {
+                eventBus.emit({
+                    type: "download:failed",
+                    userId: job.userId,
+                    payload: { jobId: job.id, subject: job.subject, error: error.message || "Failed to add album to Lidarr" },
+                });
+            }
 
             // Check batch completion for discovery jobs
             if (job?.discoveryBatchId) {
@@ -771,6 +788,12 @@ class SimpleDownloadManager {
 
         // Post-transaction operations (notifications, batch completion)
         if (result.jobId && result.userId) {
+            eventBus.emit({
+                type: "download:complete",
+                userId: result.userId,
+                payload: { jobId: result.jobId, subject: result.subject },
+            });
+
             // Send notification
             try {
                 const decision =
@@ -1193,6 +1216,11 @@ class SimpleDownloadManager {
                             },
                         },
                     });
+                    eventBus.emit({
+                        type: "download:complete",
+                        userId: job.userId,
+                        payload: { jobId: job.id, subject: job.subject },
+                    });
                     return { retried: false, failed: false, jobId: job.id };
                 }
             }
@@ -1205,6 +1233,12 @@ class SimpleDownloadManager {
                 error: `All releases and albums exhausted: ${reason}`,
                 completedAt: new Date(),
             },
+        });
+
+        eventBus.emit({
+            type: "download:failed",
+            userId: job.userId,
+            payload: { jobId: job.id, subject: job.subject, error: `All releases and albums exhausted: ${reason}` },
         });
 
         // Check batch completion for discovery jobs
@@ -1329,6 +1363,14 @@ class SimpleDownloadManager {
                 },
             });
 
+            for (const job of stalePendingJobs) {
+                eventBus.emit({
+                    type: "download:failed",
+                    userId: job.userId,
+                    payload: { jobId: job.id, subject: job.subject, error: "Download never started - timed out" },
+                });
+            }
+
             logger.debug(`   Batch updated ${stalePendingJobs.length} pending jobs to failed`);
         }
 
@@ -1358,7 +1400,7 @@ class SimpleDownloadManager {
                 ? new Date(metadata.startedAt)
                 : job.createdAt;
 
-            // Skip Soulseek jobs - they complete immediately with direct slsk-client
+            // Skip Soulseek jobs - they complete via their own pipeline
             if (
                 metadata?.source === "slskd" ||
                 metadata?.source === "soulseek_direct"
@@ -1521,6 +1563,11 @@ class SimpleDownloadManager {
                                 },
                             },
                         });
+                        eventBus.emit({
+                            type: "download:complete",
+                            userId: job.userId,
+                            payload: { jobId: job.id, subject: job.subject },
+                        });
                         continue; // Skip to next stale job
                     }
                 }
@@ -1572,6 +1619,11 @@ class SimpleDownloadManager {
                         error: errorMessage,
                         completedAt: new Date(),
                     },
+                });
+                eventBus.emit({
+                    type: "download:failed",
+                    userId: job.userId,
+                    payload: { jobId: job.id, subject: job.subject, error: errorMessage },
                 });
             }
 
@@ -1962,6 +2014,18 @@ class SimpleDownloadManager {
                     error: null,
                 },
             });
+
+            const completedSet = new Set(toComplete);
+            for (const job of processingJobs) {
+                if (completedSet.has(job.id)) {
+                    eventBus.emit({
+                        type: "download:complete",
+                        userId: job.userId,
+                        payload: { jobId: job.id, subject: job.subject },
+                    });
+                }
+            }
+
             logger.debug(`   Batch updated ${toComplete.length} job(s) to completed`);
         }
 
@@ -2107,6 +2171,9 @@ class SimpleDownloadManager {
                 }
             }
 
+            // Build lookup for SSE events (jobsToComplete/jobsToFail only store id + metadata)
+            const jobLookup = new Map(processingJobs.map((j) => [j.id, j]));
+
             // Process updates (individual updates needed for different metadata per job)
             for (const { id, metadata } of jobsToResetCounter) {
                 await prisma.downloadJob.update({
@@ -2168,6 +2235,14 @@ class SimpleDownloadManager {
                         },
                     },
                 });
+                const srcJob = jobLookup.get(id);
+                if (srcJob) {
+                    eventBus.emit({
+                        type: "download:complete",
+                        userId: srcJob.userId,
+                        payload: { jobId: id, subject: srcJob.subject },
+                    });
+                }
             }
 
             for (const { id, metadata, missingCount } of jobsToFail) {
@@ -2187,6 +2262,14 @@ class SimpleDownloadManager {
                         },
                     },
                 });
+                const srcJob = jobLookup.get(id);
+                if (srcJob) {
+                    eventBus.emit({
+                        type: "download:failed",
+                        userId: srcJob.userId,
+                        payload: { jobId: id, subject: srcJob.subject, error: "Lidarr queue sync: Download not found after 90s (3 checks)." },
+                    });
+                }
             }
 
             // Check discovery batch completions (deduplicated, with yielding)
