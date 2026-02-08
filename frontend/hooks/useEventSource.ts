@@ -4,17 +4,19 @@ import { useEffect, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/lib/auth-context";
 import { useDownloadProgress } from "@/lib/download-progress-context";
+import api from "@/lib/api";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3006/api";
 
 export function useEventSource() {
-    const { token, isAuthenticated } = useAuth();
+    const { isAuthenticated } = useAuth();
     const queryClient = useQueryClient();
     const { updateProgress, clearProgress } = useDownloadProgress();
     const eventSourceRef = useRef<EventSource | null>(null);
     const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
     useEffect(() => {
+        const token = api.getToken();
         if (!isAuthenticated || !token) return;
 
         let mounted = true;
@@ -92,5 +94,5 @@ export function useEventSource() {
                 eventSourceRef.current = null;
             }
         };
-    }, [isAuthenticated, token, queryClient, updateProgress, clearProgress]);
+    }, [isAuthenticated, queryClient, updateProgress, clearProgress]);
 }
