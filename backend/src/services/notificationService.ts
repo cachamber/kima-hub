@@ -1,7 +1,6 @@
-import { PrismaClient } from "@prisma/client";
+import { prisma } from "../utils/db";
 import { logger } from "../utils/logger";
-
-const prisma = new PrismaClient();
+import { eventBus } from "./eventBus";
 
 export type NotificationType =
     | "system"
@@ -33,6 +32,17 @@ class NotificationService {
                 title,
                 message,
                 metadata,
+            },
+        });
+
+        eventBus.emit({
+            type: "notification",
+            userId,
+            payload: {
+                id: notification.id,
+                notificationType: type,
+                title,
+                message,
             },
         });
 
@@ -94,20 +104,36 @@ class NotificationService {
      * Clear a notification (remove from view but keep in DB)
      */
     async clear(id: string, userId: string) {
-        return prisma.notification.updateMany({
+        const result = await prisma.notification.updateMany({
             where: { id, userId },
             data: { cleared: true },
         });
+
+        eventBus.emit({
+            type: "notification:cleared",
+            userId,
+            payload: { id },
+        });
+
+        return result;
     }
 
     /**
      * Clear all notifications for a user
      */
     async clearAll(userId: string) {
-        return prisma.notification.updateMany({
+        const result = await prisma.notification.updateMany({
             where: { userId },
             data: { cleared: true },
         });
+
+        eventBus.emit({
+            type: "notification:cleared",
+            userId,
+            payload: {},
+        });
+
+        return result;
     }
 
     /**
