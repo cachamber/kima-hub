@@ -13,6 +13,7 @@ import { DownloadHistoryItem } from "@/hooks/useNotifications";
 import { GradientSpinner } from "./ui/GradientSpinner";
 import { cn } from "@/utils/cn";
 import { useDownloadContext } from "@/lib/download-context";
+import { useJobProgress } from "@/lib/download-progress-context";
 import { api } from "@/lib/api";
 import { useIsMobile, useIsTablet } from "@/hooks/useMediaQuery";
 
@@ -340,6 +341,7 @@ function DownloadJobItem({
     onDelete?: (id: string) => void;
 }) {
     const [isDeleting, setIsDeleting] = useState(false);
+    const progress = useJobProgress(job.id);
 
     const getStatusIcon = () => {
         switch (job.status) {
@@ -447,6 +449,36 @@ function DownloadJobItem({
                             {job.type}
                         </span>
                     </div>
+                    {(job.status === "processing" || job.status === "pending") && (
+                        <div className="mt-2">
+                            {progress?.queuePosition ? (
+                                <>
+                                    <div className="w-full h-1 bg-white/10 rounded-full overflow-hidden">
+                                        <div className="h-full bg-[#ecb200] rounded-full animate-pulse w-full" />
+                                    </div>
+                                    <p className="text-[10px] text-white/40 mt-0.5">
+                                        Position {progress.queuePosition} in queue
+                                    </p>
+                                </>
+                            ) : progress?.totalBytes ? (
+                                <>
+                                    <div className="w-full h-1 bg-white/10 rounded-full overflow-hidden">
+                                        <div
+                                            className="h-full bg-[#ecb200] rounded-full transition-all duration-300"
+                                            style={{ width: `${Math.round(((progress.bytesReceived || 0) / progress.totalBytes) * 100)}%` }}
+                                        />
+                                    </div>
+                                    <p className="text-[10px] text-white/40 mt-0.5">
+                                        {Math.round((progress.bytesReceived || 0) / 1024 / 1024)}MB / {Math.round(progress.totalBytes / 1024 / 1024)}MB
+                                    </p>
+                                </>
+                            ) : (
+                                <div className="w-full h-1 bg-white/10 rounded-full overflow-hidden">
+                                    <div className="h-full bg-[#ecb200] rounded-full animate-pulse w-full" />
+                                </div>
+                            )}
+                        </div>
+                    )}
                     {job.error && (
                         <p className="text-xs text-red-400/80 mt-1 line-clamp-2">
                             {job.error}
@@ -478,6 +510,8 @@ function DownloadJobItemCompact({
     job: DownloadHistoryItem;
     onDelete?: (id: string) => void;
 }) {
+    const progress = useJobProgress(job.id);
+
     const getStatusIcon = () => {
         switch (job.status) {
             case "completed":
@@ -516,26 +550,42 @@ function DownloadJobItemCompact({
     };
 
     return (
-        <div className="px-3 py-2 flex items-center gap-2">
-            <div className="flex-shrink-0">{getStatusIcon()}</div>
-            <div className="flex-1 min-w-0">
-                <p className="text-xs font-medium text-white truncate">
-                    {job.subject}
-                </p>
-                {getStatusText() && (
-                    <p
-                        className={cn(
-                            "text-[10px] font-medium",
-                            getSourceColor()
-                        )}
-                    >
-                        {getStatusText()}
+        <div className="px-3 py-2">
+            <div className="flex items-center gap-2">
+                <div className="flex-shrink-0">{getStatusIcon()}</div>
+                <div className="flex-1 min-w-0">
+                    <p className="text-xs font-medium text-white truncate">
+                        {job.subject}
                     </p>
-                )}
+                    {getStatusText() && (
+                        <p
+                            className={cn(
+                                "text-[10px] font-medium",
+                                getSourceColor()
+                            )}
+                        >
+                            {getStatusText()}
+                        </p>
+                    )}
+                </div>
+                <span className="text-[10px] text-white/40 capitalize shrink-0">
+                    {job.status}
+                </span>
             </div>
-            <span className="text-[10px] text-white/40 capitalize shrink-0">
-                {job.status}
-            </span>
+            {(job.status === "processing" || job.status === "pending") && (
+                <div className="mt-1.5">
+                    <div className="w-full h-0.5 bg-white/10 rounded-full overflow-hidden">
+                        {progress?.totalBytes ? (
+                            <div
+                                className="h-full bg-[#ecb200] rounded-full transition-all duration-300"
+                                style={{ width: `${Math.round(((progress.bytesReceived || 0) / progress.totalBytes) * 100)}%` }}
+                            />
+                        ) : (
+                            <div className="h-full bg-[#ecb200] rounded-full animate-pulse w-full" />
+                        )}
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
