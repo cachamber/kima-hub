@@ -2,11 +2,12 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { Plus, Settings, RefreshCw } from "lucide-react";
 import { cn } from "@/utils/cn";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth-context";
+import { useQuery } from "@tanstack/react-query";
 import { useAudioState } from "@/lib/audio-state-context";
 import { useIsMobile, useIsTablet } from "@/hooks/useMediaQuery";
 import { useToast } from "@/lib/toast-context";
@@ -42,10 +43,13 @@ export function Sidebar() {
     const isTablet = useIsTablet();
     const isMobileOrTablet = isMobile || isTablet;
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-    const [playlists, setPlaylists] = useState<Playlist[]>([]);
-    const [isLoadingPlaylists, setIsLoadingPlaylists] = useState(false);
     const [isSyncing, setIsSyncing] = useState(false);
-    const hasLoadedPlaylists = useRef(false);
+
+    const { data: playlists = [], isLoading: isLoadingPlaylists } = useQuery<Playlist[]>({
+        queryKey: ["playlists"],
+        queryFn: () => api.getPlaylists(),
+        enabled: isAuthenticated,
+    });
 
     // Handle library sync - no toast, notification bar handles feedback
     const handleSync = async () => {
@@ -54,8 +58,6 @@ export function Sidebar() {
         try {
             setIsSyncing(true);
             await api.scanLibrary();
-            // No toast - notification will appear in the activity panel
-            window.dispatchEvent(new CustomEvent("notifications-changed"));
         } catch (error) {
             console.error("Failed to trigger library scan:", error);
             toast.error("Failed to start scan. Please try again.");
@@ -64,55 +66,6 @@ export function Sidebar() {
             setTimeout(() => setIsSyncing(false), 2000);
         }
     };
-
-    // Load playlists only once
-    useEffect(() => {
-        let loadingTimeout: NodeJS.Timeout | null = null;
-
-        const loadPlaylists = async () => {
-            if (!isAuthenticated || hasLoadedPlaylists.current) return;
-
-            // Delay showing loading state to avoid flicker
-            loadingTimeout = setTimeout(() => setIsLoadingPlaylists(true), 200);
-            hasLoadedPlaylists.current = true;
-            try {
-                const data = await api.getPlaylists();
-                setPlaylists(data);
-            } catch (error) {
-                console.error("Failed to load playlists:", error);
-                hasLoadedPlaylists.current = false; // Allow retry on error
-            } finally {
-                if (loadingTimeout) clearTimeout(loadingTimeout);
-                setIsLoadingPlaylists(false);
-            }
-        };
-
-        loadPlaylists();
-
-        // Listen for playlist events to refresh playlists
-        const handlePlaylistEvent = async () => {
-            if (!isAuthenticated) return;
-            try {
-                const data = await api.getPlaylists();
-                setPlaylists(data);
-            } catch (error) {
-                console.error("Failed to reload playlists:", error);
-            }
-        };
-
-        window.addEventListener("playlist-created", handlePlaylistEvent);
-        window.addEventListener("playlist-updated", handlePlaylistEvent);
-        window.addEventListener("playlist-deleted", handlePlaylistEvent);
-
-        return () => {
-            if (loadingTimeout) {
-                clearTimeout(loadingTimeout);
-            }
-            window.removeEventListener("playlist-created", handlePlaylistEvent);
-            window.removeEventListener("playlist-updated", handlePlaylistEvent);
-            window.removeEventListener("playlist-deleted", handlePlaylistEvent);
-        };
-    }, [isAuthenticated]);
 
     // Close mobile menu when route changes
     useEffect(() => {

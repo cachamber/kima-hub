@@ -9,7 +9,7 @@ import {
     Trash2,
     GripVertical,
 } from "lucide-react";
-import { DownloadJob } from "@/hooks/useDownloadStatus";
+import { DownloadHistoryItem } from "@/hooks/useNotifications";
 import { GradientSpinner } from "./ui/GradientSpinner";
 import { cn } from "@/utils/cn";
 import { useDownloadContext } from "@/lib/download-context";
@@ -336,7 +336,7 @@ function DownloadJobItem({
     job,
     onDelete,
 }: {
-    job: DownloadJob;
+    job: DownloadHistoryItem;
     onDelete?: (id: string) => void;
 }) {
     const [isDeleting, setIsDeleting] = useState(false);
@@ -475,7 +475,7 @@ function DownloadJobItem({
 function DownloadJobItemCompact({
     job,
 }: {
-    job: DownloadJob;
+    job: DownloadHistoryItem;
     onDelete?: (id: string) => void;
 }) {
     const getStatusIcon = () => {

@@ -9,8 +9,7 @@ import {
     useMemo,
     useCallback,
 } from "react";
-import { useDownloadStatus, DownloadJob } from "@/hooks/useDownloadStatus";
-import { useAuth } from "@/lib/auth-context";
+import { useActiveDownloads, DownloadHistoryItem } from "@/hooks/useNotifications";
 import { useEventSource } from "@/hooks/useEventSource";
 
 interface PendingDownload {
@@ -24,10 +23,10 @@ interface PendingDownload {
 interface DownloadContextType {
     pendingDownloads: PendingDownload[];
     downloadStatus: {
-        activeDownloads: DownloadJob[];
-        recentDownloads: DownloadJob[];
+        activeDownloads: DownloadHistoryItem[];
+        recentDownloads: DownloadHistoryItem[];
         hasActiveDownloads: boolean;
-        failedDownloads: DownloadJob[];
+        failedDownloads: DownloadHistoryItem[];
     };
     addPendingDownload: (
         type: "artist" | "album",
@@ -49,38 +48,25 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
     const [pendingDownloads, setPendingDownloads] = useState<PendingDownload[]>(
         []
     );
-    const { isAuthenticated } = useAuth();
     useEventSource();
-    const downloadStatus = useDownloadStatus(15000, isAuthenticated);
+    const { downloads: activeDownloads } = useActiveDownloads();
 
-    // Sync pending downloads with actual download status (render-time adjustment)
+    const downloadStatus = useMemo(() => ({
+        activeDownloads: activeDownloads.filter((d: DownloadHistoryItem) => d.status === "pending" || d.status === "processing"),
+        recentDownloads: [] as DownloadHistoryItem[],
+        hasActiveDownloads: activeDownloads.some((d: DownloadHistoryItem) => d.status === "pending" || d.status === "processing"),
+        failedDownloads: [] as DownloadHistoryItem[],
+    }), [activeDownloads]);
+
+    // Render-time adjustment: remove stale pending downloads when they appear in active downloads
     const [prevActiveDownloads, setPrevActiveDownloads] = useState(downloadStatus.activeDownloads);
-    const [prevRecentDownloads, setPrevRecentDownloads] = useState(downloadStatus.recentDownloads);
-    const [prevFailedDownloads, setPrevFailedDownloads] = useState(downloadStatus.failedDownloads);
-
-    if (
-        prevActiveDownloads !== downloadStatus.activeDownloads ||
-        prevRecentDownloads !== downloadStatus.recentDownloads ||
-        prevFailedDownloads !== downloadStatus.failedDownloads
-    ) {
+    if (prevActiveDownloads !== downloadStatus.activeDownloads) {
         setPrevActiveDownloads(downloadStatus.activeDownloads);
-        setPrevRecentDownloads(downloadStatus.recentDownloads);
-        setPrevFailedDownloads(downloadStatus.failedDownloads);
-
         setPendingDownloads((prev) => {
             const next = prev.filter((pending) => {
-                const hasActiveJob = downloadStatus.activeDownloads.some(
+                return !downloadStatus.activeDownloads.some(
                     (job) => job.targetMbid === pending.mbid
                 );
-                if (hasActiveJob) return false;
-
-                const matchingJob = [
-                    ...downloadStatus.recentDownloads,
-                    ...downloadStatus.failedDownloads,
-                ].find((job) => job.targetMbid === pending.mbid);
-                if (matchingJob) return false;
-
-                return true;
             });
             return next.length === prev.length ? prev : next;
         });

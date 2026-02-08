@@ -20,12 +20,19 @@ export interface DownloadHistoryItem {
     id: string;
     subject: string;
     type: string;
+    targetMbid: string;
     status: string;
     error?: string;
     createdAt: string;
     updatedAt: string;
     completedAt?: string;
-    metadata?: Record<string, unknown>;
+    metadata?: {
+        statusText?: string;
+        currentSource?: "lidarr" | "soulseek";
+        lidarrAttempts?: number;
+        soulseekAttempts?: number;
+        [key: string]: unknown;
+    };
 }
 
 /**
@@ -44,7 +51,6 @@ export function useNotifications() {
     } = useQuery<Notification[]>({
         queryKey: ["notifications"],
         queryFn: () => api.get<Notification[]>("/notifications"),
-        refetchInterval: 30000,
     });
 
     // Derive unread count from data (computed, not stored)
@@ -157,7 +163,6 @@ export function useDownloadHistory() {
     } = useQuery<DownloadHistoryItem[]>({
         queryKey: ["download-history"],
         queryFn: fetchHistory,
-        refetchInterval: 30000, // 30s - history doesn't need frequent updates
     });
 
     const queryClient = useQueryClient();
@@ -224,11 +229,6 @@ export function useActiveDownloads() {
     } = useQuery<DownloadHistoryItem[]>({
         queryKey: ["active-downloads"],
         queryFn: fetchDownloads,
-        // Adaptive polling: 10s when active, 30s when idle
-        refetchInterval: (query) => {
-            const data = query.state.data;
-            return data && data.length > 0 ? 10000 : 30000;
-        },
     });
 
     return {

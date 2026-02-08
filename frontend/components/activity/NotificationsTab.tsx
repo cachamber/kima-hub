@@ -1,6 +1,5 @@
 "use client";
 
-import { useEffect, useRef } from "react";
 import {
     Bell,
     Check,
@@ -27,7 +26,6 @@ interface Notification {
 
 export function NotificationsTab() {
     const queryClient = useQueryClient();
-    const previousNotificationIds = useRef<Set<string>>(new Set());
 
     const {
         data: notifications = [],
@@ -39,30 +37,7 @@ export function NotificationsTab() {
             const result = await api.getNotifications();
             return result;
         },
-        refetchInterval: 30000, // Poll every 30 seconds
     });
-
-    // Dispatch events when new playlist-related notifications arrive
-    useEffect(() => {
-        if (!notifications || notifications.length === 0) return;
-
-        const currentIds = new Set(notifications.map((n) => n.id));
-
-        // Check for new playlist-related notifications
-        for (const notification of notifications) {
-            if (!previousNotificationIds.current.has(notification.id)) {
-                // This is a new notification
-                if (
-                    notification.type === "playlist_ready" ||
-                    notification.type === "import_complete"
-                ) {
-                    window.dispatchEvent(new CustomEvent("playlist-created"));
-                }
-            }
-        }
-
-        previousNotificationIds.current = currentIds;
-    }, [notifications]);
 
     // Log error if any
     if (error) {

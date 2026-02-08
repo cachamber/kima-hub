@@ -44,8 +44,6 @@ export function HistoryTab() {
         try {
             await api.clearDownloadFromHistory(id);
             setHistory((prev) => prev.filter((h) => h.id !== id));
-            // Notify other components that download status has changed
-            window.dispatchEvent(new CustomEvent("download-status-changed"));
         } catch (error) {
             console.error("Failed to clear download:", error);
         }
@@ -55,8 +53,6 @@ export function HistoryTab() {
         try {
             await api.clearAllDownloadHistory();
             setHistory([]);
-            // Notify other components that download status has changed
-            window.dispatchEvent(new CustomEvent("download-status-changed"));
         } catch (error) {
             console.error("Failed to clear all history:", error);
         }
