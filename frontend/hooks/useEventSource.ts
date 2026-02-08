@@ -4,7 +4,7 @@ import { useEffect, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/lib/auth-context";
 import { useDownloadProgress } from "@/lib/download-progress-context";
-import api from "@/lib/api";
+import { api } from "@/lib/api";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3006/api";
 

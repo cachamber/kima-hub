@@ -149,8 +149,7 @@ export default function PlaylistDetailPage() {
                     })
                 );
                 window.dispatchEvent(new CustomEvent("open-activity-panel"));
-                // If the backend emits a scan/download notification, refresh it
-                window.dispatchEvent(new CustomEvent("notifications-changed"));
+                queryClient.invalidateQueries({ queryKey: ["notifications"] });
                 // Refresh playlist data after a delay to allow download + scan to complete
                 setTimeout(() => {
                     queryClient.invalidateQueries({

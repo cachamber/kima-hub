@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { toast } from "sonner";
 import type { SoulseekResult } from "../types";
@@ -19,6 +20,7 @@ interface UseSoulseekSearchReturn {
 export function useSoulseekSearch({
     query,
 }: UseSoulseekSearchProps): UseSoulseekSearchReturn {
+    const queryClient = useQueryClient();
     const [soulseekResults, setSoulseekResults] = useState<SoulseekResult[]>([]);
     const [isSoulseekSearching, setIsSoulseekSearching] = useState(false);
     const [isSoulseekPolling, setIsSoulseekPolling] = useState(false);
@@ -155,7 +157,7 @@ export function useSoulseekSearch({
                     new CustomEvent("set-activity-panel-tab", { detail: { tab: "active" } }),
                 );
                 window.dispatchEvent(new CustomEvent("open-activity-panel"));
-                window.dispatchEvent(new CustomEvent("notifications-changed"));
+                queryClient.invalidateQueries({ queryKey: ["notifications"] });
             }
 
             setTimeout(() => {
@@ -176,7 +178,7 @@ export function useSoulseekSearch({
                 return newSet;
             });
         }
-    }, []);
+    }, [queryClient]);
 
     return {
         soulseekResults,

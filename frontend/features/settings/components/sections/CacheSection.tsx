@@ -364,7 +364,6 @@ export function CacheSection({ settings, onUpdate }: CacheSectionProps) {
         queryClient.invalidateQueries({
             queryKey: ["unread-notification-count"],
         });
-        window.dispatchEvent(new CustomEvent("notifications-changed"));
     };
 
     const handleSyncAndEnrich = async () => {
