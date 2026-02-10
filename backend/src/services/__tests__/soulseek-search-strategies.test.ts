@@ -1,4 +1,4 @@
-import { normalizeTrackTitle } from "../soulseek-search-strategies";
+import { normalizeTrackTitle, normalizeArtistName } from "../soulseek-search-strategies";
 
 describe("normalizeTrackTitle - Classical Music", () => {
     it("should strip movement numbers from classical music titles", () => {
@@ -45,5 +45,29 @@ describe("normalizeTrackTitle - Classical Music", () => {
         // At minimal level, only unicode normalization happens
         expect(result).toContain("feat.");
         expect(result).toContain("Live");
+    });
+});
+
+describe("normalizeArtistName", () => {
+    it('should preserve "The The" band name', () => {
+        expect(normalizeArtistName("The The")).toBe("The The");
+    });
+
+    it('should remove "The" prefix from normal artist names', () => {
+        expect(normalizeArtistName("The Beatles")).toBe("Beatles");
+        expect(normalizeArtistName("The Rolling Stones")).toBe("Rolling Stones");
+    });
+
+    it('should preserve single "The"', () => {
+        expect(normalizeArtistName("The")).toBe("The");
+    });
+
+    it('should normalize ampersands to "and"', () => {
+        expect(normalizeArtistName("Artist & Band")).toBe("Artist and Band");
+    });
+
+    it('should normalize unicode quotes', () => {
+        expect(normalizeArtistName("Artist\u2019s Name")).toBe("Artist's Name");
+        expect(normalizeArtistName("\u201CArtist\u201D")).toBe('"Artist"');
     });
 });

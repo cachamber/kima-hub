@@ -101,11 +101,14 @@ export function normalizeTrackTitle(title: string, level: 'aggressive' | 'modera
 export function normalizeArtistName(artist: string): string {
     const artistLower = artist.toLowerCase();
 
-    // Don't remove "the" if it's the entire artist name (e.g., "The The")
-    // Only remove "the " prefix if there's more content after it
+    // Don't remove "the" for bands like "The The" where it's part of the name
     let normalized = artist;
     if (artistLower.startsWith("the ") && artistLower.length > 4) {
-        normalized = artist.slice(4);
+        const remainder = artist.slice(4).trim().toLowerCase();
+        // Only strip "The " if the remainder is not also "the"
+        if (remainder !== "the") {
+            normalized = artist.slice(4);
+        }
     }
 
     return normalized
@@ -180,14 +183,13 @@ export async function searchWithStrategies(
 ): Promise<FileSearchResponse[]> {
     const audioExtensions = [".flac", ".mp3", ".m4a", ".ogg", ".opus", ".wav", ".aac"];
 
-    // Filter strategies based on whether we have album name and cache built queries
-    const applicableStrategies = SEARCH_STRATEGIES.filter(strategy => {
-        const query = strategy.buildQuery(artistName, trackTitle, albumName);
-        return query.length > 0;
-    }).map(strategy => ({
-        strategy,
-        query: strategy.buildQuery(artistName, trackTitle, albumName)
-    }));
+    // Build queries once and filter strategies that produce valid queries
+    const applicableStrategies = SEARCH_STRATEGIES
+        .map(strategy => ({
+            strategy,
+            query: strategy.buildQuery(artistName, trackTitle, albumName)
+        }))
+        .filter(({ query }) => query.length > 0);
 
     let allResponses: FileSearchResponse[] = [];
     let successfulStrategy: string | null = null;
