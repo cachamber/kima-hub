@@ -71,37 +71,6 @@ class SoulseekService {
         setInterval(() => this.cleanupFailedUsers(), 5 * 60 * 1000);
     }
 
-    private normalizeTrackTitle(title: string): string {
-        let normalized = title
-            .replace(/\u2026/g, "")
-            .replace(/[\u2018\u2019\u2032`]/g, "'")
-            .replace(/[\u201C\u201D]/g, '"')
-            .replace(/\//g, " ")
-            .replace(/[\u2013\u2014]/g, "-")
-            .replace(/[\u00D7]/g, "x");
-
-        const livePatterns =
-            /\s*\([^)]*(?:live|remaster|remix|version|edit|demo|acoustic|radio|single|extended|instrumental|feat\.|ft\.|featuring)[^)]*\)\s*/gi;
-        normalized = normalized.replace(livePatterns, " ");
-
-        const bracketPatterns =
-            /\s*\[[^\]]*(?:live|remaster|remix|version|edit|demo|acoustic|radio|single|extended|instrumental|feat\.|ft\.|featuring)[^\]]*\]\s*/gi;
-        normalized = normalized.replace(bracketPatterns, " ");
-
-        normalized = normalized.replace(
-            /\s*-\s*(\d{4}|remaster|live|remix|version|edit|demo|acoustic).*$/i,
-            ""
-        );
-
-        normalized = normalized.replace(/\s+/g, " ").trim();
-
-        if (normalized.length < 3) {
-            return title;
-        }
-
-        return normalized;
-    }
-
     async connect(): Promise<void> {
         const settings = await getSystemSettings();
 
@@ -301,41 +270,29 @@ class SoulseekService {
             return { found: false, bestMatch: null, allMatches: [] };
         }
 
-        const normalizedTitle = this.normalizeTrackTitle(trackTitle);
-        const useNormalized = normalizedTitle !== trackTitle;
-
-        const query = `${artistName} ${normalizedTitle}`.trim();
-        if (useNormalized) {
-            sessionLog(
-                "SOULSEEK",
-                `[Search #${searchId}] Normalized: "${trackTitle}" -> "${normalizedTitle}"`
-            );
-        }
-        sessionLog(
-            "SOULSEEK",
-            `[Search #${searchId}] Searching: "${query}" (timeout ${timeoutMs}ms, connected ${connectionAge}s, ${this.consecutiveEmptySearches} consecutive empty)`
-        );
+        // Use multi-strategy search with aggressive normalization
+        const { searchWithStrategies } = await import("./soulseek-search-strategies");
 
         const searchStartTime = Date.now();
 
         try {
-            const responses: FileSearchResponse[] = await this.client.search(
-                query,
-                { timeout: timeoutMs, onResult }
+            // Delegate to optimized multi-strategy search
+            const responses = await searchWithStrategies(
+                this.client,
+                artistName,
+                trackTitle,
+                albumName,
+                timeoutMs,
+                searchId
             );
 
             const searchDuration = Date.now() - searchStartTime;
-
-            sessionLog(
-                "SOULSEEK",
-                `[Search #${searchId}] Raw responses received: ${responses.length}`
-            );
 
             if (!responses || responses.length === 0) {
                 this.consecutiveEmptySearches++;
                 sessionLog(
                     "SOULSEEK",
-                    `[Search #${searchId}] No results found after ${searchDuration}ms (${this.consecutiveEmptySearches}/${this.MAX_CONSECUTIVE_EMPTY} consecutive empty)`,
+                    `[Search #${searchId}] All strategies failed to find audio files after ${searchDuration}ms (${this.consecutiveEmptySearches}/${this.MAX_CONSECUTIVE_EMPTY} consecutive empty)`,
                     "WARN"
                 );
 
@@ -362,11 +319,12 @@ class SoulseekService {
                 return { found: false, bestMatch: null, allMatches: [] };
             }
 
+            // Success - reset counters
             this.consecutiveEmptySearches = 0;
             this.lastSuccessfulSearch = new Date();
             this.totalSuccessfulSearches++;
 
-            // Flatten all files from all responses into SearchResult-compatible objects
+            // Flatten responses to SearchResult format
             const flatResults: SearchResult[] = [];
             for (const response of responses) {
                 for (const file of response.files) {
@@ -383,34 +341,12 @@ class SoulseekService {
 
             sessionLog(
                 "SOULSEEK",
-                `[Search #${searchId}] Found ${flatResults.length} files from ${responses.length} users in ${searchDuration}ms (success rate: ${Math.round((this.totalSuccessfulSearches / this.totalSearches) * 100)}%)`
+                `[Search #${searchId}] Found ${flatResults.length} files from ${responses.length} users in ${searchDuration}ms`
             );
 
-            const audioExtensions = [
-                ".flac",
-                ".mp3",
-                ".m4a",
-                ".ogg",
-                ".opus",
-                ".wav",
-                ".aac",
-            ];
-            const audioFiles = flatResults.filter((r) => {
-                const filename = (r.file || "").toLowerCase();
-                return audioExtensions.some((ext) => filename.endsWith(ext));
-            });
-
-            if (audioFiles.length === 0) {
-                sessionLog(
-                    "SOULSEEK",
-                    `[Search #${searchId}] No audio files in ${flatResults.length} results`,
-                    "WARN"
-                );
-                return { found: false, bestMatch: null, allMatches: [] };
-            }
-
+            // Rank and filter results
             const rankedMatches = this.rankAllResults(
-                audioFiles,
+                flatResults,
                 artistName,
                 trackTitle
             );
@@ -418,7 +354,7 @@ class SoulseekService {
             if (rankedMatches.length === 0) {
                 sessionLog(
                     "SOULSEEK",
-                    `[Search #${searchId}] No suitable match found from ${audioFiles.length} audio files`,
+                    `[Search #${searchId}] No suitable match found after ranking ${flatResults.length} files`,
                     "WARN"
                 );
                 return { found: false, bestMatch: null, allMatches: [] };
