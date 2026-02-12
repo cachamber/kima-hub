@@ -139,3 +139,44 @@ export function isNativePath(url: string | null | undefined): boolean {
     if (!url) return false;
     return url.startsWith("native:");
 }
+
+/**
+ * Resize an image buffer to the given width, preserving aspect ratio.
+ * Returns the resized buffer as JPEG, or the original buffer if resizing fails.
+ */
+export async function resizeImageBuffer(
+    buffer: Buffer,
+    width: number
+): Promise<Buffer> {
+    // Skip resizing if width is unreasonably large or small
+    if (width < 16 || width > 2048) return buffer;
+
+    try {
+        const sharp = (await import("sharp")).default;
+        const metadata = await sharp(buffer).metadata();
+
+        // Skip if image is already smaller than requested width
+        if (metadata.width && metadata.width <= width) return buffer;
+
+        return await sharp(buffer)
+            .resize(width, undefined, { fit: "inside", withoutEnlargement: true })
+            .jpeg({ quality: 85, progressive: true })
+            .toBuffer();
+    } catch (err: any) {
+        logger.warn(`[ImageStorage] Resize failed: ${err.message}`);
+        return buffer;
+    }
+}
+
+/**
+ * Get the path for a resized version of a native image.
+ * Format: {basePath}/{subdir}/{id}_w{width}.jpg
+ */
+export function getResizedImagePath(nativePath: string, width: number): string | null {
+    if (!nativePath.startsWith("native:")) return null;
+
+    const relativePath = nativePath.replace("native:", "");
+    const parsed = path.parse(relativePath);
+    const resizedRelative = path.join(parsed.dir, `${parsed.name}_w${width}.jpg`);
+    return path.join(getCoversBasePath(), resizedRelative);
+}
