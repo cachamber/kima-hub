@@ -2083,7 +2083,13 @@ router.get("/cover-art/:id?", imageLimiter, async (req, res) => {
         logger.debug(`[COVER-ART] Successfully fetched, caching...`);
 
         const buffer = await imageResponse.arrayBuffer();
-        const imageBuffer = Buffer.from(buffer);
+        let imageBuffer: Buffer = Buffer.from(buffer);
+
+        // Resize if size parameter provided
+        const requestedWidth = size ? parseInt(size as string, 10) : 0;
+        if (requestedWidth > 0) {
+            imageBuffer = await resizeImageBuffer(imageBuffer, requestedWidth);
+        }
 
         // Generate ETag from content
         const etag = crypto.createHash("md5").update(imageBuffer).digest("hex");
