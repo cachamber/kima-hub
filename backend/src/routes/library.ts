@@ -42,6 +42,7 @@ import {
     getDecadeFromYear,
 } from "../utils/dateFilters";
 import { shuffleArray } from "../utils/shuffle";
+import { resizeImageBuffer, getResizedImagePath } from "../services/imageStorage";
 
 const router = Router();
 
@@ -1692,6 +1693,62 @@ router.get("/tracks/shuffle", async (req, res) => {
     }
 });
 
+/**
+ * Serve a native image, optionally resized. Uses disk cache for resized variants.
+ */
+async function serveNativeImage(
+    coverCachePath: string,
+    nativePath: string,
+    size: string | undefined,
+    req: any,
+    res: any
+): Promise<void> {
+    const requestOrigin = req.headers.origin;
+    const headers: Record<string, string> = {
+        "Content-Type": "image/jpeg",
+        "Cache-Control": "public, max-age=31536000, immutable",
+        "Cross-Origin-Resource-Policy": "cross-origin",
+    };
+    if (requestOrigin) {
+        headers["Access-Control-Allow-Origin"] = requestOrigin;
+        headers["Access-Control-Allow-Credentials"] = "true";
+    } else {
+        headers["Access-Control-Allow-Origin"] = "*";
+    }
+
+    const width = size ? parseInt(size, 10) : 0;
+
+    // If no valid size requested, serve original
+    if (!width || width < 16 || width > 2048) {
+        return res.sendFile(coverCachePath, { headers });
+    }
+
+    // Check for disk-cached resized version
+    const resizedPath = getResizedImagePath(`native:${nativePath}`, width);
+    if (resizedPath && fs.existsSync(resizedPath)) {
+        return res.sendFile(resizedPath, { headers });
+    }
+
+    // Generate resized version
+    try {
+        const originalBuffer = fs.readFileSync(coverCachePath);
+        const resizedBuffer = await resizeImageBuffer(originalBuffer, width);
+
+        // Write to disk cache for future requests
+        if (resizedPath) {
+            fs.writeFileSync(resizedPath, resizedBuffer);
+            return res.sendFile(resizedPath, { headers });
+        }
+
+        // Fallback: send buffer directly
+        Object.entries(headers).forEach(([k, v]) => res.setHeader(k, v));
+        return res.send(resizedBuffer);
+    } catch (err) {
+        logger.warn(`[COVER-ART] Resize failed for ${nativePath}, serving original: ${err instanceof Error ? err.message : String(err)}`);
+        return res.sendFile(coverCachePath, { headers });
+    }
+}
+
 // GET /library/cover-art/:id?size= or GET /library/cover-art?url=&size=
 // Apply lenient image limiter (500 req/min) instead of general API limiter (100 req/15min)
 router.get("/cover-art/:id?", imageLimiter, async (req, res) => {
@@ -1772,44 +1829,18 @@ router.get("/cover-art/:id?", imageLimiter, async (req, res) => {
             // Check if this is a native cover (prefixed with "native:")
             if (decodedUrl.startsWith("native:")) {
                 const nativePath = decodedUrl.replace("native:", "");
-
                 const coverCachePath = path.join(
                     config.music.transcodeCachePath,
                     "../covers",
                     nativePath
                 );
 
-                logger.debug(
-                    `[COVER-ART] Serving native cover: ${coverCachePath}`
-                );
-
-                // Check if file exists
                 if (!fs.existsSync(coverCachePath)) {
-                    logger.error(
-                        `[COVER-ART] Native cover not found: ${coverCachePath}`
-                    );
-                    return res
-                        .status(404)
-                        .json({ error: "Cover art not found" });
+                    logger.error(`[COVER-ART] Native cover not found: ${coverCachePath}`);
+                    return res.status(404).json({ error: "Cover art not found" });
                 }
 
-                // Serve the file directly
-                const requestOrigin = req.headers.origin;
-                const headers: Record<string, string> = {
-                    "Content-Type": "image/jpeg", // Assume JPEG for now
-                    "Cache-Control": "public, max-age=31536000, immutable",
-                    "Cross-Origin-Resource-Policy": "cross-origin",
-                };
-                if (requestOrigin) {
-                    headers["Access-Control-Allow-Origin"] = requestOrigin;
-                    headers["Access-Control-Allow-Credentials"] = "true";
-                } else {
-                    headers["Access-Control-Allow-Origin"] = "*";
-                }
-
-                return res.sendFile(coverCachePath, {
-                    headers,
-                });
+                return serveNativeImage(coverCachePath, nativePath, size as string | undefined, req, res);
             }
 
             coverUrl = decodedUrl;
@@ -1827,35 +1858,17 @@ router.get("/cover-art/:id?", imageLimiter, async (req, res) => {
             // Check if this is a native cover (prefixed with "native:")
             if (decodedId.startsWith("native:")) {
                 const nativePath = decodedId.replace("native:", "");
-
                 const coverCachePath = path.join(
                     config.music.transcodeCachePath,
                     "../covers",
                     nativePath
                 );
 
-                // Check if file exists
                 if (fs.existsSync(coverCachePath)) {
-                    // Serve the file directly
-                    const requestOrigin = req.headers.origin;
-                    const headers: Record<string, string> = {
-                        "Content-Type": "image/jpeg",
-                        "Cache-Control": "public, max-age=31536000, immutable",
-                        "Cross-Origin-Resource-Policy": "cross-origin",
-                    };
-                    if (requestOrigin) {
-                        headers["Access-Control-Allow-Origin"] = requestOrigin;
-                        headers["Access-Control-Allow-Credentials"] = "true";
-                    } else {
-                        headers["Access-Control-Allow-Origin"] = "*";
-                    }
-
-                    return res.sendFile(coverCachePath, {
-                        headers,
-                    });
+                    return serveNativeImage(coverCachePath, nativePath, size as string | undefined, req, res);
                 }
 
-                // Native cover file missing - try to find album and fetch from Deezer
+                // Native cover file missing - try Deezer fallback
                 logger.warn(
                     `[COVER-ART] Native cover not found: ${coverCachePath}, trying Deezer fallback`
                 );
