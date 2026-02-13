@@ -3640,6 +3640,7 @@ router.get("/radio", async (req, res) => {
                             id: { not: sourceTrackId },
                             analysisStatus: "completed",
                         },
+                        take: 500,
                         select: {
                             id: true,
                             bpm: true,
@@ -4083,6 +4084,7 @@ router.get("/radio", async (req, res) => {
                 // Random selection from all tracks in library
                 const allTracks = await prisma.track.findMany({
                     select: { id: true },
+                    take: 300,
                 });
                 trackIds = allTracks.map((t) => t.id);
         }

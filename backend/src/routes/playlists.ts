@@ -26,6 +26,9 @@ router.get("/", async (req, res) => {
         }
         const userId = req.user.id;
 
+        const page = parseInt(req.query.page as string) || 1;
+        const limit = Math.min(parseInt(req.query.limit as string) || 50, 100);
+
         // Get user's hidden playlists
         const hiddenPlaylists = await prisma.hiddenPlaylist.findMany({
             where: { userId },
@@ -40,6 +43,8 @@ router.get("/", async (req, res) => {
                 OR: [{ userId }, { isPublic: true }],
             },
             orderBy: { createdAt: "desc" },
+            skip: (page - 1) * limit,
+            take: limit,
             include: {
                 user: {
                     select: {
