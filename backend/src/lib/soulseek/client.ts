@@ -182,9 +182,33 @@ export class SlskClient extends (EventEmitter as new () => TypedEventEmitter<Sls
 
                 this.fileTransferConnections.push(conn)
 
-                conn.write(toPeerMessage.pierceFirewall({ token: msg.token }).getBuffer())
-
                 let download: DownloadWithToken | undefined
+
+                conn.on('error', (error) => {
+                  if (download) {
+                    download.stream.destroy(error)
+                  }
+                })
+                conn.on('close', () => {
+                  if (download && download.status !== 'complete') {
+                    download.events.emit(
+                      'error',
+                      new Error('Connection closed before transfer completed')
+                    )
+                    this.downloads = this.downloads.filter((d) => d !== download)
+                  }
+                  if (download && !download.stream.destroyed) {
+                    download.stream.end()
+                  }
+                  this.fileTransferConnections = this.fileTransferConnections.filter(
+                    (c) => c !== conn
+                  )
+                })
+
+                conn.once('connect', () => {
+                  conn.write(toPeerMessage.pierceFirewall({ token: msg.token }).getBuffer())
+                })
+
                 conn.on('data', (data) => {
                   if (download === undefined) {
                     const token = data.toString('hex', 0, 4)
@@ -261,21 +285,6 @@ export class SlskClient extends (EventEmitter as new () => TypedEventEmitter<Sls
                       this.downloads = this.downloads.filter((d) => d !== download)
                     }
                   }
-                })
-
-                conn.on('error', (error) => download?.stream.emit('error', error))
-                conn.on('close', () => {
-                  if (download && download.status !== 'complete') {
-                    download.events.emit(
-                      'error',
-                      new Error('Connection closed before transfer completed')
-                    )
-                    this.downloads = this.downloads.filter((d) => d !== download)
-                  }
-                  download?.stream.end()
-                  this.fileTransferConnections = this.fileTransferConnections.filter(
-                    (c) => c !== conn
-                  )
                 })
 
                 break
@@ -381,8 +390,6 @@ export class SlskClient extends (EventEmitter as new () => TypedEventEmitter<Sls
   }
 
   async getPeerAddress(username: string, timeout = DEFAULT_GET_PEER_ADDRESS_TIMEOUT) {
-    this.server.send('getPeerAddress', { username })
-
     const result = await new Promise<GetPeerAddress>((resolve, reject) => {
       const timeout_ = setTimeout(() => {
         this.server.off('message', listener)
@@ -398,14 +405,13 @@ export class SlskClient extends (EventEmitter as new () => TypedEventEmitter<Sls
       }
 
       this.server.on('message', listener)
+      this.server.send('getPeerAddress', { username })
     })
 
     return result
   }
 
   async login(username: string, password: string, timeout = DEFAULT_LOGIN_TIMEOUT) {
-    this.server.send('login', { username, password })
-
     const loginResult = await new Promise<Login>((resolve, reject) => {
       const timeout_ = setTimeout(() => {
         this.server.off('message', listener)
@@ -421,6 +427,7 @@ export class SlskClient extends (EventEmitter as new () => TypedEventEmitter<Sls
       }
 
       this.server.on('message', listener)
+      this.server.send('login', { username, password })
     })
 
     if (!loginResult.success) {
@@ -458,6 +465,7 @@ export class SlskClient extends (EventEmitter as new () => TypedEventEmitter<Sls
       if (!this.credentials || !this.autoReconnect) return
 
       try {
+        this.server.removeAllListeners()
         this.server.destroy()
         this.server = new SlskServer(this.serverAddress)
         this.wireServerHandlers()
@@ -581,8 +589,17 @@ export class SlskClient extends (EventEmitter as new () => TypedEventEmitter<Sls
       peer.once('close', () => peer.destroy())
 
       await new Promise<void>((resolve, reject) => {
-        peer.once('error', (error) => reject(error))
+        const connectTimeout = setTimeout(() => {
+          peer.destroy()
+          reject(new Error('getByPeerInit connect timed out'))
+        }, timeout)
+
+        peer.once('error', (error) => {
+          clearTimeout(connectTimeout)
+          reject(error)
+        })
         peer.once('connect', () => {
+          clearTimeout(connectTimeout)
           if (this.username === undefined) {
             reject(new Error('You are not logged in'))
             return

@@ -4,6 +4,8 @@ import type { FileAttribute } from '../common'
 import { TransferDirection } from '../common'
 import { MessageParser } from '../message-parser'
 
+const MAX_DECOMPRESS_SIZE = 10 * 1024 * 1024 // 10 MB
+
 export type FromPeerMessage = ReturnType<(typeof fromPeerMessage)[keyof typeof fromPeerMessage]>
 
 export type SharedFileListRequest = {
@@ -75,7 +77,7 @@ export const fromPeerMessage = {
   // function async, which cascades to fromPeerMessageParser and its callers.
   fileSearchResponse: (msg_: MessageParser): FileSearchResponse => {
     const content = msg_.data.slice(msg_.pointer)
-    const buffer = zlib.unzipSync(content)
+    const buffer = zlib.unzipSync(content, { maxOutputLength: MAX_DECOMPRESS_SIZE })
 
     const msg = new MessageParser(buffer)
     const username = msg.str()

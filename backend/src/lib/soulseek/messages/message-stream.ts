@@ -11,17 +11,20 @@ export class MessageStream extends stream.Writable {
   }
 
   read(data: Buffer) {
-    if (data.length < 4) {
-      this.rest = data.slice(0, data.length)
-      return
-    }
+    while (true) {
+      if (data.length < 4) {
+        this.rest = data.length > 0 ? data : undefined
+        return
+      }
 
-    const size = data.readUInt32LE()
-    if (size + 4 <= data.length) {
-      this.emit('message', new MessageParser(data.slice(0, size + 4)))
-      this.read(data.slice(size + 4, data.length))
-    } else {
-      this.rest = data.slice(0, data.length)
+      const size = data.readUInt32LE()
+      if (size + 4 <= data.length) {
+        this.emit('message', new MessageParser(data.slice(0, size + 4)))
+        data = data.slice(size + 4)
+      } else {
+        this.rest = data
+        return
+      }
     }
   }
 

@@ -49,6 +49,7 @@ export class SlskServer extends (EventEmitter as new () => TypedEventEmitter<Sls
     message: K,
     ...args: Parameters<(typeof toServerMessage)[K]>
   ) {
+    if (this.conn.destroyed || !this.conn.writable) return
     // eslint-disable-next-line @typescript-eslint/ban-ts-comment
     // @ts-ignore
     const result = toServerMessage[message](...args)

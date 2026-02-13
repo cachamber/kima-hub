@@ -62,6 +62,7 @@ export class SlskPeer extends (EventEmitter as new () => TypedEventEmitter<SlskP
     message: K,
     ...args: Parameters<(typeof toPeerMessage)[K]>
   ) {
+    if (this.conn.destroyed || !this.conn.writable) return
     // eslint-disable-next-line @typescript-eslint/ban-ts-comment
     // @ts-ignore
     const result = toPeerMessage[message](...args)
