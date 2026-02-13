@@ -22,12 +22,12 @@ export function usePodcastActions(podcastId: string, sortedEpisodes?: Episode[])
 
     const handleSubscribe = useCallback(
         async (previewData: PodcastPreview | null) => {
-            if (!previewData) return;
+            if (!previewData?.feedUrl) return;
 
             setIsSubscribing(true);
             try {
                 const response = await api.subscribePodcast(
-                    previewData.feedUrl!,
+                    previewData.feedUrl,
                     previewData.itunesId
                 );
 

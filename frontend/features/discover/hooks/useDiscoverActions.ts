@@ -82,10 +82,9 @@ export function useDiscoverActions(
         [toast, onGenerationComplete, updateTrackLiked]
     );
 
-    const handlePlayPlaylist = useCallback(() => {
-        if (!playlist || playlist.tracks.length === 0) return;
-
-        const formattedTracks = playlist.tracks.map((track) => ({
+    const formatPlaylistTracks = useCallback(() => {
+        if (!playlist || playlist.tracks.length === 0) return null;
+        return playlist.tracks.map((track) => ({
             id: track.id,
             title: track.title,
             artist: { name: track.artist },
@@ -94,31 +93,23 @@ export function useDiscoverActions(
                 title: track.album,
                 coverArt: track.coverUrl || undefined,
             },
-            duration: 0,
+            duration: track.duration || 0,
         }));
+    }, [playlist]);
 
+    const handlePlayPlaylist = useCallback(() => {
+        const formattedTracks = formatPlaylistTracks();
+        if (!formattedTracks) return;
         playTracks(formattedTracks, 0);
-    }, [playlist, playTracks]);
+    }, [formatPlaylistTracks, playTracks]);
 
     const handlePlayTrack = useCallback(
         (index: number) => {
-            if (!playlist || playlist.tracks.length === 0) return;
-
-            const formattedTracks = playlist.tracks.map((track) => ({
-                id: track.id,
-                title: track.title,
-                artist: { name: track.artist },
-                album: {
-                    id: track.albumId,
-                    title: track.album,
-                    coverArt: track.coverUrl || undefined,
-                },
-                duration: 0,
-            }));
-
+            const formattedTracks = formatPlaylistTracks();
+            if (!formattedTracks) return;
             playTracks(formattedTracks, index);
         },
-        [playlist, playTracks]
+        [formatPlaylistTracks, playTracks]
     );
 
     const handleTogglePlay = useCallback(() => {

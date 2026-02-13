@@ -62,7 +62,7 @@ function toSearchParams(params: Record<string, string | number | boolean | undef
 }
 
 // Dynamically determine API URL based on configuration
-const getApiBaseUrl = () => {
+export const getApiBaseUrl = () => {
     // Server-side rendering
     if (typeof window === "undefined") {
         return process.env.BACKEND_URL || "http://127.0.0.1:3006";

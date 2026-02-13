@@ -55,20 +55,25 @@ export default function SeriesDetailPage() {
     useEffect(() => {
         if (!isAuthenticated) return;
 
+        let cancelled = false;
+
         const loadSeries = async () => {
             setIsLoading(true);
             try {
                 const data = await api.getAudiobookSeries(seriesName);
-                setBooks(Array.isArray(data) ? data : []);
+                if (!cancelled) setBooks(Array.isArray(data) ? data : []);
             } catch (error: unknown) {
-                console.error("Failed to load series:", error);
-                toast.error("Failed to load series");
+                if (!cancelled) {
+                    console.error("Failed to load series:", error);
+                    toast.error("Failed to load series");
+                }
             } finally {
-                setIsLoading(false);
+                if (!cancelled) setIsLoading(false);
             }
         };
 
         loadSeries();
+        return () => { cancelled = true; };
     }, [seriesName, isAuthenticated, toast]);
 
     const getCoverUrl = (coverUrl: string | null, size = 300) => {

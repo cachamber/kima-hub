@@ -5,9 +5,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/lib/auth-context";
 import { useDownloadProgress } from "@/lib/download-progress-context";
 import { searchResultStore } from "@/lib/search-result-store";
-import { api } from "@/lib/api";
-
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3006/api";
+import { api, getApiBaseUrl } from "@/lib/api";
 
 export function useEventSource() {
     const { isAuthenticated } = useAuth();
@@ -28,7 +26,7 @@ export function useEventSource() {
             const token = api.getToken();
             if (!token) return;
 
-            const es = new EventSource(`${API_BASE}/events?token=${token}`);
+            const es = new EventSource(`${getApiBaseUrl()}/api/events?token=${token}`);
             eventSourceRef.current = es;
 
             es.onmessage = (event) => {

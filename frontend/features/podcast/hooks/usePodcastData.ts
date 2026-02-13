@@ -51,16 +51,19 @@ export function usePodcastData() {
   useEffect(() => {
     if (!podcast || !isAuthenticated) return;
 
+    let cancelled = false;
+
     async function loadSimilarPodcasts() {
       try {
         const similar = await api.getSimilarPodcasts(podcastId);
-        setSimilarPodcasts(similar);
+        if (!cancelled) setSimilarPodcasts(similar);
       } catch (error) {
-        console.error("Failed to load similar podcasts:", error);
+        if (!cancelled) console.error("Failed to load similar podcasts:", error);
       }
     }
 
     loadSimilarPodcasts();
+    return () => { cancelled = true; };
   }, [podcast, isAuthenticated, podcastId]);
 
   // Handle preview mode if podcast is not subscribed
@@ -68,10 +71,13 @@ export function usePodcastData() {
     if (isPodcastLoading) return;
     if (podcast || !isAuthenticated || previewLoadState !== 'idle') return;
 
+    let cancelled = false;
+
     async function loadPreviewData() {
       setPreviewLoadState('loading');
       try {
         const preview = await api.previewPodcast(podcastId);
+        if (cancelled) return;
         setPreviewData(preview);
         setPreviewLoadState('done');
 
@@ -79,12 +85,15 @@ export function usePodcastData() {
           router.replace(`/podcasts/${preview.subscribedPodcastId}`);
         }
       } catch (error) {
-        console.error("Failed to load preview:", error);
-        setPreviewLoadState('error');
+        if (!cancelled) {
+          console.error("Failed to load preview:", error);
+          setPreviewLoadState('error');
+        }
       }
     }
 
     loadPreviewData();
+    return () => { cancelled = true; };
   }, [isPodcastLoading, podcast, isAuthenticated, podcastId, previewLoadState, router]);
 
   // Save sort order to localStorage when it changes
