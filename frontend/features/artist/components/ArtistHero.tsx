@@ -99,11 +99,11 @@ export function ArtistHero({
 
                     {/* Artist Info - Bottom Aligned */}
                     <div className="flex-1 min-w-0 pb-1">
-                        <p className="text-xs font-medium text-white/90 mb-1">
+                        <p className="text-xs font-mono font-medium text-white/70 uppercase tracking-wider mb-1">
                             Artist
                         </p>
                         <div className="flex items-center gap-3 group mb-2">
-                            <h1 className="text-2xl md:text-4xl lg:text-5xl font-bold text-white leading-tight line-clamp-2">
+                            <h1 className="text-2xl md:text-4xl lg:text-5xl font-black tracking-tighter text-white leading-tight line-clamp-2">
                                 {displayData.name}
                             </h1>
                             {displayData.hasUserOverrides && (
@@ -156,7 +156,7 @@ export function ArtistHero({
                                     {ownedAlbums.length > 0 && (
                                         <>
                                             <span className="mx-1">•</span>
-                                            <span className="text-[#ecb200]">
+                                            <span className="text-brand">
                                                 {ownedAlbums.length} owned
                                             </span>
                                         </>

@@ -7,6 +7,7 @@ import type { Track, Artist } from "../types";
 import type { ColorPalette } from "@/hooks/useImageColor";
 import { formatTime } from "@/utils/formatTime";
 import { formatNumber } from "@/utils/formatNumber";
+import { SectionHeader } from "@/features/home/components/SectionHeader";
 
 interface PopularTracksProps {
     tracks: Track[];
@@ -33,7 +34,7 @@ export const PopularTracks: React.FC<PopularTracksProps> = ({
 
     return (
         <section>
-            <h2 className="text-xl font-bold mb-4">Popular</h2>
+            <SectionHeader color="tracks" title="Popular" />
             <div data-tv-section="tracks">
                 {tracks.slice(0, 5).map((track, index) => {
                     const isPlaying = currentTrackId === track.id;
@@ -84,12 +85,12 @@ export const PopularTracks: React.FC<PopularTracksProps> = ({
                                         className={cn(
                                             "text-sm group-hover:hidden",
                                             isPlaying
-                                                ? "text-[#ecb200]"
+                                                ? "text-brand"
                                                 : "text-gray-400"
                                         )}
                                     >
                                         {isPlaying ? (
-                                            <Music className="w-4 h-4 text-[#ecb200] animate-pulse" />
+                                            <Music className="w-4 h-4 text-brand animate-pulse" />
                                         ) : (
                                             index + 1
                                         )}
@@ -121,7 +122,7 @@ export const PopularTracks: React.FC<PopularTracksProps> = ({
                                         className={cn(
                                             "text-sm font-medium truncate flex items-center gap-2",
                                             isPlaying
-                                                ? "text-[#ecb200]"
+                                                ? "text-brand"
                                                 : "text-white"
                                         )}
                                     >
@@ -169,7 +170,7 @@ export const PopularTracks: React.FC<PopularTracksProps> = ({
                                     </button>
                                 )}
                                 {track.duration && (
-                                    <span className="text-sm text-gray-400 w-10 text-right">
+                                    <span className="text-sm text-gray-400 w-10 text-right font-mono tabular-nums">
                                         {formatTime(track.duration)}
                                     </span>
                                 )}

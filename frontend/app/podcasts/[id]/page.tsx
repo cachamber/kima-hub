@@ -131,7 +131,7 @@ export default function PodcastDetailPage() {
                 <div className="relative max-w-[1800px] mx-auto px-4 md:px-8 py-8 space-y-10">
                     {/* Continue Listening */}
                     {podcast && inProgressEpisodes.length > 0 && (
-                        <div className="animate-slide-up" style={{ animationDelay: "0s" }}>
+                        <div>
                             <ContinueListening
                                 podcast={podcast}
                                 inProgressEpisodes={inProgressEpisodes}
@@ -148,7 +148,7 @@ export default function PodcastDetailPage() {
 
                     {/* Preview Mode */}
                     {!podcast && previewData && (
-                        <div className="animate-slide-up" style={{ animationDelay: "0s" }}>
+                        <div>
                             <PreviewEpisodes
                                 previewData={previewData}
                                 colors={colors}
@@ -160,7 +160,7 @@ export default function PodcastDetailPage() {
 
                     {/* All Episodes */}
                     {podcast && (
-                        <div className="animate-slide-up" style={{ animationDelay: "0.1s" }}>
+                        <div>
                             <EpisodeList
                                 podcast={podcast}
                                 episodes={sortedEpisodes}
@@ -179,7 +179,7 @@ export default function PodcastDetailPage() {
 
                     {/* About - for subscribed podcasts */}
                     {podcast?.description && (
-                        <div className="animate-slide-up" style={{ animationDelay: "0.2s" }}>
+                        <div>
                             <section>
                                 <div className="flex items-center gap-3 mb-4">
                                     <span className="w-1 h-6 bg-gradient-to-b from-[#3b82f6] to-[#2563eb] rounded-full shrink-0" />
@@ -200,7 +200,7 @@ export default function PodcastDetailPage() {
 
                     {/* Similar Podcasts */}
                     {similarPodcasts.length > 0 && (
-                        <div className="animate-slide-up" style={{ animationDelay: "0.3s" }}>
+                        <div>
                             <SimilarPodcasts podcasts={similarPodcasts} />
                         </div>
                     )}

@@ -88,7 +88,7 @@ export default function AudiobookDetailPage() {
                 <div className="relative max-w-[1800px] mx-auto px-4 md:px-8 py-8 space-y-10">
                     {/* Chapters */}
                     {audiobook.chapters && audiobook.chapters.length > 0 && (
-                        <div className="animate-slide-up" style={{ animationDelay: "0s" }}>
+                        <div>
                             <ChapterList
                                 chapters={audiobook.chapters}
                                 onSeekToChapter={seekToChapter}
@@ -99,7 +99,7 @@ export default function AudiobookDetailPage() {
 
                     {/* About */}
                     {showDescription && (
-                        <div className="animate-slide-up" style={{ animationDelay: "0.1s" }}>
+                        <div>
                             <section>
                                 <div className="flex items-center gap-3 mb-4">
                                     <span className="w-1 h-6 bg-gradient-to-b from-[#f59e0b] to-[#d97706] rounded-full shrink-0" />
@@ -120,7 +120,7 @@ export default function AudiobookDetailPage() {
 
                     {/* Series info */}
                     {audiobook.series && (
-                        <div className="animate-slide-up" style={{ animationDelay: "0.2s" }}>
+                        <div>
                             <section>
                                 <div className="flex items-center gap-3 mb-4">
                                     <span className="w-1 h-6 bg-gradient-to-b from-[#f59e0b] to-[#d97706] rounded-full shrink-0" />
@@ -141,7 +141,7 @@ export default function AudiobookDetailPage() {
                     )}
 
                     {/* Playback hint */}
-                    <div className="animate-slide-up" style={{ animationDelay: "0.3s" }}>
+                    <div>
                         <p className="text-[10px] font-mono text-white/20 uppercase tracking-wider pt-4">
                             Use the player controls in the bottom bar for playback speed, seeking, and volume.
                         </p>

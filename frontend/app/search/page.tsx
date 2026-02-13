@@ -170,7 +170,7 @@ export default function SearchPage() {
 
                 {/* Soulseek Tab */}
                 {filterTab === "soulseek" && hasSearched && (
-                    <div className="animate-slide-up">
+                    <div>
                         <SoulseekBrowser
                             results={soulseekResults}
                             isSearching={isSoulseekSearching}
@@ -188,7 +188,7 @@ export default function SearchPage() {
                 {filterTab !== "soulseek" && (
                     <div className="space-y-12">
                         {show2ColumnLayout ? (
-                            <div className="grid grid-cols-1 lg:grid-cols-[1fr_1.5fr] gap-8 animate-slide-up">
+                            <div className="grid grid-cols-1 lg:grid-cols-[1fr_1.5fr] gap-8"">
                                 {/* Featured Result - Larger card */}
                                 <div className="space-y-4">
                                     <h2 className="text-2xl font-black tracking-tight flex items-center gap-3">
@@ -224,7 +224,7 @@ export default function SearchPage() {
                         ) : (
                             <>
                                 {hasSearched && (showDiscover || showLibrary) && hasTopResult && (
-                                    <section className="animate-slide-up">
+                                    <section>
                                         <h2 className="text-2xl font-black tracking-tight flex items-center gap-3 mb-6">
                                             <span className="w-1 h-8 bg-gradient-to-b from-[#eab308] to-[#f59e0b] rounded-full" />
                                             Top Match
@@ -237,7 +237,7 @@ export default function SearchPage() {
                                 )}
 
                                 {hasSearched && hasTracks && (
-                                    <section className="animate-slide-up" style={{ animationDelay: "0.1s" }}>
+                                    <section>
                                         <h2 className="text-2xl font-black tracking-tight flex items-center gap-3 mb-6">
                                             <span className="w-1 h-8 bg-gradient-to-b from-[#a855f7] to-[#c026d3] rounded-full" />
                                             Tracks
@@ -261,7 +261,7 @@ export default function SearchPage() {
 
                         {/* Albums Grid */}
                         {hasSearched && showLibrary && (libraryResults?.albums?.length ?? 0) > 0 && (
-                            <section className="animate-slide-up" style={{ animationDelay: "0.2s" }}>
+                            <section>
                                 <h2 className="text-2xl font-black tracking-tight flex items-center gap-3 mb-6">
                                     <span className="w-1 h-8 bg-gradient-to-b from-[#22c55e] to-[#16a34a] rounded-full" />
                                     Albums
@@ -272,7 +272,7 @@ export default function SearchPage() {
 
                         {/* Podcasts Grid */}
                         {hasSearched && showLibrary && (libraryResults?.podcasts?.length ?? 0) > 0 && (
-                            <section className="animate-slide-up" style={{ animationDelay: "0.3s" }}>
+                            <section>
                                 <h2 className="text-2xl font-black tracking-tight flex items-center gap-3 mb-6">
                                     <span className="w-1 h-8 bg-gradient-to-b from-[#3b82f6] to-[#2563eb] rounded-full" />
                                     Podcasts
@@ -283,7 +283,7 @@ export default function SearchPage() {
 
                         {/* Audiobooks Grid */}
                         {hasSearched && showLibrary && (libraryResults?.audiobooks?.length ?? 0) > 0 && (
-                            <section className="animate-slide-up" style={{ animationDelay: "0.4s" }}>
+                            <section>
                                 <h2 className="text-2xl font-black tracking-tight flex items-center gap-3 mb-6">
                                     <span className="w-1 h-8 bg-gradient-to-b from-[#f59e0b] to-[#d97706] rounded-full" />
                                     Audiobooks
@@ -294,7 +294,7 @@ export default function SearchPage() {
 
                         {/* Related Artists */}
                         {hasSearched && showDiscover && similarArtists.length > 0 && (
-                            <section className="animate-slide-up" style={{ animationDelay: "0.5s" }}>
+                            <section>
                                 <h2 className="text-2xl font-black tracking-tight flex items-center gap-3 mb-6">
                                     <span className="w-1 h-8 bg-gradient-to-b from-[#ec4899] to-[#db2777] rounded-full" />
                                     Related Artists

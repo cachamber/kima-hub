@@ -353,7 +353,7 @@ export default function AudiobooksPage() {
             <div className="relative px-4 md:px-8 pb-24">
                 <div className="max-w-[1800px] mx-auto">
                     {/* Filter and Sort Controls */}
-                    <div className="mb-8 space-y-3 animate-slide-up" style={{ animationDelay: "0s" }}>
+                    <div className="mb-8 space-y-3"">
                         {/* First Row: Filter Pills and Shuffle */}
                         <div className="flex flex-wrap items-center gap-2">
                             {(["all", "listening", "finished"] as FilterType[]).map((f) => (
@@ -455,7 +455,7 @@ export default function AudiobooksPage() {
                     <div className="space-y-10">
                         {/* Continue Listening Section */}
                         {continueListening.length > 0 && filter === "all" && !groupBySeries && (
-                            <div className="animate-slide-up" style={{ animationDelay: `${(sectionIndex++) * 0.1}s` }}>
+                            <div>
                                 <SectionHeader title="Continue Listening" count={continueListening.length} />
                                 <div
                                     className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-8 3xl:grid-cols-10 gap-6"
@@ -482,7 +482,7 @@ export default function AudiobooksPage() {
                             groupBySeries ? (
                                 <>
                                     {series.length > 0 && (
-                                        <div className="animate-slide-up" style={{ animationDelay: `${(sectionIndex++) * 0.1}s` }}>
+                                        <div>
                                             <SectionHeader title="Series" count={series.length} />
                                             <div
                                                 className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-8 3xl:grid-cols-10 gap-6"
@@ -509,7 +509,7 @@ export default function AudiobooksPage() {
                                     )}
 
                                     {standalone.length > 0 && (
-                                        <div className="animate-slide-up" style={{ animationDelay: `${(sectionIndex++) * 0.1}s` }}>
+                                        <div>
                                             <SectionHeader title="Standalone" count={standalone.length} />
                                             <div
                                                 className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-8 3xl:grid-cols-10 gap-6"
@@ -532,7 +532,7 @@ export default function AudiobooksPage() {
                                     )}
                                 </>
                             ) : (
-                                <div className="animate-slide-up" style={{ animationDelay: `${(sectionIndex++) * 0.1}s` }}>
+                                <div>
                                     <SectionHeader title="All Books" count={filteredBooks.length} />
                                     <div
                                         className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-8 3xl:grid-cols-10 gap-6"

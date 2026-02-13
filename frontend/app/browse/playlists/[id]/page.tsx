@@ -361,7 +361,7 @@ export default function DeezerPlaylistDetailPage() {
             <div className="relative px-4 md:px-8 pb-32">
                 <div className="max-w-[1800px] mx-auto">
                     {playlist.tracks.length > 0 ? (
-                        <div className="animate-slide-up" style={{ animationDelay: "0s" }}>
+                        <div>
                             <div className="flex items-center gap-3 mb-6">
                                 <span className="w-1 h-8 bg-gradient-to-b from-[#a855f7] to-[#c026d3] rounded-full shrink-0" />
                                 <h2 className="text-2xl font-black tracking-tighter uppercase">Tracks</h2>

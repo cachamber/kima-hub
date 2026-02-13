@@ -217,7 +217,7 @@ const TrackRow = memo(
                 )}
 
                 {track.duration && (
-                    <div className="text-xs md:text-sm text-gray-400 w-10 md:w-12 text-right tabular-nums">
+                    <div className="text-xs md:text-sm text-gray-400 w-10 md:w-12 text-right font-mono tabular-nums">
                         {formatTime(track.duration)}
                     </div>
                 )}

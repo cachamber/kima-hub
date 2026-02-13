@@ -172,7 +172,7 @@ export default function RadioPage() {
                 <div className="relative max-w-[1800px] mx-auto px-4 sm:px-6 md:px-8 pb-32 pt-8">
                     <div className="space-y-12">
                         {/* Quick Start */}
-                        <section className="animate-slide-up" style={{ animationDelay: "0s" }}>
+                        <section>
                             <h2 className="text-2xl font-black tracking-tight flex items-center gap-3 mb-6">
                                 <span className="w-1 h-8 bg-gradient-to-b from-[#fca208] to-[#f97316] rounded-full" />
                                 <span className="uppercase tracking-tighter">Quick Start</span>
@@ -192,7 +192,7 @@ export default function RadioPage() {
 
                         {/* Genres */}
                         {(isLoading || genreStations.length > 0) && (
-                            <section className="animate-slide-up" style={{ animationDelay: "0.1s" }}>
+                            <section>
                                 <h2 className="text-2xl font-black tracking-tight flex items-center gap-3 mb-6">
                                     <span className="w-1 h-8 bg-gradient-to-b from-[#a855f7] to-[#c026d3] rounded-full" />
                                     <span className="uppercase tracking-tighter">By Genre</span>
@@ -222,7 +222,7 @@ export default function RadioPage() {
 
                         {/* Decades */}
                         {(isLoading || decadeStations.length > 0) && (
-                            <section className="animate-slide-up" style={{ animationDelay: "0.2s" }}>
+                            <section>
                                 <h2 className="text-2xl font-black tracking-tight flex items-center gap-3 mb-6">
                                     <span className="w-1 h-8 bg-gradient-to-b from-[#22c55e] to-[#16a34a] rounded-full" />
                                     <span className="uppercase tracking-tighter">By Decade</span>
@@ -251,7 +251,7 @@ export default function RadioPage() {
                         )}
 
                         {/* Info panel */}
-                        <section className="animate-slide-up" style={{ animationDelay: "0.3s" }}>
+                        <section>
                             <div className="relative overflow-hidden rounded-lg border-2 border-white/10 bg-gradient-to-br from-[#0f0f0f] to-[#0a0a0a] p-8">
                                 <div className="absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-[#fca208] to-[#f97316]" />
                                 <div className="flex items-center gap-3 mb-4 pb-3 border-b border-white/10">

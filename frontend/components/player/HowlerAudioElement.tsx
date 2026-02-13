@@ -114,6 +114,7 @@ export const HowlerAudioElement = memo(function HowlerAudioElement() {
     // Refs
     const lastTrackIdRef = useRef<string | null>(null);
     const lastPlayingStateRef = useRef<boolean>(isPlaying);
+    const isBufferingRef = useRef<boolean>(isBuffering);
     const progressSaveIntervalRef = useRef<NodeJS.Timeout | null>(null);
     const lastProgressSaveRef = useRef<number>(0);
     const isUserInitiatedRef = useRef<boolean>(false);
@@ -269,7 +270,7 @@ export const HowlerAudioElement = memo(function HowlerAudioElement() {
         async (isFinished: boolean = false) => {
             if (!currentPodcast) return;
 
-            if (isBuffering && !isFinished) return;
+            if (isBufferingRef.current && !isFinished) return;
 
             const currentTime = howlerEngine.getCurrentTime();
             const duration =
@@ -580,6 +581,15 @@ export const HowlerAudioElement = memo(function HowlerAudioElement() {
 
                 isLoadingRef.current = false;
 
+                // Transition state machine out of LOADING.
+                // The events effect's handleLoad also does this, but it may be
+                // momentarily unregistered during effect re-runs (e.g., when
+                // savePodcastProgress changes identity due to isBuffering).
+                // This is the authoritative transition -- handleLoad is a backup.
+                if (playbackStateMachine.getState() === "LOADING") {
+                    playbackStateMachine.transition("READY");
+                }
+
                 if (startTime > 0) {
                     howlerEngine.seek(startTime);
                 }
@@ -760,10 +770,14 @@ export const HowlerAudioElement = memo(function HowlerAudioElement() {
         };
     }, [currentPodcast, playbackType, setCanSeek, setDownloadProgress]);
 
-    // Keep lastPlayingStateRef always in sync
+    // Keep refs always in sync
     useLayoutEffect(() => {
         lastPlayingStateRef.current = isPlaying;
     }, [isPlaying]);
+
+    useLayoutEffect(() => {
+        isBufferingRef.current = isBuffering;
+    }, [isBuffering]);
 
     // Handle play/pause changes from UI
     // Skip if a track change is in progress -- the track-change effect handles playback.

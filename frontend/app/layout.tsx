@@ -12,7 +12,6 @@ import { QueryProvider } from "@/lib/query-client";
 import { ServiceWorkerRegistration } from "@/components/ServiceWorkerRegistration";
 import { GlobalErrorBoundary } from "@/components/providers/GlobalErrorBoundary";
 import { ActivityPanelSettingsProvider } from "@/lib/activity-panel-settings-context";
-import { DisableInitialAnimations } from "@/components/DisableInitialAnimations";
 
 const montserrat = Montserrat({
     weight: ["300", "400", "500", "600", "700", "800"],
@@ -57,10 +56,9 @@ export default function RootLayout({
     return (
         <html lang="en">
             <body
-                className={`${montserrat.variable} antialiased preload`}
+                className={`${montserrat.variable} antialiased`}
                 style={{ fontFamily: "var(--font-montserrat)" }}
             >
-                <DisableInitialAnimations />
                 <GlobalErrorBoundary>
                     <ServiceWorkerRegistration />
                     <AuthProvider>

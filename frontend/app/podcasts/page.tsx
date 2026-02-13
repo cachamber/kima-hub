@@ -350,7 +350,7 @@ export default function PodcastsPage() {
                     <div className="space-y-12">
                         {/* My Podcasts */}
                         {podcasts.length > 0 && (
-                            <section className="animate-slide-up" style={{ animationDelay: `${sectionIndex++ * 0.1}s` }}>
+                            <section>
                                 <SectionHeader
                                     title="My Podcasts"
                                     count={podcasts.length}
@@ -438,7 +438,7 @@ export default function PodcastsPage() {
 
                         {/* Top Podcasts */}
                         {topPodcasts.length > 0 && (
-                            <section className="animate-slide-up" style={{ animationDelay: `${sectionIndex++ * 0.1}s` }}>
+                            <section>
                                 <SectionHeader title="Top Podcasts" />
                                 <div
                                     className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4"
@@ -470,8 +470,8 @@ export default function PodcastsPage() {
                             return genrePodcasts.length > 0 ? (
                                 <section
                                     key={genreId}
-                                    className="animate-slide-up"
-                                    style={{ animationDelay: `${sectionIndex++ * 0.1}s` }}
+                                   
+                                   
                                 >
                                     <SectionHeader
                                         title={genreName}
@@ -503,7 +503,7 @@ export default function PodcastsPage() {
 
                         {/* Empty State */}
                         {podcasts.length === 0 && topPodcasts.length === 0 && (
-                            <section className="animate-slide-up" style={{ animationDelay: "0s" }}>
+                            <section>
                                 <div className="relative overflow-hidden rounded-lg border-2 border-white/10 bg-gradient-to-br from-[#0f0f0f] to-[#0a0a0a] p-12">
                                     <div className="absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-[#3b82f6] to-[#2563eb]" />
                                     <div className="flex flex-col items-center text-center">

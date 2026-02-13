@@ -207,7 +207,7 @@ export default function SeriesDetailPage() {
             {/* Books List */}
             <div className="relative px-4 md:px-8 pb-24">
                 <div className="max-w-[1800px] mx-auto">
-                    <div className="animate-slide-up" style={{ animationDelay: "0s" }}>
+                    <div>
                         <div className="flex items-center gap-3 mb-6">
                             <span className="w-1 h-8 bg-gradient-to-b from-[#f59e0b] to-[#d97706] rounded-full shrink-0" />
                             <h2 className="text-2xl font-black tracking-tighter uppercase">Books in Series</h2>

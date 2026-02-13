@@ -558,7 +558,7 @@ export default function PlaylistDetailPage() {
                     )}
 
                     {playlist.items?.length > 0 || playlist.pendingTracks?.length > 0 ? (
-                        <div className="w-full animate-slide-up" style={{ animationDelay: "0s" }}>
+                        <div className="w-full"">
                             {/* Section header */}
                             <div className="flex items-center gap-3 mb-6">
                                 <span className="w-1 h-8 bg-gradient-to-b from-[#fca208] to-[#f97316] rounded-full shrink-0" />
@@ -791,7 +791,7 @@ export default function PlaylistDetailPage() {
                             </div>
                         </div>
                     ) : (
-                        <div className="animate-slide-up" style={{ animationDelay: "0s" }}>
+                        <div>
                             <div className="relative overflow-hidden rounded-lg border-2 border-white/10 bg-gradient-to-br from-[#0f0f0f] to-[#0a0a0a] p-12 shadow-2xl shadow-black/40">
                                 <div className="absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-[#fca208] to-[#f97316]" />
 

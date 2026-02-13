@@ -4,6 +4,7 @@ import Image from "next/image";
 import { SimilarArtist } from "../types";
 import { Music, Library } from "lucide-react";
 import { api } from "@/lib/api";
+import { SectionHeader } from "@/features/home/components/SectionHeader";
 
 interface SimilarArtistsProps {
     similarArtists: SimilarArtist[];
@@ -20,7 +21,7 @@ export function SimilarArtists({
 
     return (
         <section>
-            <h2 className="text-xl font-bold mb-4">Fans Also Like</h2>
+            <SectionHeader color="artists" title="Fans Also Like" />
             <div
                 data-tv-section="similar-artists"
                 className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4"
@@ -73,7 +74,7 @@ export function SimilarArtists({
                                 {/* Library indicator badge */}
                                 {artist.inLibrary && (
                                     <div
-                                        className="absolute bottom-1 right-1 bg-[#ecb200] rounded-full p-1"
+                                        className="absolute bottom-1 right-1 bg-[#fca200] rounded-full p-1"
                                         title="In your library"
                                     >
                                         <Library className="w-3 h-3 text-black" />
@@ -98,7 +99,7 @@ export function SimilarArtists({
 
                             {/* Match Percentage */}
                             {matchPercentage !== null && (
-                                <p className="text-xs text-[#ecb200] mt-1">
+                                <p className="text-xs text-brand mt-1">
                                     {matchPercentage}% match
                                 </p>
                             )}
