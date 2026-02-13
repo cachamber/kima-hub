@@ -238,19 +238,19 @@ export const HowlerAudioElement = memo(function HowlerAudioElement() {
                     isFinished
                 );
 
-                setCurrentAudiobook({
-                    ...currentAudiobook,
-                    progress: {
-                        currentTime: isFinished ? duration : currentTime,
-                        progress:
-                            duration > 0
-                                ? ((isFinished ? duration : currentTime) /
-                                      duration) *
-                                  100
-                                : 0,
-                        isFinished,
-                        lastPlayedAt: new Date(),
-                    },
+                setCurrentAudiobook((prev) => {
+                    if (!prev || prev.id !== currentAudiobook.id) return prev;
+                    const dur = prev.duration || 0;
+                    const pos = isFinished ? dur : currentTime;
+                    return {
+                        ...prev,
+                        progress: {
+                            currentTime: pos,
+                            progress: dur > 0 ? (pos / dur) * 100 : 0,
+                            isFinished,
+                            lastPlayedAt: new Date(),
+                        },
+                    };
                 });
 
                 dispatchQueryEvent("audiobook-progress-updated");
