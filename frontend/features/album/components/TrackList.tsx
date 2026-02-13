@@ -108,7 +108,7 @@ const TrackRow = memo(
                         ? { borderLeftColor: colors?.vibrant || "#a855f7" }
                         : undefined
                 }
-                onClick={handleRowClick}
+                onDoubleClick={handleRowClick}
                 onKeyDown={(e) => {
                     if (e.key === "Enter") {
                         e.preventDefault();
@@ -121,20 +121,29 @@ const TrackRow = memo(
                 }}
             >
                 <div className="w-6 md:w-8 flex-shrink-0 text-center">
-                    <span
-                        className={cn(
-                            "group-hover:hidden text-sm",
-                            isPlaying
-                                ? "text-purple-400 font-bold"
-                                : "text-gray-500"
-                        )}
+                    <button
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            handleRowClick(e);
+                        }}
+                        className="w-full flex items-center justify-center"
+                        aria-label={isPlaying ? "Now playing" : "Play"}
                     >
-                        {index + 1}
-                    </span>
-                    <Play
-                        className="hidden group-hover:inline-block w-4 h-4 text-white"
-                        fill="currentColor"
-                    />
+                        <span
+                            className={cn(
+                                "group-hover:hidden text-sm",
+                                isPlaying
+                                    ? "text-purple-400 font-bold"
+                                    : "text-gray-500"
+                            )}
+                        >
+                            {index + 1}
+                        </span>
+                        <Play
+                            className="hidden group-hover:inline-block w-4 h-4 text-white"
+                            fill="currentColor"
+                        />
+                    </button>
                 </div>
 
                 <div className="flex-1 min-w-0">
