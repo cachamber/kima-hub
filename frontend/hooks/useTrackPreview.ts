@@ -63,9 +63,11 @@ export function useTrackPreview<T extends PreviewableTrack>() {
             return;
         }
 
-        // Different track -- stop current and play new
+        // Different track -- stop current and fully destroy old Audio element
         if (previewAudioRef.current) {
             previewAudioRef.current.pause();
+            previewAudioRef.current.src = "";
+            previewAudioRef.current.load();
             previewAudioRef.current = null;
         }
 
@@ -99,13 +101,20 @@ export function useTrackPreview<T extends PreviewableTrack>() {
             audio.onended = () => {
                 setPreviewPlaying(false);
                 setPreviewTrack(null);
-                mainPlayerWasPausedRef.current = false;
+                if (mainPlayerWasPausedRef.current) {
+                    howlerEngine.play();
+                    mainPlayerWasPausedRef.current = false;
+                }
             };
 
             audio.onerror = () => {
                 toast.error("Failed to play preview");
                 setPreviewPlaying(false);
                 setPreviewTrack(null);
+                if (mainPlayerWasPausedRef.current) {
+                    howlerEngine.play();
+                    mainPlayerWasPausedRef.current = false;
+                }
             };
 
             try {
@@ -163,9 +172,14 @@ export function useTrackPreview<T extends PreviewableTrack>() {
         return () => {
             if (previewAudioRef.current) {
                 previewAudioRef.current.pause();
+                previewAudioRef.current.src = "";
+                previewAudioRef.current.load();
                 previewAudioRef.current = null;
             }
-            mainPlayerWasPausedRef.current = false;
+            if (mainPlayerWasPausedRef.current) {
+                howlerEngine.play();
+                mainPlayerWasPausedRef.current = false;
+            }
         };
     }, []);
 
