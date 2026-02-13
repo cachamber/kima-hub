@@ -13,12 +13,11 @@ import { PlayerModeWrapper } from "../player/PlayerModeWrapper";
 import { ActivityPanel } from "./ActivityPanel";
 import { GalaxyBackground } from "../ui/GalaxyBackground";
 import { GradientSpinner } from "../ui/GradientSpinner";
-import { PWAInstallPrompt } from "../PWAInstallPrompt";
-import { PullToRefresh } from "../ui/PullToRefresh";
 import { ReactNode } from "react";
 import { useIsMobile, useIsTablet } from "@/hooks/useMediaQuery";
 import { useIsTV } from "@/lib/tv-utils";
 import { useActivityPanel } from "@/hooks/useActivityPanel";
+import { useActivityPanelSettings } from "@/lib/activity-panel-settings-context";
 
 const publicPaths = ["/login", "/register", "/onboarding", "/sync"];
 
@@ -30,6 +29,7 @@ export function AuthenticatedLayout({ children }: { children: ReactNode }) {
     const isTV = useIsTV();
     const isMobileOrTablet = isMobile || isTablet;
     const activityPanel = useActivityPanel();
+    const { settingsContent } = useActivityPanelSettings();
 
     // Listen for activity panel events (toggle/open/close/tab)
     useEffect(() => {
@@ -37,7 +37,7 @@ export function AuthenticatedLayout({ children }: { children: ReactNode }) {
         const handleOpen = () => activityPanel.open();
         const handleClose = () => activityPanel.close();
         const handleSetTab = (
-            e: CustomEvent<{ tab: "notifications" | "active" | "history" }>
+            e: CustomEvent<{ tab: "notifications" | "active" | "history" | "settings" }>
         ) => {
             activityPanel.setActiveTab(e.detail.tab);
         };
@@ -120,32 +120,30 @@ export function AuthenticatedLayout({ children }: { children: ReactNode }) {
                             onToggle={activityPanel.toggle}
                             activeTab={activityPanel.activeTab}
                             onTabChange={activityPanel.setActiveTab}
+                            settingsContent={settingsContent}
                         />
 
                         {/* Main content area with rounded corners */}
-                        <PullToRefresh>
-                            <main
-                                id="main-content"
-                                tabIndex={-1}
-                                className="flex-1 bg-gradient-to-b from-[#1a1a1a] via-black to-black mx-2 mb-2 rounded-lg overflow-y-auto relative focus:outline-none"
-                                style={{
-                                    marginTop: "calc(58px + env(safe-area-inset-top, 0px))",
-                                    marginBottom:
-                                        "calc(56px + env(safe-area-inset-bottom, 0px) + 8px)",
-                                }}
-                            >
-                                <GalaxyBackground />
-                                {/* Padding at bottom for mini player floating above */}
-                                <div className="pb-24">{children}</div>
-                            </main>
-                        </PullToRefresh>
+                        <main
+                            id="main-content"
+                            tabIndex={-1}
+                            className="flex-1 bg-gradient-to-b from-[#1a1a1a] via-black to-black mx-2 mb-2 rounded-lg overflow-y-auto relative focus:outline-none"
+                            style={{
+                                marginTop: "calc(58px + env(safe-area-inset-top, 0px))",
+                                marginBottom:
+                                    "calc(56px + env(safe-area-inset-bottom, 0px) + 8px)",
+                            }}
+                        >
+                            <GalaxyBackground />
+                            {/* Padding at bottom for mini player floating above */}
+                            <div className="pb-24">{children}</div>
+                        </main>
 
                         {/* Mini Player - fixed, positioned above bottom nav */}
                         <UniversalPlayer />
 
                         {/* Bottom Navigation - fixed at bottom */}
                         <BottomNavigation />
-                        <PWAInstallPrompt />
                     </div>
                 </PlayerModeWrapper>
             );
@@ -181,10 +179,10 @@ export function AuthenticatedLayout({ children }: { children: ReactNode }) {
                             onToggle={activityPanel.toggle}
                             activeTab={activityPanel.activeTab}
                             onTabChange={activityPanel.setActiveTab}
+                            settingsContent={settingsContent}
                         />
                     </div>
                     <UniversalPlayer />
-                    <PWAInstallPrompt />
                 </div>
             </PlayerModeWrapper>
         );
