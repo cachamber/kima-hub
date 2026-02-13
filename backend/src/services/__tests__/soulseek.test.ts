@@ -69,4 +69,46 @@ describe("SoulseekService - Race Condition Fix", () => {
             expect(content).toContain("this.flattenSearchResults(responses)");
         });
     });
+
+    describe("error categorization", () => {
+        it("should detect timeout errors", () => {
+            const servicePath = path.join(__dirname, "../soulseek.ts");
+            const content = fs.readFileSync(servicePath, "utf-8");
+
+            // Check for timeout detection in categorizeError
+            expect(content).toContain('message.includes("timeout")');
+            expect(content).toContain('message.includes("timed out")');
+        });
+
+        it("should detect connection errors", () => {
+            const servicePath = path.join(__dirname, "../soulseek.ts");
+            const content = fs.readFileSync(servicePath, "utf-8");
+
+            // Check for connection error detection
+            expect(content).toContain('message.includes("connection refused")');
+            expect(content).toContain('message.includes("connection reset")');
+            expect(content).toContain('message.includes("econnrefused")');
+        });
+
+        it("should mark timeout and connection errors as skipUser true", () => {
+            const servicePath = path.join(__dirname, "../soulseek.ts");
+            const content = fs.readFileSync(servicePath, "utf-8");
+
+            // Verify timeout and connection sections return skipUser: true
+            const timeoutPattern = /timeout.*skipUser:\s*true/s;
+            const connectionPattern = /connection.*skipUser:\s*true/s;
+
+            expect(content).toMatch(timeoutPattern);
+            expect(content).toMatch(connectionPattern);
+        });
+
+        it("should mark file errors as skipUser false", () => {
+            const servicePath = path.join(__dirname, "../soulseek.ts");
+            const content = fs.readFileSync(servicePath, "utf-8");
+
+            // Verify file error section returns skipUser: false
+            const filePattern = /file not found.*skipUser:\s*false/s;
+            expect(content).toMatch(filePattern);
+        });
+    });
 });

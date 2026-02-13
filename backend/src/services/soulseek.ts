@@ -514,30 +514,44 @@ private recordUserFailure(username: string): void {
     } {
         const message = error.message.toLowerCase();
 
+        // User offline or doesn't exist - skip user
         if (
             message.includes("user not exist") ||
             message.includes("user offline") ||
-            message.includes("could not connect to")
+            message.includes("peer connection failed")
         ) {
             return { type: "user_offline", skipUser: true };
         }
-        if (message.includes("timed out") || message.includes("timeout")) {
+
+        // Timeout errors - skip user (they're too slow)
+        if (
+            message.includes("timeout") ||
+            message.includes("timed out")
+        ) {
             return { type: "timeout", skipUser: true };
         }
+
+        // Connection errors - skip user
         if (
             message.includes("connection refused") ||
-            message.includes("connection reset")
+            message.includes("connection reset") ||
+            message.includes("econnrefused") ||
+            message.includes("econnreset") ||
+            message.includes("epipe")
         ) {
             return { type: "connection", skipUser: true };
         }
+
+        // File errors - don't skip user (file issue, not user issue)
         if (
             message.includes("file not found") ||
-            message.includes("no such file") ||
-            message.includes("upload denied")
+            message.includes("no such file")
         ) {
-            return { type: "file_not_found", skipUser: true };
+            return { type: "file_not_found", skipUser: false };
         }
-        return { type: "unknown", skipUser: false };
+
+        // Unknown errors - be conservative, skip user
+        return { type: "unknown", skipUser: true };
     }
 
     private rankAllResults(
