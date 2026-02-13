@@ -408,7 +408,6 @@ class HowlerEngine {
 
         this.state.currentTime = time;
         this.howl.seek(time);
-        this.emit("seek", { time });
 
         // Release seek lock after audio has time to sync
         // This timeout ensures timeupdate doesn't emit stale values during the seek operation
@@ -425,12 +424,10 @@ class HowlerEngine {
      */
     reload(): void {
         if (!this.state.currentSrc) return;
-
         const src = this.state.currentSrc;
-        const format = this.howl ? (this.howl as unknown as { _format?: string[] })._format : undefined;
-
+        const format = this.lastFormat;
         this.cleanup(true);
-        this.load(src, false, format?.[0]);
+        this.load(src, false, format);
     }
 
     /**
@@ -740,6 +737,12 @@ class HowlerEngine {
             this.userInitiatedPlay = false;
             this.stopTimeUpdates();
             this.emit("playerror", { error });
+        });
+
+        this.howl.on("loaderror", (id, error) => {
+            console.error("[HowlerEngine] Late load error on preloaded instance:", error);
+            this.isLoading = false;
+            this.emit("loaderror", { error });
         });
     }
 
