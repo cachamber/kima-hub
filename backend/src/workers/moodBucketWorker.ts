@@ -33,10 +33,14 @@ export async function startMoodBucketWorker() {
     // Run immediately
     await processNewlyAnalyzedTracks();
 
-    // Then run at interval
-    workerInterval = setInterval(async () => {
-        await processNewlyAnalyzedTracks();
-    }, WORKER_INTERVAL_MS);
+    // Then run at interval with self-rescheduling setTimeout
+    function scheduleNext() {
+        workerInterval = setTimeout(async () => {
+            await processNewlyAnalyzedTracks();
+            scheduleNext();
+        }, WORKER_INTERVAL_MS);
+    }
+    scheduleNext();
 }
 
 /**
@@ -44,7 +48,7 @@ export async function startMoodBucketWorker() {
  */
 export function stopMoodBucketWorker() {
     if (workerInterval) {
-        clearInterval(workerInterval);
+        clearTimeout(workerInterval);
         workerInterval = null;
         logger.debug("[Mood Bucket] Worker stopped");
     }

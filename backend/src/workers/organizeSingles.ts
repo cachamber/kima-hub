@@ -11,9 +11,7 @@ import { logger } from "../utils/logger";
 import path from "path";
 import fs from "fs";
 import { sessionLog } from "../utils/playlistLogger";
-import { PrismaClient } from "@prisma/client";
-
-const prisma = new PrismaClient();
+import { prisma } from "../utils/db";
 
 /**
  * Migrate existing files from Soulseek/ directory to Singles/Artist/Album/ structure
