@@ -216,6 +216,13 @@ button:disabled {
     }
 }
 
+/* Disable animations on initial page load */
+body.preload .animate-slide-up {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+}
+
 @keyframes slide-up {
     from {
         opacity: 0;

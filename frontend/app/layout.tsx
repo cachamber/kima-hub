@@ -56,9 +56,20 @@ export default function RootLayout({
     return (
         <html lang="en">
             <body
-                className={`${montserrat.variable} antialiased`}
+                className={`${montserrat.variable} antialiased preload`}
                 style={{ fontFamily: "var(--font-montserrat)" }}
             >
+                <script
+                    dangerouslySetInnerHTML={{
+                        __html: `
+                            requestAnimationFrame(() => {
+                                requestAnimationFrame(() => {
+                                    document.body.classList.remove('preload');
+                                });
+                            });
+                        `,
+                    }}
+                />
                 <GlobalErrorBoundary>
                     <ServiceWorkerRegistration />
                     <AuthProvider>
