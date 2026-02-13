@@ -1,56 +1,77 @@
 import { Tab } from "../types";
 import { cn } from "@/utils/cn";
+import { Users, Disc3, ListMusic } from "lucide-react";
 
 interface LibraryTabsProps {
   activeTab: Tab;
   onTabChange: (tab: Tab) => void;
 }
 
+const tabs = [
+  { id: "artists" as Tab, label: "Artists", icon: Users, gradient: "from-[#ec4899] to-[#db2777]" },
+  { id: "albums" as Tab, label: "Albums", icon: Disc3, gradient: "from-[#22c55e] to-[#16a34a]" },
+  { id: "tracks" as Tab, label: "Tracks", icon: ListMusic, gradient: "from-[#a855f7] to-[#9333ea]" },
+];
+
 export function LibraryTabs({ activeTab, onTabChange }: LibraryTabsProps) {
   return (
-    <div data-tv-section="library-tabs" className="flex gap-2 mb-4">
-      <button
-        data-tv-card
-        data-tv-card-index={0}
-        tabIndex={0}
-        onClick={() => onTabChange("artists")}
-        className={cn(
-          "px-3 py-1.5 text-sm font-medium rounded-full transition-all",
-          activeTab === "artists"
-            ? "bg-white text-black"
-            : "bg-white/10 text-white hover:bg-white/15"
-        )}
-      >
-        Artists
-      </button>
-      <button
-        data-tv-card
-        data-tv-card-index={1}
-        tabIndex={0}
-        onClick={() => onTabChange("albums")}
-        className={cn(
-          "px-3 py-1.5 text-sm font-medium rounded-full transition-all",
-          activeTab === "albums"
-            ? "bg-white text-black"
-            : "bg-white/10 text-white hover:bg-white/15"
-        )}
-      >
-        Albums
-      </button>
-      <button
-        data-tv-card
-        data-tv-card-index={2}
-        tabIndex={0}
-        onClick={() => onTabChange("tracks")}
-        className={cn(
-          "px-3 py-1.5 text-sm font-medium rounded-full transition-all",
-          activeTab === "tracks"
-            ? "bg-white text-black"
-            : "bg-white/10 text-white hover:bg-white/15"
-        )}
-      >
-        Songs
-      </button>
+    <div data-tv-section="library-tabs" className="relative">
+      {/* Glassmorphism background */}
+      <div className="absolute -inset-x-4 -inset-y-2 bg-[#0a0a0a]/60 backdrop-blur-xl rounded-2xl border border-white/5" />
+
+      {/* Tab buttons */}
+      <div className="relative flex gap-2 p-2">
+        {tabs.map((tab, index) => {
+          const isActive = activeTab === tab.id;
+          const Icon = tab.icon;
+
+          return (
+            <button
+              key={tab.id}
+              data-tv-card
+              data-tv-card-index={index}
+              tabIndex={0}
+              onClick={() => onTabChange(tab.id)}
+              className={cn(
+                "relative px-6 py-3 text-sm font-black uppercase tracking-wider rounded-xl transition-all duration-300 flex items-center gap-2.5 overflow-hidden group",
+                isActive
+                  ? "text-black scale-105 shadow-lg"
+                  : "text-gray-400 hover:text-white hover:scale-105 bg-white/5 hover:bg-white/10"
+              )}
+            >
+              {/* Active gradient background */}
+              {isActive && (
+                <>
+                  <div
+                    className={cn(
+                      "absolute inset-0 bg-gradient-to-r",
+                      tab.gradient
+                    )}
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent animate-shimmer" />
+                </>
+              )}
+
+              {/* Content */}
+              <span className="relative z-10 flex items-center gap-2.5">
+                <Icon className="w-4 h-4" />
+                {tab.label}
+              </span>
+
+              {/* Hover effect */}
+              {!isActive && (
+                <div
+                  className={cn(
+                    "absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-gradient-to-r",
+                    tab.gradient
+                  )}
+                  style={{ opacity: 0.1 }}
+                />
+              )}
+            </button>
+          );
+        })}
+      </div>
     </div>
   );
 }

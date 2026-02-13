@@ -10,6 +10,7 @@ export function useDiscoverActions(
     isGenerating?: boolean,
     refreshBatchStatus?: () => Promise<unknown>,
     setPendingGeneration?: (pending: boolean) => void,
+    markGenerationStart?: () => void,
     updateTrackLiked?: (albumId: string, isLiked: boolean) => void
 ) {
     const { playTracks, isPlaying, pause, resume } = useAudio();
@@ -23,6 +24,7 @@ export function useDiscoverActions(
 
         // Set optimistic state immediately to prevent double-clicks
         setPendingGeneration?.(true);
+        markGenerationStart?.();
 
         try {
             toast.info("Generating your Discover Weekly playlist...");
@@ -49,7 +51,7 @@ export function useDiscoverActions(
                 toast.error(err.message || "Failed to generate playlist");
             }
         }
-    }, [isGenerating, refreshBatchStatus, setPendingGeneration]);
+    }, [isGenerating, refreshBatchStatus, setPendingGeneration, markGenerationStart]);
 
     const handleLike = useCallback(
         async (track: DiscoverTrack) => {

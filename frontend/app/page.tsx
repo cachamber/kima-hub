@@ -13,26 +13,10 @@ import { MixesGrid } from "@/features/home/components/MixesGrid";
 import { PopularArtistsGrid } from "@/features/home/components/PopularArtistsGrid";
 import { PodcastsGrid } from "@/features/home/components/PodcastsGrid";
 import { AudiobooksGrid } from "@/features/home/components/AudiobooksGrid";
-import { FeaturedPlaylistsGrid } from "@/features/home/components/FeaturedPlaylistsGrid";
+import { FeaturedPlaylistsGrid, FeaturedPlaylistsSkeleton } from "@/features/home/components/FeaturedPlaylistsGrid";
 import { LibraryRadioStations } from "@/features/home/components/LibraryRadioStations";
 
-// Lazy load MoodMixer - only loads when user opens it
 const MoodMixer = lazy(() => import("@/components/MoodMixer").then(mod => ({ default: mod.MoodMixer })));
-
-// Loading skeleton for playlist cards
-function PlaylistSkeleton() {
-    return (
-        <div className="flex gap-3 overflow-hidden">
-            {[...Array(8)].map((_, i) => (
-                <div key={i} className="flex-shrink-0 w-[140px] sm:w-[160px] md:w-[170px] lg:w-[180px] p-3">
-                    <div className="aspect-square rounded-md bg-white/5 animate-pulse mb-3" />
-                    <div className="h-4 bg-white/5 rounded animate-pulse w-3/4 mb-2" />
-                    <div className="h-3 bg-white/5 rounded animate-pulse w-1/2" />
-                </div>
-            ))}
-        </div>
-    );
-}
 
 export default function HomePage() {
     const [showMoodMixer, setShowMoodMixer] = useState(false);
@@ -55,112 +39,122 @@ export default function HomePage() {
         return <LoadingScreen />;
     }
 
+    let sectionIndex = 0;
+
     return (
-        <div className="relative">
-            <HomeHero />
+        <div className="min-h-screen relative bg-gradient-to-b from-[#0a0a0a] to-black">
+            {/* Static gradient overlay */}
+            <div className="fixed inset-0 pointer-events-none opacity-50">
+                <div className="absolute inset-0 bg-gradient-to-br from-white/5 via-transparent to-transparent" />
+            </div>
 
-            <div className="relative max-w-[1800px] mx-auto px-4 sm:px-6 pb-8">
-                <div className="space-y-8">
-                    {/* Library Radio Stations - Quick shuffle from your library */}
-                    <section>
-                        <SectionHeader title="Library Radio" showAllHref="/radio" />
-                        <LibraryRadioStations />
-                    </section>
+            <div className="relative">
+                <HomeHero />
 
-                    {/* Continue Listening - #1 Priority */}
-                    {recentlyListened.length > 0 && (
-                        <section>
-                            <SectionHeader title="Continue Listening" showAllHref="/library?tab=artists" />
-                            <ContinueListening items={recentlyListened} />
+                <div className="relative max-w-[1800px] mx-auto px-4 sm:px-6 md:px-8 pb-32 pt-8">
+                    <div className="space-y-12">
+                        {/* Library Radio Stations */}
+                        <section className="animate-slide-up" style={{ animationDelay: `${sectionIndex++ * 0.1}s` }}>
+                            <SectionHeader title="Library Radio" showAllHref="/radio" color="featured" />
+                            <LibraryRadioStations />
                         </section>
-                    )}
 
-                    {/* Recently Added - #2 Priority */}
-                    {recentlyAdded.length > 0 && (
-                        <section>
-                            <SectionHeader title="Recently Added" showAllHref="/library?tab=artists" />
-                            <ArtistsGrid artists={recentlyAdded} />
-                        </section>
-                    )}
+                        {/* Continue Listening */}
+                        {recentlyListened.length > 0 && (
+                            <section className="animate-slide-up" style={{ animationDelay: `${sectionIndex++ * 0.1}s` }}>
+                                <SectionHeader title="Continue Listening" showAllHref="/library?tab=artists" color="featured" />
+                                <ContinueListening items={recentlyListened} />
+                            </section>
+                        )}
 
-                    {/* Made For You - #3 Priority */}
-                    {mixes.length > 0 && (
-                        <section>
-                            <SectionHeader
-                                title="Made For You"
-                                rightAction={
-                                    <div className="flex items-center gap-2">
-                                        <button
-                                            onClick={() => setShowMoodMixer(true)}
-                                            className="flex items-center gap-2 px-3 py-1.5 text-sm text-black font-semibold bg-[#ecb200] hover:bg-[#d4a000] rounded-full transition-colors"
-                                        >
-                                            <AudioWaveform className="w-4 h-4" />
-                                            <span className="hidden sm:inline">Mood Mixer</span>
-                                        </button>
-                                        <button
-                                            onClick={handleRefreshMixes}
-                                            disabled={isRefreshingMixes}
-                                            className="flex items-center gap-2 px-3 py-1.5 text-sm text-gray-400 hover:text-white transition-colors font-semibold group bg-white/5 hover:bg-white/10 rounded-full disabled:opacity-50 disabled:cursor-not-allowed"
-                                        >
-                                            {isRefreshingMixes ? (
-                                                <GradientSpinner size="sm" />
-                                            ) : (
-                                                <RefreshCw className="w-4 h-4 group-hover:rotate-180 transition-transform duration-500" />
-                                            )}
-                                            <span className="hidden sm:inline">
-                                                {isRefreshingMixes ? "Refreshing..." : "Refresh"}
-                                            </span>
-                                        </button>
-                                    </div>
-                                }
-                            />
-                            <MixesGrid mixes={mixes} />
-                        </section>
-                    )}
+                        {/* Recently Added */}
+                        {recentlyAdded.length > 0 && (
+                            <section className="animate-slide-up" style={{ animationDelay: `${sectionIndex++ * 0.1}s` }}>
+                                <SectionHeader title="Recently Added" showAllHref="/library?tab=artists" color="artists" />
+                                <ArtistsGrid artists={recentlyAdded} />
+                            </section>
+                        )}
 
-                    {/* Recommended For You - #4 Priority */}
-                    {recommended.length > 0 && (
-                        <section>
-                            <SectionHeader title="Recommended For You" showAllHref="/discover" badge="Last.FM" />
-                            <ArtistsGrid artists={recommended} />
-                        </section>
-                    )}
+                        {/* Made For You */}
+                        {mixes.length > 0 && (
+                            <section className="animate-slide-up" style={{ animationDelay: `${sectionIndex++ * 0.1}s` }}>
+                                <SectionHeader
+                                    title="Made For You"
+                                    color="discover"
+                                    rightAction={
+                                        <div className="flex items-center gap-2">
+                                            <button
+                                                onClick={() => setShowMoodMixer(true)}
+                                                className="flex items-center gap-2 px-4 py-2 text-xs font-black uppercase tracking-wider text-black bg-[#fca208] hover:bg-[#f97316] rounded-lg transition-colors"
+                                            >
+                                                <AudioWaveform className="w-3.5 h-3.5" />
+                                                <span className="hidden sm:inline">Mood Mixer</span>
+                                            </button>
+                                            <button
+                                                onClick={handleRefreshMixes}
+                                                disabled={isRefreshingMixes}
+                                                className="flex items-center gap-2 px-4 py-2 text-xs font-mono uppercase tracking-wider text-gray-400 hover:text-white transition-colors bg-white/5 hover:bg-white/10 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed border border-white/10 hover:border-white/20"
+                                            >
+                                                {isRefreshingMixes ? (
+                                                    <GradientSpinner size="sm" />
+                                                ) : (
+                                                    <RefreshCw className="w-3.5 h-3.5 group-hover:rotate-180 transition-transform duration-500" />
+                                                )}
+                                                <span className="hidden sm:inline">
+                                                    {isRefreshingMixes ? "Refreshing..." : "Refresh"}
+                                                </span>
+                                            </button>
+                                        </div>
+                                    }
+                                />
+                                <MixesGrid mixes={mixes} />
+                            </section>
+                        )}
 
-                    {/* Popular Artists - #5 Priority */}
-                    {popularArtists.length > 0 && (
-                        <section>
-                            <SectionHeader title="Popular Artists" badge="Last.FM" />
-                            <PopularArtistsGrid artists={popularArtists} />
-                        </section>
-                    )}
+                        {/* Recommended For You */}
+                        {recommended.length > 0 && (
+                            <section className="animate-slide-up" style={{ animationDelay: `${sectionIndex++ * 0.1}s` }}>
+                                <SectionHeader title="Recommended" showAllHref="/discover" badge="Last.FM" color="artists" />
+                                <ArtistsGrid artists={recommended} />
+                            </section>
+                        )}
 
-                    {/* Featured Playlists - After Popular Artists */}
-                    {(isBrowseLoading || featuredPlaylists.length > 0) && (
-                        <section>
-                            <SectionHeader title="Featured Playlists" showAllHref="/browse/playlists" badge="Deezer" />
-                            {isBrowseLoading && featuredPlaylists.length === 0 ? (
-                                <PlaylistSkeleton />
-                            ) : (
-                                <FeaturedPlaylistsGrid playlists={featuredPlaylists} />
-                            )}
-                        </section>
-                    )}
+                        {/* Popular Artists */}
+                        {popularArtists.length > 0 && (
+                            <section className="animate-slide-up" style={{ animationDelay: `${sectionIndex++ * 0.1}s` }}>
+                                <SectionHeader title="Popular Artists" badge="Last.FM" color="artists" />
+                                <PopularArtistsGrid artists={popularArtists} />
+                            </section>
+                        )}
 
-                    {/* Popular Podcasts - #6 Priority */}
-                    {recentPodcasts.length > 0 && (
-                        <section>
-                            <SectionHeader title="Popular Podcasts" showAllHref="/podcasts" />
-                            <PodcastsGrid podcasts={recentPodcasts} />
-                        </section>
-                    )}
+                        {/* Featured Playlists */}
+                        {(isBrowseLoading || featuredPlaylists.length > 0) && (
+                            <section className="animate-slide-up" style={{ animationDelay: `${sectionIndex++ * 0.1}s` }}>
+                                <SectionHeader title="Featured Playlists" showAllHref="/browse/playlists" badge="Deezer" color="tracks" />
+                                {isBrowseLoading && featuredPlaylists.length === 0 ? (
+                                    <FeaturedPlaylistsSkeleton />
+                                ) : (
+                                    <FeaturedPlaylistsGrid playlists={featuredPlaylists} />
+                                )}
+                            </section>
+                        )}
 
-                    {/* Audiobooks - #7 Priority */}
-                    {recentAudiobooks.length > 0 && (
-                        <section>
-                            <SectionHeader title="Audiobooks" showAllHref="/audiobooks" />
-                            <AudiobooksGrid audiobooks={recentAudiobooks} />
-                        </section>
-                    )}
+                        {/* Popular Podcasts */}
+                        {recentPodcasts.length > 0 && (
+                            <section className="animate-slide-up" style={{ animationDelay: `${sectionIndex++ * 0.1}s` }}>
+                                <SectionHeader title="Popular Podcasts" showAllHref="/podcasts" color="podcasts" />
+                                <PodcastsGrid podcasts={recentPodcasts} />
+                            </section>
+                        )}
+
+                        {/* Audiobooks */}
+                        {recentAudiobooks.length > 0 && (
+                            <section className="animate-slide-up" style={{ animationDelay: `${sectionIndex++ * 0.1}s` }}>
+                                <SectionHeader title="Audiobooks" showAllHref="/audiobooks" color="audiobooks" />
+                                <AudiobooksGrid audiobooks={recentAudiobooks} />
+                            </section>
+                        )}
+                    </div>
                 </div>
             </div>
 

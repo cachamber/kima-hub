@@ -57,45 +57,57 @@ const AlbumCardItem = memo(
                 data-tv-card
                 data-tv-card-index={index}
                 tabIndex={0}
-                className="group"
+                className="group block"
             >
-                <div className="p-3 rounded-md cursor-pointer hover:bg-white/5 transition-colors" style={{ transform: "translateZ(0)" }}>
-                    <div className="relative aspect-square mb-3">
-                        <div className="w-full h-full bg-[#282828] rounded-md flex items-center justify-center overflow-hidden" style={{ contain: "content" }}>
+                <div className="relative bg-[#0a0a0a] border-2 border-white/10 rounded-lg overflow-hidden hover:border-[#22c55e]/50 transition-all duration-300 hover:shadow-lg hover:shadow-[#22c55e]/10" style={{ transform: "translateZ(0)" }}>
+                    <div className="relative aspect-square">
+                        <div className="w-full h-full bg-[#181818] flex items-center justify-center overflow-hidden" style={{ contain: "content" }}>
                             {coverArtUrl ? (
                                 <CachedImage
                                     src={coverArtUrl}
                                     alt={album.title}
                                     fill
-                                    className="object-cover group-hover:scale-105 transition-transform"
+                                    className="object-cover group-hover:scale-110 transition-transform duration-500"
                                     sizes="(max-width: 640px) 50vw, (max-width: 1024px) 25vw, 16vw"
                                 />
                             ) : (
-                                <Disc3 className="w-10 h-10 text-gray-600" />
+                                <Disc3 className="w-12 h-12 text-gray-700" />
                             )}
                         </div>
+
+                        {/* Gradient overlay on hover */}
+                        <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0a] via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+
                         {/* Play button */}
                         <button
                             onClick={handlePlay}
-                            className="absolute bottom-1 right-1 w-10 h-10 rounded-full bg-[#ecb200] flex items-center justify-center shadow-xl opacity-0 group-hover:opacity-100 transition-opacity"
+                            className="absolute bottom-3 right-3 w-11 h-11 rounded-lg bg-[#22c55e] flex items-center justify-center shadow-xl opacity-0 group-hover:opacity-100 transition-all duration-200 hover:scale-110 hover:bg-[#16a34a]"
                         >
-                            <Play className="w-4 h-4 fill-current ml-0.5 text-black" />
+                            <Play className="w-5 h-5 fill-current ml-0.5 text-black" />
                         </button>
+
                         {/* Delete button */}
                         <button
                             onClick={handleDelete}
-                            className="absolute top-1 right-1 w-7 h-7 rounded-full bg-black/60 flex items-center justify-center opacity-0 group-hover:opacity-100 hover:bg-red-600 transition-opacity"
+                            className="absolute top-2 right-2 w-8 h-8 rounded-lg bg-black/80 hidden md:flex items-center justify-center opacity-0 group-hover:opacity-100 hover:bg-red-600 transition-all duration-200 border border-white/20"
                             title="Delete album"
                         >
-                            <Trash2 className="w-3.5 h-3.5 text-white" />
+                            <Trash2 className="w-4 h-4 text-white" />
                         </button>
+
+                        {/* Color accent bar */}
+                        <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-[#22c55e] to-[#16a34a] transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300" />
                     </div>
-                    <h3 className="text-sm font-semibold text-white truncate">
-                        {album.title}
-                    </h3>
-                    <p className="text-xs text-gray-400 mt-0.5 truncate">
-                        {album.artist?.name}
-                    </p>
+
+                    {/* Info section with monospace data */}
+                    <div className="p-3 bg-gradient-to-b from-[#0a0a0a] to-[#0f0f0f]">
+                        <h3 className="text-sm font-black text-white truncate mb-1 tracking-tight">
+                            {album.title}
+                        </h3>
+                        <p className="text-xs font-mono text-gray-500 uppercase tracking-wider truncate">
+                            {album.artist?.name}
+                        </p>
+                    </div>
                 </div>
             </Link>
         );

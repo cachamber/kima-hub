@@ -6,6 +6,10 @@ const withBundleAnalyzer = bundleAnalyzer({
 });
 
 const nextConfig: NextConfig = {
+    turbopack: {
+        root: __dirname,
+    },
+    
     // Allow dev origins for local network testing
     allowedDevOrigins: [
         "http://127.0.0.1:3030",

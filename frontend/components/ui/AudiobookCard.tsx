@@ -13,7 +13,7 @@ interface AudiobookCardProps {
         progress: number;
         isFinished: boolean;
     } | null;
-    seriesBadge?: string; // e.g., "5 books" for series cards
+    seriesBadge?: string;
     index?: number;
     getCoverUrl: (url: string) => string | null;
 }
@@ -38,9 +38,8 @@ export function AudiobookCard({
             tabIndex={0}
         >
             <div className="cursor-pointer group relative h-full flex flex-col">
-                {/* Book Cover Container - Fixed Aspect Ratio */}
                 <div className="relative flex-shrink-0">
-                    <div className="aspect-[2/3] rounded-sm overflow-hidden bg-gradient-to-br from-[#2a2a2a] to-[#1a1a1a] shadow-2xl relative">
+                    <div className="aspect-[2/3] rounded-lg overflow-hidden bg-[#0a0a0a] border border-white/10 group-hover:border-[#f59e0b]/40 group-hover:shadow-xl group-hover:shadow-[#f59e0b]/10 transition-all duration-300 relative">
                         {resolvedCoverUrl ? (
                             <CachedImage
                                 src={resolvedCoverUrl}
@@ -53,51 +52,47 @@ export function AudiobookCard({
                             />
                         ) : (
                             <div className="w-full h-full flex items-center justify-center">
-                                <Book className="w-16 h-16 text-gray-700" />
+                                <Book className="w-16 h-16 text-white/10" />
                             </div>
                         )}
-                        
-                        {/* Book Spine Shadow */}
-                        <div className="absolute left-0 top-0 bottom-0 w-2 bg-gradient-to-r from-black/40 to-transparent pointer-events-none" />
-                        
-                        {/* Book Gloss */}
-                        <div className="absolute inset-0 bg-gradient-to-br from-white/5 via-transparent to-black/20 pointer-events-none" />
 
-                        {/* Progress Bar */}
-                        {progress && !progress.isFinished && (
+                        {/* Book spine shadow */}
+                        <div className="absolute left-0 top-0 bottom-0 w-2 bg-gradient-to-r from-black/40 to-transparent pointer-events-none" />
+
+                        {/* Progress bar */}
+                        {progress && !progress.isFinished && progress.progress > 0 && (
                             <div className="absolute bottom-0 left-0 right-0 h-1 bg-black/60">
                                 <div
-                                    className="h-full bg-purple-500"
+                                    className="h-full bg-[#f59e0b]"
                                     style={{ width: `${progress.progress}%` }}
                                 />
                             </div>
                         )}
 
-                        {/* Completion Badge */}
+                        {/* Completion badge */}
                         {progress?.isFinished && (
-                            <div className="absolute top-2 right-2 bg-green-500 rounded-full p-1.5 shadow-lg">
+                            <div className="absolute top-2 right-2 bg-green-500 rounded-full p-1 shadow-lg">
                                 <CheckCircle className="w-3 h-3 text-white" />
                             </div>
                         )}
 
-                        {/* Series Badge (for series cards only) */}
+                        {/* Series badge */}
                         {seriesBadge && (
-                            <div className="absolute top-2 right-2 bg-purple-500 rounded px-2 py-1 text-xs font-bold shadow-lg">
+                            <div className="absolute top-2 right-2 bg-[#f59e0b] text-black rounded px-2 py-0.5 text-[10px] font-black uppercase tracking-wider shadow-lg">
                                 {seriesBadge}
                             </div>
                         )}
+
+                        {/* Hover accent line */}
+                        <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-[#f59e0b] to-[#d97706] transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300 origin-center" />
                     </div>
-                    
-                    {/* Shelf Shadow */}
-                    <div className="absolute -bottom-1 left-0 right-0 h-2 bg-gradient-to-b from-[#1a1a1a]/50 to-transparent rounded-b-sm" />
                 </div>
 
-                {/* Text Container - Fixed Height for Uniformity */}
-                <div className="mt-3 px-1 h-14 flex flex-col justify-start">
-                    <h3 className="text-sm font-bold text-white line-clamp-2 leading-tight">
+                <div className="mt-2.5 px-0.5 h-14 flex flex-col justify-start">
+                    <h3 className="text-sm font-black text-white line-clamp-2 leading-tight tracking-tight">
                         {title}
                     </h3>
-                    <p className="text-xs text-gray-400 line-clamp-1 mt-1">
+                    <p className="text-[11px] font-mono text-white/40 line-clamp-1 mt-0.5 uppercase tracking-wider">
                         {author}
                     </p>
                 </div>
@@ -105,18 +100,3 @@ export function AudiobookCard({
         </Link>
     );
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

@@ -94,15 +94,15 @@ export function UserManagementSection() {
 
     return (
         <>
-            <SettingsSection 
-                id="users" 
+            <SettingsSection
+                id="users"
                 title="User Management"
                 description="Manage users who can access this instance"
                 showSeparator={false}
             >
                 {/* Create User Form */}
-                <div className="py-4 px-4 bg-[#1a1a1a] rounded-lg mb-4">
-                    <h3 className="text-sm font-medium text-white mb-3">Create New User</h3>
+                <div className="py-4 px-4 bg-white/5 rounded-lg border border-white/10 mb-4">
+                    <h3 className="text-xs font-mono text-white/50 mb-3 uppercase tracking-wider">Create New User</h3>
                     <div className="space-y-3">
                         <div className="flex gap-3">
                             <SettingsInput
@@ -131,13 +131,13 @@ export function UserManagementSection() {
                             <button
                                 onClick={handleCreate}
                                 disabled={creating || !newUsername.trim() || newPassword.length < 6}
-                                className="px-4 py-1.5 text-sm bg-white text-black font-medium rounded-full
-                                    hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed transition-transform"
+                                className="px-4 py-1.5 text-xs font-black bg-[#fca208] text-black rounded-lg uppercase tracking-wider
+                                    hover:bg-[#f97316] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                             >
                                 {creating ? "Creating..." : "Create"}
                             </button>
-                            <InlineStatus 
-                                status={createStatus} 
+                            <InlineStatus
+                                status={createStatus}
                                 message={createMessage}
                                 onClear={() => setCreateStatus("idle")}
                             />
@@ -148,36 +148,36 @@ export function UserManagementSection() {
                 {/* Users List */}
                 <div className="space-y-1">
                     {loading ? (
-                        <div className="py-4 text-sm text-gray-500">Loading users...</div>
+                        <div className="py-4 text-xs font-mono text-white/30 uppercase tracking-wider">Loading users...</div>
                     ) : users.length === 0 ? (
-                        <div className="py-4 text-sm text-gray-500">No users found</div>
+                        <div className="py-4 text-xs font-mono text-white/30 uppercase tracking-wider">No users found</div>
                     ) : (
                         users.map((user) => (
-                            <div 
+                            <div
                                 key={user.id}
-                                className="flex items-center justify-between py-3 px-3 rounded-md hover:bg-white/5"
+                                className="flex items-center justify-between py-3 px-3 rounded-lg hover:bg-white/[0.03] border border-transparent hover:border-white/5 transition-all"
                             >
                                 <div className="flex items-center gap-3">
-                                    <div className="w-8 h-8 rounded-full bg-[#333] flex items-center justify-center text-sm text-white">
+                                    <div className="w-8 h-8 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center text-xs font-black text-[#fca208]">
                                         {user.username[0].toUpperCase()}
                                     </div>
                                     <div>
-                                        <div className="text-sm text-white">
+                                        <div className="text-sm font-medium text-white">
                                             {user.username}
                                             {currentUser?.id === user.id && (
-                                                <span className="text-xs text-gray-500 ml-2">(you)</span>
+                                                <span className="text-[10px] font-mono text-white/30 ml-2 uppercase tracking-wider">(you)</span>
                                             )}
                                         </div>
-                                        <div className="text-xs text-gray-500">
+                                        <div className="text-[10px] font-mono text-white/30 uppercase tracking-wider">
                                             {user.role === "admin" ? "Admin" : "User"}
                                         </div>
                                     </div>
                                 </div>
-                                
+
                                 {currentUser?.id !== user.id && (
                                     <button
                                         onClick={() => setConfirmDelete(user.id)}
-                                        className="p-2 text-gray-500 hover:text-red-400 transition-colors"
+                                        className="p-2 text-white/20 hover:text-red-400 transition-colors"
                                     >
                                         <Trash2 className="w-4 h-4" />
                                     </button>
@@ -195,24 +195,24 @@ export function UserManagementSection() {
                 title="Delete User"
             >
                 <div className="space-y-4">
-                    <p className="text-sm text-gray-300">
+                    <p className="text-xs font-mono text-white/50 uppercase tracking-wider">
                         Are you sure you want to delete this user? This action cannot be undone.
                     </p>
                     <div className="flex gap-2 justify-end items-center">
-                        <InlineStatus 
-                            status={deleteStatus} 
+                        <InlineStatus
+                            status={deleteStatus}
                             message={deleteMessage}
                             onClear={() => setDeleteStatus("idle")}
                         />
                         <button
                             onClick={() => setConfirmDelete(null)}
-                            className="px-4 py-2 text-sm text-gray-400 hover:text-white"
+                            className="px-4 py-2 text-xs font-mono text-white/40 hover:text-white/70 uppercase tracking-wider transition-colors"
                         >
                             Cancel
                         </button>
                         <button
                             onClick={() => confirmDelete && handleDelete(confirmDelete)}
-                            className="px-4 py-2 text-sm bg-red-500 text-white rounded-full hover:bg-red-600"
+                            className="px-4 py-2 text-xs font-black bg-red-500 text-white rounded-lg uppercase tracking-wider hover:bg-red-600 transition-colors"
                         >
                             Delete
                         </button>

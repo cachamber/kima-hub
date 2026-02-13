@@ -130,7 +130,7 @@ export function FullPlayer() {
             if (result.success && result.trackCount > 0) {
                 toast.success(`Vibe mode on`, {
                     description: `${result.trackCount} similar tracks queued up next`,
-                    icon: <AudioWaveform className="w-4 h-4 text-[#ecb200]" />,
+                    icon: <AudioWaveform className="w-4 h-4 text-brand" />,
                 });
             } else {
                 toast.error("Couldn't find matching tracks in your library");
@@ -207,18 +207,17 @@ export function FullPlayer() {
     return (
         <div className="relative flex-shrink-0">
             <div className="bg-black border-t border-white/[0.08] h-24">
-                {/* Subtle top glow */}
-                <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent" />
+                {/* Brand accent line */}
+                <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-brand/40 to-transparent" />
                 <div className="flex items-center h-full px-6 gap-6">
                     {/* Artwork & Info */}
                     <div className="flex items-center gap-4 w-80">
                         {mediaLink ? (
                             <Link
                                 href={mediaLink}
-                                className="relative w-14 h-14 flex-shrink-0 group"
+                                className="relative w-14 h-14 flex-shrink-0"
                             >
-                                <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent rounded-full blur-sm opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                                <div className="relative w-full h-full bg-gradient-to-br from-[#2a2a2a] to-[#1a1a1a] rounded-full overflow-hidden shadow-lg flex items-center justify-center">
+                                <div className="relative w-full h-full bg-gradient-to-br from-[#2a2a2a] to-[#1a1a1a] rounded-lg overflow-hidden shadow-lg flex items-center justify-center">
                                     {coverUrl ? (
                                         <Image
                                             key={coverUrl}
@@ -237,7 +236,7 @@ export function FullPlayer() {
                             </Link>
                         ) : (
                             <div className="relative w-14 h-14 flex-shrink-0">
-                                <div className="relative w-full h-full bg-gradient-to-br from-[#2a2a2a] to-[#1a1a1a] rounded-full overflow-hidden shadow-lg flex items-center justify-center">
+                                <div className="relative w-full h-full bg-gradient-to-br from-[#2a2a2a] to-[#1a1a1a] rounded-lg overflow-hidden shadow-lg flex items-center justify-center">
                                     <MusicIcon className="w-6 h-6 text-gray-500" />
                                 </div>
                             </div>
@@ -309,7 +308,7 @@ export function FullPlayer() {
                                 className={cn(
                                     "transition-all duration-200 hover:scale-110 disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:scale-100",
                                     isShuffle
-                                        ? "text-green-500 hover:text-green-400"
+                                        ? "text-brand hover:text-brand-hover"
                                         : "text-gray-400 hover:text-white"
                                 )}
                                 disabled={!hasMedia || playbackType !== "track"}
@@ -367,9 +366,9 @@ export function FullPlayer() {
                                     audioError
                                         ? "bg-red-500 text-white hover:scale-110 hover:bg-red-400"
                                         : hasMedia && !isBuffering
-                                        ? "bg-white text-black hover:scale-110 shadow-lg shadow-white/20 hover:shadow-white/30"
+                                        ? "bg-[#fca200] text-black hover:scale-110 shadow-lg shadow-[#fca200]/20 hover:shadow-[#fca200]/30"
                                         : isBuffering
-                                        ? "bg-white/80 text-black"
+                                        ? "bg-[#fca200]/80 text-black"
                                         : "bg-gray-700 text-gray-500 cursor-not-allowed"
                                 )}
                                 disabled={!hasMedia || isBuffering}
@@ -393,7 +392,7 @@ export function FullPlayer() {
                                 }
                             >
                                 {hasMedia && !isBuffering && !audioError && (
-                                    <div className="absolute inset-0 rounded-full bg-white blur-md opacity-0 group-hover:opacity-50 transition-opacity duration-200" />
+                                    <div className="absolute inset-0 rounded-full bg-[#fca200] blur-md opacity-0 group-hover:opacity-50 transition-opacity duration-200" />
                                 )}
                                 {audioError ? (
                                     <RefreshCw className="w-5 h-5 relative z-10" />
@@ -441,7 +440,7 @@ export function FullPlayer() {
                                 className={cn(
                                     "transition-all duration-200 hover:scale-110 disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:scale-100",
                                     repeatMode !== "off"
-                                        ? "text-green-500 hover:text-green-400"
+                                        ? "text-brand hover:text-brand-hover"
                                         : "text-gray-400 hover:text-white"
                                 )}
                                 disabled={!hasMedia || playbackType !== "track"}
@@ -477,8 +476,8 @@ export function FullPlayer() {
                                         !hasMedia || playbackType !== "track"
                                             ? "text-gray-600"
                                             : vibeMode
-                                            ? "text-[#ecb200] hover:text-[#d4a000]"
-                                            : "text-gray-400 hover:text-[#ecb200]"
+                                            ? "text-brand hover:text-brand-hover"
+                                            : "text-gray-400 hover:text-brand"
                                     )}
                                     disabled={
                                         !hasMedia ||
@@ -510,11 +509,11 @@ export function FullPlayer() {
                         <div className="w-full flex items-center gap-3">
                             <span
                                 className={cn(
-                                    "text-xs text-right font-medium tabular-nums",
+                                    "text-xs text-right font-mono font-medium tabular-nums",
                                     hasMedia
                                         ? "text-gray-400"
                                         : "text-gray-600",
-                                    duration >= 3600 ? "w-14" : "w-10" // Wider for h:mm:ss format
+                                    duration >= 3600 ? "w-14" : "w-10"
                                 )}
                             >
                                 {formatTime(displayTime)}
@@ -532,11 +531,11 @@ export function FullPlayer() {
                             />
                             <span
                                 className={cn(
-                                    "text-xs font-medium tabular-nums",
+                                    "text-xs font-mono font-medium tabular-nums",
                                     hasMedia
                                         ? "text-gray-400"
                                         : "text-gray-600",
-                                    duration >= 3600 ? "w-14" : "w-10" // Wider for h:mm:ss format
+                                    duration >= 3600 ? "w-14" : "w-10"
                                 )}
                             >
                                 {playbackType === "podcast" ||
@@ -576,9 +575,9 @@ export function FullPlayer() {
                                 aria-valuenow={Math.round(volume * 100)}
                                 aria-valuetext={`${Math.round(volume * 100)} percent`}
                                 style={{
-                                    background: `linear-gradient(to right, #fff ${volume * 100}%, rgba(255,255,255,0.15) ${volume * 100}%)`
+                                    background: `linear-gradient(to right, #fca200 ${volume * 100}%, rgba(255,255,255,0.15) ${volume * 100}%)`
                                 }}
-                                className="w-full h-1 rounded-full appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:cursor-pointer [&::-webkit-slider-thumb]:shadow-lg [&::-webkit-slider-thumb]:shadow-white/30 [&::-webkit-slider-thumb]:transition-all [&::-webkit-slider-thumb]:hover:scale-110"
+                                className="w-full h-1 rounded-full appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:bg-brand [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:cursor-pointer [&::-webkit-slider-thumb]:shadow-lg [&::-webkit-slider-thumb]:shadow-brand/30 [&::-webkit-slider-thumb]:transition-all [&::-webkit-slider-thumb]:hover:scale-110"
                             />
                         </div>
 

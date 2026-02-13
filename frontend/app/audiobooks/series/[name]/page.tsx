@@ -4,22 +4,18 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import { Card } from "@/components/ui/Card";
-import { Button } from "@/components/ui/Button";
-import { Badge } from "@/components/ui/Badge";
 import { api } from "@/lib/api";
 import { formatDuration } from "@/utils/formatTime";
 import { useAuth } from "@/lib/auth-context";
 import { useAudioState, useAudioPlayback, useAudioControls } from "@/lib/audio-context";
 import { useToast } from "@/lib/toast-context";
+import { GradientSpinner } from "@/components/ui/GradientSpinner";
 import {
     ArrowLeft,
     Book,
-    Clock,
     Play,
     Pause,
     CheckCircle,
-    Loader2,
 } from "lucide-react";
 
 interface Audiobook {
@@ -75,7 +71,6 @@ export default function SeriesDetailPage() {
         loadSeries();
     }, [seriesName, isAuthenticated, toast]);
 
-
     const getCoverUrl = (coverUrl: string | null, size = 300) => {
         if (!coverUrl) return null;
         return api.getCoverArtUrl(coverUrl, size);
@@ -83,16 +78,18 @@ export default function SeriesDetailPage() {
 
     if (isLoading) {
         return (
-            <div className="flex items-center justify-center min-h-screen">
-                <Loader2 className="w-8 h-8 text-purple-500 animate-spin" />
+            <div className="flex items-center justify-center min-h-screen bg-[#0a0a0a]">
+                <GradientSpinner size="md" />
             </div>
         );
     }
 
     if (books.length === 0) {
         return (
-            <div className="flex items-center justify-center min-h-screen">
-                <p className="text-gray-500">No books found in this series</p>
+            <div className="flex items-center justify-center min-h-screen bg-[#0a0a0a]">
+                <p className="text-xs font-mono text-gray-500 uppercase tracking-wider">
+                    No books found in this series
+                </p>
             </div>
         );
     }
@@ -101,200 +98,238 @@ export default function SeriesDetailPage() {
     const author = firstBook.author;
     const genres = firstBook.genres || [];
     const totalDuration = books.reduce((sum, book) => sum + book.duration, 0);
+    const heroImage = firstBook.coverUrl ? getCoverUrl(firstBook.coverUrl, 500) : null;
 
     return (
-        <div className="min-h-screen bg-black">
+        <div className="min-h-screen bg-gradient-to-b from-[#0a0a0a] to-black">
             {/* Hero Section */}
-            <div className="relative bg-gradient-to-b from-purple-900/30 to-transparent pb-8">
-                <div className="max-w-7xl mx-auto px-8 py-12">
-                    <div className="flex flex-col md:flex-row gap-8 items-start">
-                        {/* Series Cover */}
-                        <div className="relative w-64 h-64 flex-shrink-0 rounded-lg overflow-hidden shadow-2xl bg-[#181818]">
-                            {firstBook.coverUrl &&
-                            getCoverUrl(firstBook.coverUrl, 500) ? (
-                                <Image
-                                    src={getCoverUrl(firstBook.coverUrl, 500)!}
-                                    alt={seriesName}
-                                    fill
-                                    sizes="256px"
-                                    className="object-cover"
-                                    unoptimized
-                                />
-                            ) : (
-                                <div className="w-full h-full flex items-center justify-center">
-                                    <Book className="w-24 h-24 text-gray-600" />
-                                </div>
-                            )}
+            <div className="relative">
+                {/* Background */}
+                {heroImage && (
+                    <div className="absolute inset-0 overflow-hidden">
+                        <div className="absolute inset-0 scale-110 blur-md opacity-30">
+                            <Image
+                                src={heroImage}
+                                alt={seriesName}
+                                fill
+                                sizes="100vw"
+                                className="object-cover"
+                                priority
+                                unoptimized
+                            />
+                        </div>
+                        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-[#0a0a0a]/80 to-[#0a0a0a]" />
+                    </div>
+                )}
+
+                <div className="relative px-4 md:px-8 pt-8 pb-6">
+                    <div className="max-w-[1800px] mx-auto">
+                        {/* Back navigation */}
+                        <button
+                            onClick={() => router.push("/audiobooks")}
+                            className="flex items-center gap-2 text-xs font-mono text-white/40 hover:text-white transition-colors mb-6 uppercase tracking-wider"
+                        >
+                            <ArrowLeft className="w-3.5 h-3.5" />
+                            Audiobooks
+                        </button>
+
+                        {/* System status */}
+                        <div className="flex items-center gap-2 mb-4">
+                            <div className="w-1.5 h-1.5 bg-[#f59e0b] rounded-full" />
+                            <span className="text-xs font-mono text-white/50 uppercase tracking-wider">
+                                Series
+                            </span>
                         </div>
 
-                        {/* Series Info */}
-                        <div className="flex-1">
-                            <div className="text-sm font-bold text-white/90 mb-2">
-                                SERIES
+                        <div className="flex items-end gap-6">
+                            {/* Cover Art */}
+                            <div className="w-[140px] h-[140px] md:w-[192px] md:h-[192px] bg-[#0a0a0a] rounded-lg shadow-2xl shrink-0 overflow-hidden relative border-2 border-white/10">
+                                {heroImage ? (
+                                    <Image
+                                        src={heroImage}
+                                        alt={seriesName}
+                                        fill
+                                        sizes="(max-width: 768px) 140px, 192px"
+                                        className="object-cover"
+                                        priority
+                                        unoptimized
+                                    />
+                                ) : (
+                                    <div className="w-full h-full flex items-center justify-center">
+                                        <Book className="w-16 h-16 text-white/10" />
+                                    </div>
+                                )}
                             </div>
-                            <h1 className="text-5xl md:text-7xl font-bold text-white mb-6">
-                                {seriesName}
-                            </h1>
 
-                            <div className="flex flex-wrap items-center gap-4 text-sm text-gray-300 mb-6">
-                                <span className="font-semibold">{author}</span>
-                                <span>•</span>
-                                <span>
-                                    {books.length}{" "}
-                                    {books.length === 1 ? "book" : "books"}
-                                </span>
-                                <span>•</span>
-                                <span>{formatDuration(totalDuration)}</span>
-                            </div>
+                            {/* Info */}
+                            <div className="flex-1 min-w-0 pb-1">
+                                <h1 className="text-2xl md:text-4xl lg:text-5xl font-black text-white leading-tight line-clamp-2 mb-2 tracking-tighter">
+                                    {seriesName}
+                                </h1>
 
-                            {genres.length > 0 && (
-                                <div className="flex flex-wrap gap-2 mb-6">
-                                    {genres.slice(0, 5).map((genre) => (
-                                        <Badge key={genre} variant="default">
-                                            {genre}
-                                        </Badge>
-                                    ))}
+                                {/* Metadata row */}
+                                <div className="flex flex-wrap items-center gap-3 text-xs font-mono text-white/50 uppercase tracking-wider">
+                                    <span className="font-black text-white normal-case tracking-tight text-sm">
+                                        {author}
+                                    </span>
+                                    <span className="text-white/20">|</span>
+                                    <span>
+                                        {books.length} {books.length === 1 ? "book" : "books"}
+                                    </span>
+                                    <span className="text-white/20">|</span>
+                                    <span>{formatDuration(totalDuration)}</span>
                                 </div>
-                            )}
 
-                            <Button
-                                variant="ghost"
-                                onClick={() => router.back()}
-                                className="mb-6"
-                            >
-                                <ArrowLeft className="w-4 h-4 mr-2" />
-                                Back
-                            </Button>
+                                {/* Genre tags */}
+                                {genres.length > 0 && (
+                                    <div className="hidden md:flex flex-wrap gap-1.5 mt-3">
+                                        {genres.slice(0, 5).map((genre) => (
+                                            <span
+                                                key={genre}
+                                                className="px-2.5 py-0.5 bg-white/5 border border-white/10 rounded text-[10px] font-mono text-white/60 uppercase tracking-wider"
+                                            >
+                                                {genre}
+                                            </span>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
 
             {/* Books List */}
-            <div className="max-w-7xl mx-auto px-8 pb-24">
-                <h2 className="text-2xl font-bold text-white mb-6">
-                    Books in Series
-                </h2>
+            <div className="relative px-4 md:px-8 pb-24">
+                <div className="max-w-[1800px] mx-auto">
+                    <div className="animate-slide-up" style={{ animationDelay: "0s" }}>
+                        <div className="flex items-center gap-3 mb-6">
+                            <span className="w-1 h-8 bg-gradient-to-b from-[#f59e0b] to-[#d97706] rounded-full shrink-0" />
+                            <h2 className="text-2xl font-black tracking-tighter uppercase">Books in Series</h2>
+                            <span className="text-xs font-mono text-[#f59e0b]">
+                                {books.length}
+                            </span>
+                            <span className="flex-1 border-t border-white/10" />
+                        </div>
 
-                <div className="space-y-2">
-                    {books.map((book, index) => {
-                        const isCurrentBook =
-                            currentAudiobook?.id === book.id &&
-                            playbackType === "audiobook";
-                        const isBookPlaying = isCurrentBook && isPlaying;
+                        <div className="space-y-0.5">
+                            {books.map((book, index) => {
+                                const isCurrentBook =
+                                    currentAudiobook?.id === book.id &&
+                                    playbackType === "audiobook";
+                                const isBookPlaying = isCurrentBook && isPlaying;
+                                const bookCover = book.coverUrl ? getCoverUrl(book.coverUrl, 100) : null;
 
-                        return (
-                            <Card
-                                key={book.id}
-                                className="p-4 hover:bg-[#181818] transition-colors group"
-                            >
-                                <div className="flex items-center gap-4">
-                                    {/* Book Number */}
-                                    <div className="w-8 text-center">
-                                        {isBookPlaying ? (
-                                            <div className="flex items-center justify-center">
-                                                <div className="w-4 h-4 flex items-center justify-center">
-                                                    <div className="grid grid-cols-2 gap-0.5">
-                                                        <div className="w-1 h-3 bg-purple-500 animate-pulse" />
-                                                        <div className="w-1 h-3 bg-purple-500 animate-pulse delay-75" />
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        ) : (
-                                            <span className="text-gray-400 font-medium">
-                                                {book.series?.sequence ||
-                                                    index + 1}
-                                            </span>
-                                        )}
-                                    </div>
-
-                                    {/* Book Cover (small) */}
-                                    <Link href={`/audiobooks/${book.id}`}>
-                                        <div className="relative w-12 h-12 rounded overflow-hidden bg-[#181818] flex-shrink-0 cursor-pointer">
-                                            {book.coverUrl &&
-                                            getCoverUrl(book.coverUrl, 100) ? (
-                                                <Image
-                                                    src={getCoverUrl(book.coverUrl, 100)!}
-                                                    alt={book.title}
-                                                    fill
-                                                    sizes="48px"
-                                                    className="object-cover"
-                                                    unoptimized
-                                                />
-                                            ) : (
-                                                <div className="w-full h-full flex items-center justify-center">
-                                                    <Book className="w-6 h-6 text-gray-600" />
-                                                </div>
-                                            )}
-                                        </div>
-                                    </Link>
-
-                                    {/* Book Title & Author */}
-                                    <Link
-                                        href={`/audiobooks/${book.id}`}
-                                        className="flex-1 min-w-0 cursor-pointer"
+                                return (
+                                    <div
+                                        key={book.id}
+                                        className={`group relative rounded-lg transition-all ${
+                                            isCurrentBook
+                                                ? "bg-white/5 border border-[#f59e0b]/30"
+                                                : "border border-transparent hover:bg-white/[0.03] hover:border-white/5"
+                                        }`}
                                     >
-                                        <h3 className="text-white font-medium truncate hover:underline">
-                                            {book.title}
-                                        </h3>
-                                        <p className="text-sm text-gray-400 truncate">
-                                            {book.narrator || book.author}
-                                        </p>
-                                    </Link>
-
-                                    {/* Progress/Status */}
-                                    {book.progress?.isFinished ? (
-                                        <CheckCircle className="w-5 h-5 text-green-500 flex-shrink-0" />
-                                    ) : book.progress &&
-                                      book.progress.progress > 0 ? (
-                                        <div className="flex items-center gap-2 flex-shrink-0">
-                                            <div className="w-24 h-1 bg-[#181818] rounded-full overflow-hidden">
+                                        {/* Progress bar */}
+                                        {book.progress && book.progress.progress > 0 && !book.progress.isFinished && (
+                                            <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-white/5 rounded-full overflow-hidden">
                                                 <div
-                                                    className="h-full bg-purple-500"
-                                                    style={{
-                                                        width: `${book.progress.progress}%`,
-                                                    }}
+                                                    className="h-full bg-[#f59e0b]/60 transition-all"
+                                                    style={{ width: `${book.progress.progress}%` }}
                                                 />
                                             </div>
-                                            <span className="text-xs text-gray-400">
-                                                {Math.round(
-                                                    book.progress.progress
+                                        )}
+
+                                        <div className="flex items-center gap-4 px-3 py-3">
+                                            {/* Number / Play */}
+                                            <div className="w-8 flex items-center justify-center shrink-0">
+                                                {book.progress?.isFinished ? (
+                                                    <CheckCircle className="w-4 h-4 text-green-400" />
+                                                ) : isBookPlaying ? (
+                                                    <Pause
+                                                        className="w-4 h-4 text-[#f59e0b] cursor-pointer"
+                                                        onClick={() => pause()}
+                                                    />
+                                                ) : (
+                                                    <>
+                                                        <span className={`text-xs font-mono ${
+                                                            isCurrentBook ? "text-[#f59e0b] font-black hidden" : "text-white/30 group-hover:hidden"
+                                                        }`}>
+                                                            {book.series?.sequence || index + 1}
+                                                        </span>
+                                                        <Play
+                                                            className={`w-4 h-4 cursor-pointer ${
+                                                                isCurrentBook
+                                                                    ? "text-[#f59e0b]"
+                                                                    : "text-white hidden group-hover:block"
+                                                            }`}
+                                                            onClick={() => {
+                                                                if (isCurrentBook) {
+                                                                    resume();
+                                                                } else {
+                                                                    playAudiobook(book);
+                                                                }
+                                                            }}
+                                                        />
+                                                    </>
                                                 )}
-                                                %
+                                            </div>
+
+                                            {/* Cover thumbnail */}
+                                            <Link href={`/audiobooks/${book.id}`}>
+                                                <div className="relative w-10 h-10 rounded overflow-hidden bg-[#0a0a0a] border border-white/10 shrink-0 cursor-pointer">
+                                                    {bookCover ? (
+                                                        <Image
+                                                            src={bookCover}
+                                                            alt={book.title}
+                                                            fill
+                                                            sizes="40px"
+                                                            className="object-cover"
+                                                            unoptimized
+                                                        />
+                                                    ) : (
+                                                        <div className="w-full h-full flex items-center justify-center">
+                                                            <Book className="w-4 h-4 text-white/10" />
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </Link>
+
+                                            {/* Title & narrator */}
+                                            <Link
+                                                href={`/audiobooks/${book.id}`}
+                                                className="flex-1 min-w-0"
+                                            >
+                                                <h3 className={`font-black truncate text-sm tracking-tight ${
+                                                    isCurrentBook ? "text-[#f59e0b]" : "text-white"
+                                                }`}>
+                                                    {book.title}
+                                                </h3>
+                                                <p className="text-[10px] font-mono text-white/40 truncate uppercase tracking-wider mt-0.5">
+                                                    {book.narrator || book.author}
+                                                </p>
+                                            </Link>
+
+                                            {/* Progress */}
+                                            {book.progress?.isFinished ? (
+                                                <span className="text-[10px] font-mono text-green-400 uppercase tracking-wider shrink-0">
+                                                    Finished
+                                                </span>
+                                            ) : book.progress && book.progress.progress > 0 ? (
+                                                <span className="text-[10px] font-mono text-[#f59e0b] uppercase tracking-wider shrink-0">
+                                                    {Math.round(book.progress.progress)}%
+                                                </span>
+                                            ) : null}
+
+                                            {/* Duration */}
+                                            <span className="text-[10px] font-mono text-white/30 shrink-0 uppercase tracking-wider">
+                                                {formatDuration(book.duration)}
                                             </span>
                                         </div>
-                                    ) : null}
-
-                                    {/* Duration */}
-                                    <div className="flex items-center gap-2 text-sm text-gray-400 flex-shrink-0">
-                                        <Clock className="w-4 h-4" />
-                                        {formatDuration(book.duration)}
                                     </div>
-
-                                    {/* Play Button */}
-                                    <Button
-                                        variant={
-                                            isCurrentBook ? "primary" : "icon"
-                                        }
-                                        onClick={() => {
-                                            if (isCurrentBook) {
-                                                if (isPlaying) { pause(); } else { resume(); }
-                                            } else {
-                                                playAudiobook(book);
-                                            }
-                                        }}
-                                        className="flex-shrink-0"
-                                    >
-                                        {isBookPlaying ? (
-                                            <Pause className="w-4 h-4" />
-                                        ) : (
-                                            <Play className="w-4 h-4" />
-                                        )}
-                                    </Button>
-                                </div>
-                            </Card>
-                        );
-                    })}
+                                );
+                            })}
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>

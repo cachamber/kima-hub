@@ -3,26 +3,7 @@ import { Play, Pause, Music, ChevronDown, ChevronUp } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { cn } from "@/utils/cn";
 import { UnavailableAlbum } from "../types";
-
-const tierColors: Record<string, string> = {
-    high: "text-green-400",
-    medium: "text-yellow-400",
-    explore: "text-orange-400",
-    wildcard: "text-purple-400",
-    // Legacy mappings
-    low: "text-orange-400",
-    wild: "text-purple-400",
-};
-
-const tierLabels: Record<string, string> = {
-    high: "High Match",
-    medium: "Medium Match",
-    explore: "Explore",
-    wildcard: "Wild Card",
-    // Legacy mappings
-    low: "Explore",
-    wild: "Wild Card",
-};
+import { tierColors, tierLabels } from "../constants";
 
 interface UnavailableAlbumsProps {
     unavailable: UnavailableAlbum[];

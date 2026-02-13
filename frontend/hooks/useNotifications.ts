@@ -233,6 +233,8 @@ export function useActiveDownloads() {
         queryKey: ["active-downloads"],
         queryFn: fetchDownloads,
         enabled: isAuthenticated,
+        refetchInterval: 2000, // Poll every 2 seconds for real-time updates
+        refetchIntervalInBackground: false, // Stop polling when tab is hidden
     });
 
     return {

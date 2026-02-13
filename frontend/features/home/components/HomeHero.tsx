@@ -2,32 +2,37 @@
 
 const getGreeting = () => {
     const hour = new Date().getHours();
-    if (hour < 12) return "Good morning";
-    if (hour < 18) return "Good afternoon";
-    return "Good evening";
+    if (hour < 12) return "GOOD\nMORNING";
+    if (hour < 18) return "GOOD\nAFTERNOON";
+    return "GOOD\nEVENING";
 };
 
 export function HomeHero() {
-    return (
-        <div className="relative">
-            {/* Quick gradient fade - yellow to purple */}
-            <div className="absolute inset-0 pointer-events-none">
-                <div
-                    className="absolute inset-0 bg-gradient-to-b from-[#ecb200]/15 via-purple-900/10 to-transparent"
-                    style={{ height: "35vh" }}
-                />
-                <div
-                    className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,var(--tw-gradient-stops))] from-[#ecb200]/8 via-transparent to-transparent"
-                    style={{ height: "25vh" }}
-                />
-            </div>
+    const greeting = getGreeting();
+    const [line1, line2] = greeting.split("\n");
 
-            {/* Hero Section - Compact */}
-            <div className="relative">
-                <div className="relative max-w-[1800px] mx-auto px-4 pt-6 pb-4">
-                    <h1 className="text-2xl md:text-3xl font-bold text-white tracking-tight">
-                        {getGreeting()}
-                    </h1>
+    return (
+        <div className="relative bg-gradient-to-b from-[#0a0a0a] via-[#0f0f0f] to-transparent pt-6 pb-8 px-4 sm:px-6 md:px-8 border-b border-white/5">
+            <div className="max-w-[1800px] mx-auto">
+                {/* System status indicator */}
+                <div className="flex items-center gap-2 mb-6">
+                    <div className="w-1.5 h-1.5 bg-[#fca208] rounded-full" />
+                    <span className="text-xs font-mono text-gray-500 uppercase tracking-wider">
+                        System Online
+                    </span>
+                </div>
+
+                {/* Title */}
+                <div className="flex items-baseline justify-between flex-wrap gap-4">
+                    <div>
+                        <h1 className="text-5xl md:text-6xl lg:text-7xl font-black tracking-tighter text-white leading-none mb-3">
+                            {line1}<br />
+                            <span className="text-[#fca208]">{line2}</span>
+                        </h1>
+                        <p className="text-sm font-mono text-gray-500">
+                            Personal streaming hub / Your library at a glance
+                        </p>
+                    </div>
                 </div>
             </div>
         </div>

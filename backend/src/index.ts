@@ -298,7 +298,7 @@ app.listen(config.port, "0.0.0.0", async () => {
     const { createBullBoard } = await import("@bull-board/api");
     const { BullAdapter } = await import("@bull-board/api/bullAdapter");
     const { ExpressAdapter } = await import("@bull-board/express");
-    const { scanQueue, discoverQueue, imageQueue } = await import(
+    const { scanQueue, discoverQueue } = await import(
         "./workers/queues"
     );
 
@@ -309,7 +309,6 @@ app.listen(config.port, "0.0.0.0", async () => {
         queues: [
             new BullAdapter(scanQueue),
             new BullAdapter(discoverQueue),
-            new BullAdapter(imageQueue),
         ],
         serverAdapter,
     });

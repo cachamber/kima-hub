@@ -30,6 +30,7 @@ export function useSoulseekSearch({
     const [soulseekEnabled, setSoulseekEnabled] = useState(false);
     const [downloadingFiles, setDownloadingFiles] = useState<Set<string>>(new Set());
     const [isComplete, setIsComplete] = useState(false);
+    const [hasActiveSearch, setHasActiveSearch] = useState(false);
 
     const searchIdRef = useRef<string | null>(null);
 
@@ -49,10 +50,7 @@ export function useSoulseekSearch({
 
     // Soulseek search with SSE streaming
     useEffect(() => {
-        if (!query.trim() || !soulseekEnabled) {
-            setSoulseekResults([]);
-            return;
-        }
+        if (!query.trim() || !soulseekEnabled) return;
 
         let cancelled = false;
 
@@ -66,6 +64,7 @@ export function useSoulseekSearch({
 
             setIsSoulseekSearching(true);
             setIsComplete(false);
+            setHasActiveSearch(false);
             setSoulseekResults([]);
 
             try {
@@ -74,6 +73,7 @@ export function useSoulseekSearch({
 
                 searchIdRef.current = searchId;
                 setIsSoulseekSearching(false);
+                setHasActiveSearch(true);
 
                 // Read store and update state
                 const syncFromStore = () => {
@@ -118,6 +118,8 @@ export function useSoulseekSearch({
                 searchResultStore.clear(searchIdRef.current);
                 searchIdRef.current = null;
             }
+            setHasActiveSearch(false);
+            setSoulseekResults([]);
         };
     }, [query, soulseekEnabled]);
 
@@ -178,7 +180,7 @@ export function useSoulseekSearch({
     return {
         soulseekResults,
         isSoulseekSearching,
-        isSoulseekPolling: !isComplete && !isSoulseekSearching && !!searchIdRef.current && !!query.trim() && soulseekEnabled,
+        isSoulseekPolling: !isComplete && !isSoulseekSearching && hasActiveSearch && !!query.trim() && soulseekEnabled,
         isSearchComplete: isComplete,
         soulseekEnabled,
         downloadingFiles,

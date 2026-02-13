@@ -23,12 +23,12 @@ export function SettingsSelect({ id, value, onChange, options, disabled }: Setti
                 onChange={(e) => onChange(e.target.value)}
                 disabled={disabled}
                 className={`
-                    appearance-none bg-[#333] text-white text-sm
-                    pl-3 pr-8 py-1.5 rounded-md
-                    border-0 outline-none
-                    focus:ring-2 focus:ring-white/20
-                    cursor-pointer transition-colors
-                    hover:bg-[#404040]
+                    appearance-none bg-white/5 text-white text-sm font-mono
+                    pl-3 pr-8 py-1.5 rounded-lg
+                    border border-white/10 outline-none
+                    focus:ring-2 focus:ring-[#fca208]/30 focus:border-[#fca208]/40
+                    cursor-pointer transition-all
+                    hover:bg-white/[0.08] hover:border-white/20
                     ${disabled ? 'opacity-50 cursor-not-allowed' : ''}
                 `}
             >
@@ -38,8 +38,7 @@ export function SettingsSelect({ id, value, onChange, options, disabled }: Setti
                     </option>
                 ))}
             </select>
-            <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+            <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30 pointer-events-none" />
         </div>
     );
 }
-

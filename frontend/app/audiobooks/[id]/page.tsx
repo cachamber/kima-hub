@@ -1,26 +1,23 @@
 "use client";
 
+import DOMPurify from "dompurify";
 import { GradientSpinner } from "@/components/ui/GradientSpinner";
 import { useImageColor } from "@/hooks/useImageColor";
 import { formatTime } from "@/utils/formatTime";
 
-// Hooks
 import { useAudiobookData } from "@/features/audiobook/hooks/useAudiobookData";
 import { useAudiobookActions } from "@/features/audiobook/hooks/useAudiobookActions";
 
-// Components
 import { AudiobookHero } from "@/features/audiobook/components/AudiobookHero";
 import { AudiobookActionBar } from "@/features/audiobook/components/AudiobookActionBar";
+import { ChapterList } from "@/features/audiobook/components/ChapterList";
 
 export default function AudiobookDetailPage() {
-    // Data hook
     const { audiobookId, audiobook, isLoading, refetch, heroImage, colorExtractionImage, metadata } =
         useAudiobookData();
 
-    // Extract colors from the hero image (uses token for CORS canvas access)
     const { colors } = useImageColor(colorExtractionImage);
 
-    // Action hooks
     const {
         isThisBookPlaying,
         isPlaying,
@@ -28,12 +25,12 @@ export default function AudiobookDetailPage() {
         handlePlayPause,
         handleMarkAsCompleted,
         handleResetProgress,
+        seekToChapter,
     } = useAudiobookActions(audiobookId, audiobook, refetch);
 
-    // Loading state
     if (isLoading) {
         return (
-            <div className="flex items-center justify-center min-h-screen">
+            <div className="flex items-center justify-center min-h-screen bg-[#0a0a0a]">
                 <GradientSpinner size="md" />
             </div>
         );
@@ -41,27 +38,21 @@ export default function AudiobookDetailPage() {
 
     if (!audiobook) {
         return (
-            <div className="flex items-center justify-center min-h-screen">
-                <p className="text-gray-500">Audiobook not found</p>
+            <div className="flex items-center justify-center min-h-screen bg-[#0a0a0a]">
+                <p className="text-xs font-mono text-gray-500 uppercase tracking-wider">
+                    Audiobook not found
+                </p>
             </div>
         );
     }
 
-    // Clean up description - strip HTML and clean whitespace
-    const cleanDescription = audiobook.description
-        ? audiobook.description
-              .replace(/<[^>]*>/g, " ")
-              .replace(/\s+/g, " ")
-              .trim()
-        : null;
-
     const showDescription =
-        cleanDescription &&
-        !cleanDescription.match(/^(Read by|Narrated by):/i) &&
-        cleanDescription.length > 20;
+        audiobook.description &&
+        !audiobook.description.match(/^(Read by|Narrated by):/i) &&
+        audiobook.description.replace(/<[^>]*>/g, "").trim().length > 20;
 
     return (
-        <div className="min-h-screen flex flex-col">
+        <div className="min-h-screen flex flex-col bg-gradient-to-b from-[#0a0a0a] to-black">
             <AudiobookHero
                 audiobook={audiobook}
                 heroImage={heroImage}
@@ -83,49 +74,78 @@ export default function AudiobookDetailPage() {
 
             {/* Main Content */}
             <div className="relative flex-1">
+                {/* Color gradient continuation */}
                 <div
-                    className="absolute inset-0 pointer-events-none"
+                    className="absolute inset-x-0 top-0 pointer-events-none"
                     style={{
+                        height: "25vh",
                         background: colors
-                            ? `linear-gradient(to bottom, ${colors.vibrant}15 0%, ${colors.vibrant}08 15%, ${colors.darkVibrant}05 30%, transparent 50%)`
+                            ? `linear-gradient(to bottom, ${colors.vibrant}10 0%, ${colors.vibrant}05 40%, transparent 100%)`
                             : "transparent",
                     }}
                 />
 
-                <div className="relative px-4 md:px-8 py-8 space-y-6">
-                    {/* Description / About */}
+                <div className="relative max-w-[1800px] mx-auto px-4 md:px-8 py-8 space-y-10">
+                    {/* Chapters */}
+                    {audiobook.chapters && audiobook.chapters.length > 0 && (
+                        <div className="animate-slide-up" style={{ animationDelay: "0s" }}>
+                            <ChapterList
+                                chapters={audiobook.chapters}
+                                onSeekToChapter={seekToChapter}
+                                formatTime={formatTime}
+                            />
+                        </div>
+                    )}
+
+                    {/* About */}
                     {showDescription && (
-                        <section className="hidden md:block">
-                            <h2 className="text-xl font-bold mb-4">About</h2>
-                            <div className="bg-white/5 rounded-md p-4">
-                                <p className="text-sm text-white/70 leading-relaxed">
-                                    {cleanDescription}
-                                </p>
-                            </div>
-                        </section>
+                        <div className="animate-slide-up" style={{ animationDelay: "0.1s" }}>
+                            <section>
+                                <div className="flex items-center gap-3 mb-4">
+                                    <span className="w-1 h-6 bg-gradient-to-b from-[#f59e0b] to-[#d97706] rounded-full shrink-0" />
+                                    <h2 className="text-xl font-black tracking-tighter uppercase">About</h2>
+                                    <span className="flex-1 border-t border-white/10" />
+                                </div>
+                                <div className="relative overflow-hidden rounded-lg border border-white/10 bg-[#0a0a0a] p-5">
+                                    <div
+                                        className="prose prose-invert prose-sm max-w-none text-white/50 [&_a]:text-[#f59e0b] [&_a]:no-underline [&_a:hover]:underline text-sm leading-relaxed"
+                                        dangerouslySetInnerHTML={{
+                                            __html: DOMPurify.sanitize(audiobook.description || ""),
+                                        }}
+                                    />
+                                </div>
+                            </section>
+                        </div>
                     )}
 
                     {/* Series info */}
                     {audiobook.series && (
-                        <section>
-                            <h2 className="text-xl font-bold mb-4">Series</h2>
-                            <div className="flex items-center gap-3 text-sm">
-                                <span className="text-[#ecb200] font-medium">
-                                    {audiobook.series.name}
-                                </span>
-                                <span className="text-white/40">•</span>
-                                <span className="text-white/70">
-                                    Book {audiobook.series.sequence}
-                                </span>
-                            </div>
-                        </section>
+                        <div className="animate-slide-up" style={{ animationDelay: "0.2s" }}>
+                            <section>
+                                <div className="flex items-center gap-3 mb-4">
+                                    <span className="w-1 h-6 bg-gradient-to-b from-[#f59e0b] to-[#d97706] rounded-full shrink-0" />
+                                    <h2 className="text-xl font-black tracking-tighter uppercase">Series</h2>
+                                    <span className="flex-1 border-t border-white/10" />
+                                </div>
+                                <div className="flex items-center gap-3 text-sm">
+                                    <span className="text-[#f59e0b] font-black tracking-tight">
+                                        {audiobook.series.name}
+                                    </span>
+                                    <span className="text-white/20">|</span>
+                                    <span className="text-xs font-mono text-white/50 uppercase tracking-wider">
+                                        Book {audiobook.series.sequence}
+                                    </span>
+                                </div>
+                            </section>
+                        </div>
                     )}
 
-                    {/* Playback hint - more subtle */}
-                    <p className="text-xs text-white/40 pt-4">
-                        Use the player controls in the bottom bar for playback
-                        speed, seeking, and volume.
-                    </p>
+                    {/* Playback hint */}
+                    <div className="animate-slide-up" style={{ animationDelay: "0.3s" }}>
+                        <p className="text-[10px] font-mono text-white/20 uppercase tracking-wider pt-4">
+                            Use the player controls in the bottom bar for playback speed, seeking, and volume.
+                        </p>
+                    </div>
                 </div>
             </div>
         </div>

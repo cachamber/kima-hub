@@ -17,7 +17,7 @@ import {
 import { cn } from "@/utils/cn";
 import { useIsMobile, useIsTablet } from "@/hooks/useMediaQuery";
 
-type ActivityTab = "notifications" | "active" | "history";
+type ActivityTab = "notifications" | "active" | "history" | "settings";
 
 const TABS: { id: ActivityTab; label: string; icon: React.ElementType }[] = [
     { id: "notifications", label: "Notifications", icon: Bell },
@@ -30,6 +30,7 @@ interface ActivityPanelProps {
     onToggle: () => void;
     activeTab?: ActivityTab;
     onTabChange?: (tab: ActivityTab) => void;
+    settingsContent?: React.ReactNode;
 }
 
 export function ActivityPanel({
@@ -37,6 +38,7 @@ export function ActivityPanel({
     onToggle,
     activeTab,
     onTabChange,
+    settingsContent,
 }: ActivityPanelProps) {
     const [internalActiveTab, setInternalActiveTab] =
         useState<ActivityTab>("notifications");
@@ -47,6 +49,11 @@ export function ActivityPanel({
     const isMobile = useIsMobile();
     const isTablet = useIsTablet();
     const isMobileOrTablet = isMobile || isTablet;
+
+    // If settings tab is active but no settings content provided, default to notifications
+    if (resolvedActiveTab === "settings" && !settingsContent) {
+        setResolvedActiveTab("notifications");
+    }
 
     // Badge counts
     const notificationBadge = unreadCount > 0 ? unreadCount : null;
@@ -135,6 +142,7 @@ export function ActivityPanel({
                             <ActiveDownloadsTab />
                         )}
                         {resolvedActiveTab === "history" && <HistoryTab />}
+                        {resolvedActiveTab === "settings" && settingsContent}
                     </div>
                 </div>
             </>
@@ -149,7 +157,7 @@ export function ActivityPanel({
         >
             {/* Panel container - slides via transform (GPU-accelerated, no layout recalc) */}
             <div
-                className="absolute inset-y-0 right-0 w-[400px] bg-[#0d0d0d] rounded-tl-lg rounded-bl-lg border-l border-white/5 flex flex-col overflow-hidden transition-transform duration-200 ease-out"
+                className="absolute inset-y-0 right-0 w-[400px] bg-[#0a0a0a] flex flex-col overflow-hidden transition-transform duration-200 ease-out"
                 style={{
                     transform: isOpen ? 'translateX(0)' : 'translateX(352px)',
                     willChange: 'transform',
@@ -166,9 +174,9 @@ export function ActivityPanel({
                 >
                     <ChevronLeft className="w-5 h-5 text-white/40" />
 
-                    {/* Activity badge */}
+                    {/* Activity badge - status indicator */}
                     {hasActivity && (
-                        <span className="absolute top-4 right-3 w-2.5 h-2.5 rounded-full bg-[#ecb200]" />
+                        <span className="absolute top-4 right-3 w-1.5 h-1.5 rounded-full bg-[#22c55e]" />
                     )}
                 </div>
 
@@ -179,22 +187,25 @@ export function ActivityPanel({
                         isOpen ? "opacity-100" : "opacity-0 pointer-events-none"
                     )}
                 >
-                {/* Header */}
-                <div className="flex items-center justify-between px-5 py-4 border-b border-white/10">
-                    <h2 className="text-base font-semibold text-white whitespace-nowrap">
-                        Activity
-                    </h2>
+                {/* Header - Command Index style */}
+                <div className="flex items-center justify-between px-4 py-4 border-b-2 border-white/10">
+                    <div className="flex items-center gap-2">
+                        <div className="w-1.5 h-1.5 bg-[#22c55e] rounded-full" />
+                        <h2 className="text-xs font-mono font-black text-gray-600 uppercase tracking-wider whitespace-nowrap">
+                            Activity Feed
+                        </h2>
+                    </div>
                     <button
                         onClick={onToggle}
-                        className="p-1.5 hover:bg-white/10 rounded transition-colors"
+                        className="p-1 hover:bg-white/10 transition-colors"
                         title="Close panel"
                     >
-                        <ChevronRight className="w-5 h-5 text-white/60" />
+                        <ChevronRight className="w-4 h-4 text-gray-600" />
                     </button>
                 </div>
 
-                {/* Tabs */}
-                <div className="flex border-b border-white/10">
+                {/* Tabs - Terminal style */}
+                <div className="flex border-b-2 border-white/10 px-2 pt-2">
                     {TABS.map((tab) => {
                         const Icon = tab.icon;
                         const badge =
@@ -209,24 +220,17 @@ export function ActivityPanel({
                                 key={tab.id}
                                 onClick={() => setResolvedActiveTab(tab.id)}
                                 className={cn(
-                                    "flex-1 flex items-center justify-center gap-2 py-3 text-sm font-medium transition-colors relative whitespace-nowrap",
+                                    "flex-1 flex items-center justify-center gap-2 py-2.5 px-2 text-xs font-mono font-bold uppercase tracking-wider transition-all relative whitespace-nowrap border-l-2",
                                     resolvedActiveTab === tab.id
-                                        ? "text-white border-b-2 border-[#ecb200]"
-                                        : "text-white/50 hover:text-white/70"
+                                        ? "bg-[#0f0f0f] border-[#eab308] text-white"
+                                        : "border-transparent text-gray-600 hover:text-white hover:bg-white/5"
                                 )}
                             >
-                                <Icon className="w-4 h-4" />
-                                <span>{tab.label}</span>
+                                <Icon className="w-3.5 h-3.5" />
+                                <span className="hidden lg:inline">{tab.label}</span>
                                 {badge && (
-                                    <span
-                                        className={cn(
-                                            "absolute -top-0.5 right-1/4 min-w-[18px] h-[18px] px-1 rounded-full text-xs font-bold flex items-center justify-center",
-                                            tab.id === "active"
-                                                ? "bg-blue-500 text-white"
-                                                : "bg-[#ecb200] text-black"
-                                        )}
-                                    >
-                                        {badge > 99 ? "99+" : badge}
+                                    <span className="text-[10px] font-mono text-[#eab308]">
+                                        {badge > 99 ? "99" : badge}
                                     </span>
                                 )}
                             </button>
@@ -241,6 +245,7 @@ export function ActivityPanel({
                     )}
                     {resolvedActiveTab === "active" && <ActiveDownloadsTab />}
                     {resolvedActiveTab === "history" && <HistoryTab />}
+                    {resolvedActiveTab === "settings" && settingsContent}
                 </div>
                 </div>
             </div>

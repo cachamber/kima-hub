@@ -51,7 +51,7 @@ export function SoulseekBrowser({
     results,
     isSearching,
     isPolling,
-    isComplete,
+    isComplete: _isComplete,
     uniqueUserCount,
     downloadingFiles,
     onDownload,

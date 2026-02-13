@@ -21,36 +21,36 @@ export function PreviewEpisodes({
 }: PreviewEpisodesProps) {
     return (
         <section>
-            <h2 className="text-xl font-bold mb-4">Latest Episodes</h2>
+            <div className="flex items-center gap-3 mb-6">
+                <span className="w-1 h-8 bg-gradient-to-b from-[#3b82f6] to-[#2563eb] rounded-full shrink-0" />
+                <h2 className="text-2xl font-black tracking-tighter uppercase">Latest Episodes</h2>
+                <span className="flex-1 border-t border-white/10" />
+            </div>
 
-            {/* Episode Preview with Blur/Lock Effect */}
             <div className="relative">
                 {previewData.previewEpisodes &&
                 previewData.previewEpisodes.length > 0 ? (
                     <>
-                        <div className="space-y-1">
+                        <div className="space-y-0.5">
                             {previewData.previewEpisodes.map((episode, index) => (
                                 <div
                                     key={index}
-                                    className="flex items-center gap-4 px-3 py-3 rounded-md opacity-60 cursor-not-allowed"
+                                    className="flex items-center gap-4 px-3 py-3 rounded-lg opacity-50 cursor-not-allowed"
                                 >
-                                    {/* Number */}
                                     <div className="w-8 flex items-center justify-center shrink-0">
-                                        <span className="text-sm text-white/40">
+                                        <span className="text-xs font-mono text-white/30">
                                             {index + 1}
                                         </span>
                                     </div>
-
-                                    {/* Episode Info */}
                                     <div className="flex-1 min-w-0">
-                                        <h3 className="font-medium truncate text-sm text-white">
+                                        <h3 className="font-black truncate text-sm text-white tracking-tight">
                                             {episode.title}
                                         </h3>
-                                        <div className="flex items-center gap-2 text-xs text-white/50">
+                                        <div className="flex items-center gap-2 text-[10px] font-mono text-white/40 uppercase tracking-wider">
                                             <span>{formatDate(episode.publishedAt)}</span>
                                             {episode.duration > 0 && (
                                                 <>
-                                                    <span>•</span>
+                                                    <span className="text-white/20">|</span>
                                                     <span>{formatDuration(episode.duration)}</span>
                                                 </>
                                             )}
@@ -60,21 +60,21 @@ export function PreviewEpisodes({
                             ))}
                         </div>
 
-                        {/* Blur/Fade Overlay with Subscribe CTA */}
+                        {/* Subscribe overlay */}
                         <div className="absolute inset-0 bg-gradient-to-b from-transparent via-[#0a0a0a]/80 to-[#0a0a0a] flex items-end justify-center pb-8 pointer-events-none">
                             <button
                                 onClick={onSubscribe}
                                 disabled={isSubscribing}
-                                className="flex items-center gap-2 pointer-events-auto h-12 px-6 rounded-full bg-[#ecb200] hover:bg-[#ffc61a] hover:scale-105 transition-all font-semibold text-black disabled:opacity-50 shadow-xl"
+                                className="flex items-center gap-2 pointer-events-auto h-10 px-5 rounded-lg bg-[#3b82f6] hover:bg-[#2563eb] transition-all font-black text-sm text-white uppercase tracking-wider disabled:opacity-50 shadow-xl hover:scale-[1.02] active:scale-[0.98]"
                             >
                                 {isSubscribing ? (
                                     <>
-                                        <Loader2 className="w-5 h-5 animate-spin" />
-                                        <span>Subscribing...</span>
+                                        <Loader2 className="w-4 h-4 animate-spin" />
+                                        <span>Subscribing</span>
                                     </>
                                 ) : (
                                     <>
-                                        <Plus className="w-5 h-5" />
+                                        <Plus className="w-4 h-4" />
                                         <span>Subscribe to Unlock All Episodes</span>
                                     </>
                                 )}
@@ -82,23 +82,24 @@ export function PreviewEpisodes({
                         </div>
                     </>
                 ) : (
-                    <div className="bg-white/5 rounded-md p-6 text-center">
-                        <p className="text-white/50 mb-4">
-                            No episodes available for preview.
+                    <div className="relative overflow-hidden rounded-lg border-2 border-white/10 bg-gradient-to-br from-[#0f0f0f] to-[#0a0a0a] p-8 text-center">
+                        <div className="absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-[#3b82f6] to-[#2563eb]" />
+                        <p className="text-xs font-mono text-gray-500 uppercase tracking-wider mb-4">
+                            No episodes available for preview
                         </p>
                         <button
                             onClick={onSubscribe}
                             disabled={isSubscribing}
-                            className="flex items-center gap-2 mx-auto h-12 px-6 rounded-full bg-[#ecb200] hover:bg-[#ffc61a] hover:scale-105 transition-all font-semibold text-black disabled:opacity-50"
+                            className="flex items-center gap-2 mx-auto h-10 px-5 rounded-lg bg-[#3b82f6] hover:bg-[#2563eb] transition-all font-black text-sm text-white uppercase tracking-wider disabled:opacity-50 hover:scale-[1.02] active:scale-[0.98]"
                         >
                             {isSubscribing ? (
                                 <>
-                                    <Loader2 className="w-5 h-5 animate-spin" />
-                                    <span>Subscribing...</span>
+                                    <Loader2 className="w-4 h-4 animate-spin" />
+                                    <span>Subscribing</span>
                                 </>
                             ) : (
                                 <>
-                                    <Plus className="w-5 h-5" />
+                                    <Plus className="w-4 h-4" />
                                     <span>Subscribe</span>
                                 </>
                             )}
@@ -110,10 +111,14 @@ export function PreviewEpisodes({
             {/* About Section */}
             {previewData.description && (
                 <div className="mt-8">
-                    <h2 className="text-xl font-bold mb-4">About</h2>
-                    <div className="bg-white/5 rounded-md p-4">
+                    <div className="flex items-center gap-3 mb-4">
+                        <span className="w-1 h-6 bg-gradient-to-b from-[#3b82f6] to-[#2563eb] rounded-full shrink-0" />
+                        <h2 className="text-xl font-black tracking-tighter uppercase">About</h2>
+                        <span className="flex-1 border-t border-white/10" />
+                    </div>
+                    <div className="relative overflow-hidden rounded-lg border border-white/10 bg-[#0a0a0a] p-4">
                         <div
-                            className="prose prose-invert prose-sm max-w-none text-white/70 [&_a]:text-[#ecb200] [&_a]:no-underline [&_a:hover]:underline"
+                            className="prose prose-invert prose-sm max-w-none text-white/60 [&_a]:text-[#3b82f6] [&_a]:no-underline [&_a:hover]:underline font-mono text-xs leading-relaxed"
                             dangerouslySetInnerHTML={{
                                 __html: DOMPurify.sanitize(previewData.description || ""),
                             }}

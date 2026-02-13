@@ -17,9 +17,9 @@ interface AudiobookCardProps {
     index: number;
 }
 
-const AudiobookCard = memo(function AudiobookCard({ 
-    audiobook, 
-    index 
+const AudiobookCard = memo(function AudiobookCard({
+    audiobook,
+    index,
 }: AudiobookCardProps) {
     return (
         <CarouselItem>
@@ -28,44 +28,52 @@ const AudiobookCard = memo(function AudiobookCard({
                 data-tv-card
                 data-tv-card-index={index}
                 tabIndex={0}
+                className="group block"
             >
-                <div className="p-3 rounded-md group cursor-pointer hover:bg-white/5 transition-colors">
-                    <div className="aspect-square bg-[#282828] rounded-full mb-3 flex items-center justify-center overflow-hidden relative shadow-lg">
-                        {audiobook.coverUrl ? (
-                            <Image
-                                src={api.getCoverArtUrl(audiobook.coverUrl, 300)}
-                                alt={audiobook.title}
-                                fill
-                                sizes="180px"
-                                className="object-cover group-hover:scale-105 transition-transform duration-300"
-                                unoptimized
-                            />
-                        ) : (
-                            <BookOpen className="w-10 h-10 text-gray-600" />
-                        )}
+                <div className="relative bg-[#0a0a0a] border border-white/10 rounded-lg overflow-hidden hover:border-[#f59e0b]/40 transition-all duration-300 hover:shadow-lg hover:shadow-[#f59e0b]/10 mx-1">
+                    <div className="relative aspect-square">
+                        <div className="w-full h-full bg-[#181818] flex items-center justify-center overflow-hidden">
+                            {audiobook.coverUrl ? (
+                                <Image
+                                    src={api.getCoverArtUrl(audiobook.coverUrl, 300)}
+                                    alt={audiobook.title}
+                                    fill
+                                    sizes="180px"
+                                    className="object-cover group-hover:scale-110 transition-transform duration-500"
+                                    unoptimized
+                                />
+                            ) : (
+                                <BookOpen className="w-10 h-10 text-gray-700" />
+                            )}
+                        </div>
+                        <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-[#f59e0b] to-[#d97706] transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300" />
                     </div>
-                    <h3 className="text-sm font-semibold text-white truncate">
-                        {audiobook.title}
-                    </h3>
-                    <p className="text-xs text-gray-400 truncate mt-0.5">
-                        {audiobook.author || "Audiobook"}
-                    </p>
+                    <div className="p-3 bg-gradient-to-b from-[#0a0a0a] to-[#0f0f0f]">
+                        <h3 className="text-sm font-black text-white truncate tracking-tight">
+                            {audiobook.title}
+                        </h3>
+                        <p className="text-xs font-mono text-gray-500 uppercase tracking-wider truncate mt-0.5">
+                            {audiobook.author || "Audiobook"}
+                        </p>
+                    </div>
                 </div>
             </Link>
         </CarouselItem>
     );
 });
 
-export function AudiobooksGrid({ audiobooks }: AudiobooksGridProps) {
+const AudiobooksGrid = memo(function AudiobooksGrid({ audiobooks }: AudiobooksGridProps) {
     return (
         <HorizontalCarousel>
             {audiobooks.map((audiobook, index) => (
-                <AudiobookCard 
-                    key={audiobook.id} 
-                    audiobook={audiobook} 
-                    index={index} 
+                <AudiobookCard
+                    key={audiobook.id}
+                    audiobook={audiobook}
+                    index={index}
                 />
             ))}
         </HorizontalCarousel>
     );
-}
+});
+
+export { AudiobooksGrid };

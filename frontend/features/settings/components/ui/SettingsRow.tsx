@@ -11,14 +11,14 @@ export function SettingsRow({ label, description, children, htmlFor }: SettingsR
     return (
         <div className="flex items-center justify-between py-3 min-h-[56px]">
             <div className="flex-1 pr-4">
-                <label 
+                <label
                     htmlFor={htmlFor}
-                    className="text-sm text-white cursor-pointer"
+                    className="text-sm font-medium text-white cursor-pointer"
                 >
                     {label}
                 </label>
                 {description && (
-                    <p className="text-xs text-gray-500 mt-0.5">{description}</p>
+                    <p className="text-xs font-mono text-white/30 mt-0.5 uppercase tracking-wider">{description}</p>
                 )}
             </div>
             <div className="shrink-0">
@@ -27,4 +27,3 @@ export function SettingsRow({ label, description, children, htmlFor }: SettingsR
         </div>
     );
 }
-

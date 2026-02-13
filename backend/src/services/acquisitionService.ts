@@ -103,7 +103,7 @@ class AcquisitionService {
      */
     private async updateQueueConcurrency(): Promise<void> {
         const settings = await getSystemSettings();
-        const concurrency = settings?.soulseekConcurrentDownloads || 4;
+        const concurrency = settings?.soulseekConcurrentDownloads ?? 1;
 
         if (concurrency !== this.lastConcurrency) {
             this.albumQueue.concurrency = concurrency;
@@ -441,7 +441,7 @@ class AcquisitionService {
             const batchResult = await soulseekService.searchAndDownloadBatch(
                 tracksToDownload,
                 musicPath,
-                settings?.soulseekConcurrentDownloads || 4 // concurrency
+                settings?.soulseekConcurrentDownloads ?? 4 // concurrency
             );
 
             logger.debug(
@@ -596,7 +596,7 @@ class AcquisitionService {
             const batchResult = await soulseekService.searchAndDownloadBatch(
                 tracksToDownload,
                 musicPath,
-                settings?.soulseekConcurrentDownloads || 4 // concurrency
+                settings?.soulseekConcurrentDownloads ?? 4 // concurrency
             );
 
             if (batchResult.successful === 0) {

@@ -47,7 +47,7 @@ export function SoulseekSection({ settings, onUpdate, onTest, isTesting }: Souls
                             href="https://www.slsknet.org/news/node/1"
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1 text-[#ecb200] hover:underline"
+                            className="inline-flex items-center gap-1 text-[#fca208] hover:text-[#f97316] transition-colors"
                         >
                             <ExternalLink className="w-3 h-3" />
                             Create Account
@@ -81,8 +81,8 @@ export function SoulseekSection({ settings, onUpdate, onTest, isTesting }: Souls
                     <button
                         onClick={handleTest}
                         disabled={isTesting || !hasCredentials}
-                        className="px-4 py-1.5 text-sm bg-[#333] text-white rounded-full
-                            hover:bg-[#404040] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        className="px-4 py-1.5 text-xs font-mono bg-white/5 border border-white/10 text-white/70 rounded-lg uppercase tracking-wider
+                            hover:bg-white/10 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed transition-all"
                     >
                         {testStatus === "loading" ? "Connecting..." : "Test Connection"}
                     </button>

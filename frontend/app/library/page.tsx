@@ -17,10 +17,10 @@ import { api } from "@/lib/api";
 import { useLibraryActions } from "@/features/library/hooks/useLibraryActions";
 import { LibraryHeader } from "@/features/library/components/LibraryHeader";
 import { LibraryTabs } from "@/features/library/components/LibraryTabs";
+import { LibraryToolbar } from "@/features/library/components/LibraryToolbar";
 import { ArtistsGrid } from "@/features/library/components/ArtistsGrid";
 import { AlbumsGrid } from "@/features/library/components/AlbumsGrid";
 import { TracksList } from "@/features/library/components/TracksList";
-import { Shuffle, ListFilter } from "lucide-react";
 
 export default function LibraryPage() {
     const router = useRouter();
@@ -42,7 +42,6 @@ export default function LibraryPage() {
     const [sortBy, setSortBy] = useState<SortOption>("name");
     const [itemsPerPage, setItemsPerPage] = useState<number>(40);
     const [currentPage, setCurrentPage] = useState(urlPage);
-    const [showFilters, setShowFilters] = useState(false);
 
     // Track previous page to detect pagination changes
     const prevPageRef = useRef(currentPage);
@@ -318,125 +317,30 @@ export default function LibraryPage() {
     }, []);
 
     return (
-        <div className="min-h-screen relative">
-            <LibraryHeader />
+        <div className="min-h-screen relative bg-gradient-to-b from-[#0a0a0a] to-black">
+            <LibraryHeader totalItems={totalItems} activeTab={activeTab} />
 
-            <div className="relative px-4 md:px-8 pb-24">
-                {/* Tabs and Controls Row */}
-                <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
+            <div className="relative px-4 md:px-8 pb-24 max-w-[1800px] mx-auto">
+                <div className="mb-6 -mt-4">
                     <LibraryTabs
                         activeTab={activeTab}
                         onTabChange={changeTab}
                     />
-
-                    <div className="flex items-center gap-2">
-                        {/* Shuffle Button */}
-                        <button
-                            onClick={handleShuffleLibrary}
-                            className="flex items-center justify-center w-8 h-8 rounded-full bg-[#ecb200] hover:bg-[#d4a000] text-black transition-all hover:scale-105"
-                            title="Shuffle Library"
-                        >
-                            <Shuffle className="w-4 h-4" />
-                        </button>
-
-                        {/* Filter Toggle */}
-                        <button
-                            onClick={() => setShowFilters(!showFilters)}
-                            className={`flex items-center justify-center w-8 h-8 rounded-full transition-all ${
-                                showFilters ?
-                                    "bg-white/20 text-white"
-                                :   "bg-white/5 text-gray-400 hover:text-white hover:bg-white/10"
-                            }`}
-                            title="Show Filters"
-                        >
-                            <ListFilter className="w-4 h-4" />
-                        </button>
-
-                        {/* Item Count */}
-                        <span className="text-sm text-gray-400 ml-2">
-                            {totalItems.toLocaleString()}{" "}
-                            {activeTab === "artists" ?
-                                "artists"
-                            : activeTab === "albums" ?
-                                "albums"
-                            :   "songs"}
-                        </span>
-                    </div>
                 </div>
 
-                {/* Expandable Filters Row */}
-                {showFilters && (
-                    <div className="flex flex-wrap items-center gap-2 mb-6 pb-4 border-b border-white/5">
-                        {/* Filter Toggle (Owned / Discovery / All) - Only show for artists and albums */}
-                        {(activeTab === "artists" ||
-                            activeTab === "albums") && (
-                            <div className="flex items-center gap-1">
-                                <button
-                                    onClick={() => setFilter("owned")}
-                                    className={`px-3 py-1.5 text-xs font-medium rounded-full transition-all ${
-                                        filter === "owned" ?
-                                            "bg-[#ecb200] text-black"
-                                        :   "bg-white/5 text-gray-400 hover:text-white hover:bg-white/10"
-                                    }`}
-                                >
-                                    Owned
-                                </button>
-                                <button
-                                    onClick={() => setFilter("discovery")}
-                                    className={`px-3 py-1.5 text-xs font-medium rounded-full transition-all ${
-                                        filter === "discovery" ?
-                                            "bg-purple-500 text-white"
-                                        :   "bg-white/5 text-gray-400 hover:text-white hover:bg-white/10"
-                                    }`}
-                                >
-                                    Discovery
-                                </button>
-                                <button
-                                    onClick={() => setFilter("all")}
-                                    className={`px-3 py-1.5 text-xs font-medium rounded-full transition-all ${
-                                        filter === "all" ?
-                                            "bg-white/20 text-white"
-                                        :   "bg-white/5 text-gray-400 hover:text-white hover:bg-white/10"
-                                    }`}
-                                >
-                                    All
-                                </button>
-                            </div>
-                        )}
-
-                        {/* Sort Dropdown */}
-                        <select
-                            value={sortBy}
-                            onChange={(e) =>
-                                setSortBy(e.target.value as SortOption)
-                            }
-                            className="px-3 py-1.5 bg-white/5 border border-white/10 rounded-full text-white text-xs focus:outline-none focus:border-white/20 [&>option]:bg-[#1a1a1a] [&>option]:text-white"
-                        >
-                            <option value="name">Name (A-Z)</option>
-                            <option value="name-desc">Name (Z-A)</option>
-                            {activeTab === "albums" && (
-                                <option value="recent">Year (Newest)</option>
-                            )}
-                            {activeTab === "artists" && (
-                                <option value="tracks">Most Tracks</option>
-                            )}
-                        </select>
-
-                        {/* Items per page */}
-                        <select
-                            value={itemsPerPage}
-                            onChange={(e) =>
-                                setItemsPerPage(Number(e.target.value))
-                            }
-                            className="px-3 py-1.5 bg-white/5 border border-white/10 rounded-full text-white text-xs focus:outline-none focus:border-white/20 [&>option]:bg-[#1a1a1a] [&>option]:text-white"
-                        >
-                            <option value={24}>24 per page</option>
-                            <option value={40}>40 per page</option>
-                            <option value={80}>80 per page</option>
-                            <option value={200}>200 per page</option>
-                        </select>
-                    </div>
-                )}
+                {/* Toolbar */}
+                <div className="mb-8">
+                    <LibraryToolbar
+                        activeTab={activeTab}
+                        filter={filter}
+                        sortBy={sortBy}
+                        itemsPerPage={itemsPerPage}
+                        onFilterChange={setFilter}
+                        onSortChange={setSortBy}
+                        onItemsPerPageChange={setItemsPerPage}
+                        onShuffleLibrary={handleShuffleLibrary}
+                    />
+                </div>
 
                 {activeTab === "artists" && (
                     <ArtistsGrid
@@ -469,11 +373,11 @@ export default function LibraryPage() {
 
                 {/* Pagination */}
                 {totalPages > 1 && (
-                    <div className="flex items-center justify-center gap-2 mt-8 pt-4 border-t border-white/5">
+                    <div className="flex items-center justify-center gap-2 mt-12 pt-6 border-t-2 border-white/10">
                         <button
                             onClick={() => updatePage(1)}
                             disabled={currentPage === 1 || isLoading}
-                            className="px-3 py-1.5 text-xs text-gray-400 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="px-4 py-2 text-xs font-mono uppercase tracking-wider text-gray-400 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed bg-white/5 hover:bg-white/10 rounded transition-colors border border-white/10 hover:border-white/20"
                         >
                             First
                         </button>
@@ -482,13 +386,19 @@ export default function LibraryPage() {
                                 updatePage(Math.max(1, currentPage - 1))
                             }
                             disabled={currentPage === 1 || isLoading}
-                            className="px-3 py-1.5 text-xs text-gray-400 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="px-4 py-2 text-xs font-mono uppercase tracking-wider text-gray-400 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed bg-white/5 hover:bg-white/10 rounded transition-colors border border-white/10 hover:border-white/20"
                         >
                             Prev
                         </button>
-                        <span className="px-4 py-1.5 text-xs text-white">
-                            {currentPage} / {totalPages}
-                        </span>
+                        <div className="px-6 py-2 bg-[#0a0a0a] border-2 border-white/20 rounded">
+                            <span className="text-sm font-mono font-black text-white">
+                                {currentPage}
+                            </span>
+                            <span className="text-xs font-mono text-gray-500 mx-1">/</span>
+                            <span className="text-sm font-mono text-gray-400">
+                                {totalPages}
+                            </span>
+                        </div>
                         <button
                             onClick={() =>
                                 updatePage(
@@ -496,14 +406,14 @@ export default function LibraryPage() {
                                 )
                             }
                             disabled={currentPage === totalPages || isLoading}
-                            className="px-3 py-1.5 text-xs text-gray-400 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="px-4 py-2 text-xs font-mono uppercase tracking-wider text-gray-400 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed bg-white/5 hover:bg-white/10 rounded transition-colors border border-white/10 hover:border-white/20"
                         >
                             Next
                         </button>
                         <button
                             onClick={() => updatePage(totalPages)}
                             disabled={currentPage === totalPages || isLoading}
-                            className="px-3 py-1.5 text-xs text-gray-400 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="px-4 py-2 text-xs font-mono uppercase tracking-wider text-gray-400 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed bg-white/5 hover:bg-white/10 rounded transition-colors border border-white/10 hover:border-white/20"
                         >
                             Last
                         </button>

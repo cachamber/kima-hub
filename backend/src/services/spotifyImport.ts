@@ -1420,10 +1420,10 @@ class SpotifyImportService {
                 );
 
                 // Process albums in parallel with concurrency limit from settings
-                const settings = await getSystemSettings();
-                const albumQueue = new PQueue({
-                    concurrency: settings?.soulseekConcurrentDownloads || 4,
-                });
+const settings = await getSystemSettings();
+                 const albumQueue = new PQueue({
+                     concurrency: settings?.soulseekConcurrentDownloads ?? 1,
+                 });
 
                 const albumPromises = albumMbidsToDownload.map(
                     (albumIdentifier) =>

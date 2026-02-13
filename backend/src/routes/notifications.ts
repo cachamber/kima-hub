@@ -389,7 +389,8 @@ router.post(
 
                 const searchResult = await soulseekService.searchTrack(
                     pendingTrack.spotifyArtist,
-                    pendingTrack.spotifyTitle
+                    pendingTrack.spotifyTitle,
+                    pendingTrack.spotifyAlbum !== "Unknown Album" ? pendingTrack.spotifyAlbum : undefined
                 );
 
                 if (
@@ -560,7 +561,7 @@ router.post(
 
                 // Run Soulseek search async
                 soulseekService
-                    .searchAndDownloadBatch(tracks, musicPath, settings?.soulseekConcurrentDownloads || 4)
+                    .searchAndDownloadBatch(tracks, musicPath, settings?.soulseekConcurrentDownloads ?? 4)
                     .then(async (result) => {
                         if (result.successful > 0) {
                             await prisma.downloadJob.update({

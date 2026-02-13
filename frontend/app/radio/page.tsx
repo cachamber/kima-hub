@@ -1,223 +1,105 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Radio, Play, Loader2, Shuffle, ChevronLeft } from "lucide-react";
-import Link from "next/link";
+import { Radio, Play, Loader2 } from "lucide-react";
 import { api } from "@/lib/api";
-import { useAudioControls } from "@/lib/audio-controls-context";
-import { Track } from "@/lib/audio-state-context";
-import { toast } from "sonner";
-import { shuffleArray } from "@/utils/shuffle";
+import { cn } from "@/utils/cn";
+import {
+    GenreCount,
+    DecadeCount,
+    STATIC_STATIONS,
+    buildGenreStations,
+    buildDecadeStations,
+    useRadioPlayer,
+} from "@/features/home/radioData";
+import type { RadioStation } from "@/features/home/radioData";
 
-interface RadioStation {
-    id: string;
-    name: string;
-    description: string;
-    color: string;
-    filter: {
-        type: "genre" | "decade" | "discovery" | "favorites" | "all" | "workout";
-        value?: string;
-    };
-    minTracks?: number;
-}
-
-interface GenreCount {
-    genre: string;
-    count: number;
-}
-
-// Static radio stations
-const STATIC_STATIONS: RadioStation[] = [
-    {
-        id: "all",
-        name: "Shuffle All",
-        description: "Your entire library",
-        color: "from-brand/40 to-amber-600/30",
-        filter: { type: "all" },
-        minTracks: 10,
-    },
-    {
-        id: "workout",
-        name: "Workout",
-        description: "High energy tracks",
-        color: "from-red-500/30 to-orange-600/30",
-        filter: { type: "workout" },
-        minTracks: 15,
-    },
-    {
-        id: "discovery",
-        name: "Discovery",
-        description: "Lesser-played gems",
-        color: "from-emerald-500/30 to-teal-600/30",
-        filter: { type: "discovery" },
-        minTracks: 20,
-    },
-    {
-        id: "favorites",
-        name: "Favorites",
-        description: "Most played",
-        color: "from-rose-500/30 to-pink-600/30",
-        filter: { type: "favorites" },
-        minTracks: 10,
-    },
-];
-
-interface DecadeCount {
-    decade: number;
-    count: number;
-}
-
-// Decade color mapping - covers from 1700s (classical) to 2020s
-const DECADE_COLORS: Record<number, string> = {
-    1700: "from-amber-800/30 to-yellow-900/30",
-    1710: "from-amber-700/30 to-yellow-800/30",
-    1720: "from-amber-700/30 to-yellow-800/30",
-    1730: "from-amber-700/30 to-yellow-800/30",
-    1740: "from-amber-700/30 to-yellow-800/30",
-    1750: "from-amber-600/30 to-yellow-700/30",
-    1760: "from-amber-600/30 to-yellow-700/30",
-    1770: "from-amber-600/30 to-yellow-700/30",
-    1780: "from-amber-600/30 to-yellow-700/30",
-    1790: "from-amber-600/30 to-yellow-700/30",
-    1800: "from-slate-600/30 to-gray-700/30",
-    1810: "from-slate-600/30 to-gray-700/30",
-    1820: "from-slate-500/30 to-gray-600/30",
-    1830: "from-slate-500/30 to-gray-600/30",
-    1840: "from-slate-500/30 to-gray-600/30",
-    1850: "from-slate-400/30 to-gray-500/30",
-    1860: "from-slate-400/30 to-gray-500/30",
-    1870: "from-slate-400/30 to-gray-500/30",
-    1880: "from-slate-400/30 to-gray-500/30",
-    1890: "from-slate-400/30 to-gray-500/30",
-    1900: "from-sepia-400/30 to-amber-500/30",
-    1910: "from-amber-400/30 to-yellow-500/30",
-    1920: "from-yellow-500/30 to-amber-600/30",
-    1930: "from-orange-400/30 to-amber-500/30",
-    1940: "from-red-400/30 to-orange-500/30",
-    1950: "from-pink-400/30 to-red-500/30",
-    1960: "from-amber-500/30 to-orange-600/30",
-    1970: "from-orange-500/30 to-red-600/30",
-    1980: "from-fuchsia-500/30 to-purple-600/30",
-    1990: "from-purple-500/30 to-violet-600/30",
-    2000: "from-blue-500/30 to-cyan-600/30",
-    2010: "from-teal-500/30 to-emerald-600/30",
-    2020: "from-orange-500/30 to-amber-600/30",
-};
-
-const getDecadeColor = (decade: number): string => {
-    return DECADE_COLORS[decade] || "from-gray-500/30 to-slate-600/30";
-};
-
-const getDecadeName = (decade: number): string => {
-    if (decade < 1900) return `${decade}s`;
-    if (decade < 2000) return `${decade.toString().slice(2)}s`;
-    return `${decade}s`;
-};
-
-const getDecadeDescription = (decade: number, count: number): string => {
-    return `${decade}-${decade + 9} • ${count} tracks`;
-};
-
-// Genre color mapping
-const GENRE_COLORS: Record<string, string> = {
-    rock: "from-red-500/30 to-orange-600/30",
-    pop: "from-pink-500/30 to-rose-600/30",
-    "hip hop": "from-purple-500/30 to-indigo-600/30",
-    "hip-hop": "from-purple-500/30 to-indigo-600/30",
-    rap: "from-purple-500/30 to-indigo-600/30",
-    electronic: "from-cyan-500/30 to-blue-600/30",
-    jazz: "from-amber-500/30 to-yellow-600/30",
-    classical: "from-slate-400/30 to-gray-500/30",
-    metal: "from-zinc-600/30 to-neutral-700/30",
-    country: "from-orange-400/30 to-amber-500/30",
-    folk: "from-green-500/30 to-emerald-600/30",
-    indie: "from-violet-500/30 to-purple-600/30",
-    alternative: "from-indigo-500/30 to-blue-600/30",
-    "r&b": "from-fuchsia-500/30 to-pink-600/30",
-    soul: "from-amber-600/30 to-orange-700/30",
-    blues: "from-blue-600/30 to-indigo-700/30",
-    punk: "from-lime-500/30 to-green-600/30",
-    reggae: "from-green-400/30 to-yellow-500/30",
-    default: "from-gray-500/30 to-slate-600/30",
-};
-
-const getGenreColor = (genre: string): string => {
-    const lower = genre.toLowerCase();
-    return GENRE_COLORS[lower] || GENRE_COLORS.default;
-};
-
-// Radio Station Card Component
-function RadioStationCard({ 
-    station, 
-    onPlay, 
-    isLoading 
-}: { 
-    station: RadioStation; 
-    onPlay: () => void; 
-    isLoading: boolean;
+function RadioStationCard({
+    station,
+    loadingStation,
+    onPlay,
+}: {
+    station: RadioStation;
+    loadingStation: string | null;
+    onPlay: () => void;
 }) {
     return (
         <button
             onClick={onPlay}
-            disabled={isLoading}
-            className={`
-                relative group w-full
-                aspect-[4/3] rounded-lg overflow-hidden
-                bg-gradient-to-br ${station.color}
-                border border-white/10 hover:border-white/20
-                transition-all duration-200
-                hover:scale-[1.02] active:scale-[0.98]
-                disabled:opacity-50 disabled:cursor-not-allowed
-            `}
+            disabled={loadingStation !== null}
+            className={cn(
+                "relative group w-full overflow-hidden",
+                "aspect-[4/3] rounded-lg",
+                "bg-[#0a0a0a] border-2 border-white/10",
+                station.hoverBorder,
+                "transition-all duration-300",
+                "hover:shadow-lg",
+                station.hoverShadow,
+                "hover:scale-[1.02] active:scale-[0.98]",
+                "disabled:opacity-50 disabled:cursor-not-allowed"
+            )}
         >
+            {/* Subtle gradient tint */}
+            <div className={cn("absolute inset-0 bg-gradient-to-br", station.color)} />
+
             {/* Content */}
-            <div className="absolute inset-0 p-3 flex flex-col justify-between">
+            <div className="absolute inset-0 p-4 flex flex-col justify-between">
                 <div className="flex items-center gap-1.5">
-                    <Radio className="w-4 h-4 text-white/60" />
-                    <span className="text-[10px] text-white/60 font-medium uppercase tracking-wider">
+                    <Radio className="w-3.5 h-3.5 text-white/50" />
+                    <span className="text-[9px] font-mono text-white/50 uppercase tracking-wider">
                         Radio
                     </span>
                 </div>
                 <div>
-                    <h3 className="text-sm font-bold text-white truncate leading-tight">
+                    <h3 className="text-base font-black text-white truncate tracking-tight leading-tight mb-1">
                         {station.name}
                     </h3>
-                    <p className="text-xs text-white/50 truncate">
+                    <p className="text-xs font-mono text-gray-500 uppercase tracking-wider truncate">
                         {station.description}
                     </p>
                 </div>
             </div>
 
+            {/* Bottom accent bar on hover */}
+            <div className={cn(
+                "absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r",
+                station.accentGradient,
+                "transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300 origin-center"
+            )} />
+
+            {/* Loading overlay */}
+            {loadingStation === station.id && (
+                <div className="absolute inset-0 bg-black/60 flex items-center justify-center z-10">
+                    <Loader2 className="w-6 h-6 text-white animate-spin" />
+                </div>
+            )}
+
             {/* Play overlay on hover */}
-            <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                {isLoading ? (
-                    <Loader2 className="w-8 h-8 text-white animate-spin" />
-                ) : (
-                    <div className="w-12 h-12 rounded-full bg-brand flex items-center justify-center shadow-lg">
-                        <Play className="w-5 h-5 fill-current text-black ml-0.5" />
+            {loadingStation !== station.id && (
+                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                    <div className="w-12 h-12 rounded-lg bg-white flex items-center justify-center shadow-xl">
+                        <Play className="w-5 h-5 text-black ml-0.5" fill="currentColor" />
                     </div>
-                )}
-            </div>
+                </div>
+            )}
         </button>
     );
 }
 
-// Section Header Component
-function SectionHeader({ title, description }: { title: string; description?: string }) {
+function SectionSkeleton() {
     return (
-        <div className="mb-4">
-            <h2 className="text-xl font-bold text-white">{title}</h2>
-            {description && <p className="text-sm text-white/50 mt-1">{description}</p>}
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+            {Array.from({ length: 6 }).map((_, i) => (
+                <div key={i} className="aspect-[4/3] rounded-lg bg-[#0a0a0a] border-2 border-white/10 animate-pulse" />
+            ))}
         </div>
     );
 }
 
 export default function RadioPage() {
-    const { playTracks } = useAudioControls();
-    const [loadingStation, setLoadingStation] = useState<string | null>(null);
+    const { loadingStation, startRadio } = useRadioPlayer();
 
-    // Fetch genres from library
     const { data: genresData, isLoading: genresLoading } = useQuery({
         queryKey: ["library", "genres"],
         queryFn: () => api.get<{ genres: GenreCount[] }>("/library/genres"),
@@ -225,7 +107,6 @@ export default function RadioPage() {
         select: (data) => (data.genres || []).filter((g) => g.count >= 15),
     });
 
-    // Fetch decades from library
     const { data: decadesData, isLoading: decadesLoading } = useQuery({
         queryKey: ["library", "decades"],
         queryFn: () => api.get<{ decades: DecadeCount[] }>("/library/decades"),
@@ -233,199 +114,165 @@ export default function RadioPage() {
         select: (data) => data.decades || [],
     });
 
-    const genres = genresData ?? [];
-    const decades = decadesData ?? [];
     const isLoading = genresLoading || decadesLoading;
 
-    const startRadio = async (station: RadioStation) => {
-        setLoadingStation(station.id);
-
-        try {
-            const params = new URLSearchParams();
-            params.set("type", station.filter.type);
-            if (station.filter.value) {
-                params.set("value", station.filter.value);
-            }
-            params.set("limit", "100");
-
-            const response = await api.get<{ tracks: Track[] }>(`/library/radio?${params.toString()}`);
-
-            if (!response.tracks || response.tracks.length === 0) {
-                toast.error(`No tracks found for ${station.name}`);
-                return;
-            }
-
-            if (response.tracks.length < (station.minTracks || 10)) {
-                toast.error(`Not enough tracks for ${station.name} radio`, {
-                    description: `Found ${response.tracks.length}, need at least ${station.minTracks || 10}`,
-                });
-                return;
-            }
-
-            // Shuffle the tracks
-            const shuffled = shuffleArray(response.tracks);
-
-            // Start playing
-            playTracks(shuffled, 0);
-            toast.success(`${station.name} Radio`, {
-                description: `Shuffling ${shuffled.length} tracks`,
-                icon: <Shuffle className="w-4 h-4" />,
-            });
-        } catch (error) {
-            console.error("Failed to start radio:", error);
-            toast.error("Failed to start radio station");
-        } finally {
-            setLoadingStation(null);
-        }
-    };
-
-    // Create genre stations from library
-    const genreStations: RadioStation[] = genres.map((g) => ({
-        id: `genre-${g.genre}`,
-        name: g.genre,
-        description: `${g.count} tracks`,
-        color: getGenreColor(g.genre),
-        filter: { type: "genre" as const, value: g.genre },
-        minTracks: 15,
-    }));
-
-    // Create decade stations from library (dynamically based on what's available)
-    const decadeStations: RadioStation[] = decades.map((d) => ({
-        id: `decade-${d.decade}`,
-        name: getDecadeName(d.decade),
-        description: getDecadeDescription(d.decade, d.count),
-        color: getDecadeColor(d.decade),
-        filter: { type: "decade" as const, value: d.decade.toString() },
-        minTracks: 15,
-    }));
+    const genreStations = useMemo(() => buildGenreStations(genresData ?? []), [genresData]);
+    const decadeStations = useMemo(() => buildDecadeStations(decadesData ?? []), [decadesData]);
 
     return (
-        <div className="min-h-screen relative">
-            {/* Hero gradient */}
-            <div 
-                className="absolute top-0 left-0 right-0 pointer-events-none"
-                style={{
-                    background: "linear-gradient(to bottom, rgba(236, 178, 0, 0.15) 0%, rgba(139, 92, 246, 0.08) 40%, transparent 100%)",
-                    height: "35vh"
-                }}
-            />
-            <div 
-                className="absolute top-0 left-0 right-0 pointer-events-none"
-                style={{
-                    background: "radial-gradient(ellipse at top, rgba(236, 178, 0, 0.1) 0%, transparent 70%)",
-                    height: "25vh"
-                }}
-            />
+        <div className="min-h-screen relative bg-gradient-to-b from-[#0a0a0a] to-black">
+            {/* Static gradient overlay */}
+            <div className="fixed inset-0 pointer-events-none opacity-50">
+                <div className="absolute inset-0 bg-gradient-to-br from-white/5 via-transparent to-transparent" />
+            </div>
 
-            {/* Content */}
-            <div className="relative px-4 md:px-8 py-6">
-                {/* Back link */}
-                <Link 
-                    href="/" 
-                    className="inline-flex items-center gap-1 text-sm text-white/60 hover:text-white transition-colors mb-6"
-                >
-                    <ChevronLeft className="w-4 h-4" />
-                    Back to Home
-                </Link>
-
-                {/* Header */}
-                <div className="mb-8">
-                    <div className="flex items-center gap-3 mb-2">
-                        <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-brand to-amber-600 flex items-center justify-center">
-                            <Radio className="w-6 h-6 text-black" />
+            <div className="relative">
+                {/* Hero Header */}
+                <div className="relative bg-gradient-to-b from-[#0a0a0a] via-[#0f0f0f] to-transparent pt-6 pb-8 px-4 sm:px-6 md:px-8 border-b border-white/5">
+                    <div className="max-w-[1800px] mx-auto">
+                        {/* System status */}
+                        <div className="flex items-center gap-2 mb-6">
+                            <div className="w-1.5 h-1.5 bg-[#fca208] rounded-full" />
+                            <span className="text-xs font-mono text-gray-500 uppercase tracking-wider">
+                                Radio Active
+                            </span>
                         </div>
-                        <div>
-                            <h1 className="text-3xl font-bold text-white">Radio Stations</h1>
-                            <p className="text-white/60">Continuous shuffle from your library</p>
+
+                        <div className="flex items-baseline justify-between flex-wrap gap-4">
+                            <div>
+                                <h1 className="text-5xl md:text-6xl lg:text-7xl font-black tracking-tighter text-white leading-none mb-3">
+                                    LIBRARY<br />
+                                    <span className="text-[#fca208]">RADIO</span>
+                                </h1>
+                                <p className="text-sm font-mono text-gray-500">
+                                    Continuous shuffle from your personal archive
+                                </p>
+                            </div>
+
+                            {/* Stats */}
+                            <div className="flex items-center gap-4">
+                                {!isLoading && (
+                                    <>
+                                        <div className="border-2 border-white/10 bg-[#0a0a0a] px-4 py-3 rounded">
+                                            <span className="text-3xl font-black font-mono text-[#fca208]">
+                                                {STATIC_STATIONS.length + genreStations.length + decadeStations.length}
+                                            </span>
+                                            <span className="text-xs font-mono text-gray-500 uppercase ml-2">
+                                                stations
+                                            </span>
+                                        </div>
+                                    </>
+                                )}
+                            </div>
                         </div>
                     </div>
                 </div>
 
-                {/* Quick Start Section */}
-                <section className="mb-10">
-                    <SectionHeader 
-                        title="Quick Start" 
-                        description="Jump into your music instantly" 
-                    />
-                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
-                        {STATIC_STATIONS.map((station) => (
-                            <RadioStationCard
-                                key={station.id}
-                                station={station}
-                                onPlay={() => startRadio(station)}
-                                isLoading={loadingStation === station.id}
-                            />
-                        ))}
+                {/* Content */}
+                <div className="relative max-w-[1800px] mx-auto px-4 sm:px-6 md:px-8 pb-32 pt-8">
+                    <div className="space-y-12">
+                        {/* Quick Start */}
+                        <section className="animate-slide-up" style={{ animationDelay: "0s" }}>
+                            <h2 className="text-2xl font-black tracking-tight flex items-center gap-3 mb-6">
+                                <span className="w-1 h-8 bg-gradient-to-b from-[#fca208] to-[#f97316] rounded-full" />
+                                <span className="uppercase tracking-tighter">Quick Start</span>
+                                <span className="flex-1 border-t border-white/10" />
+                            </h2>
+                            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+                                {STATIC_STATIONS.map((station) => (
+                                    <RadioStationCard
+                                        key={station.id}
+                                        station={station}
+                                        loadingStation={loadingStation}
+                                        onPlay={() => startRadio(station)}
+                                    />
+                                ))}
+                            </div>
+                        </section>
+
+                        {/* Genres */}
+                        {(isLoading || genreStations.length > 0) && (
+                            <section className="animate-slide-up" style={{ animationDelay: "0.1s" }}>
+                                <h2 className="text-2xl font-black tracking-tight flex items-center gap-3 mb-6">
+                                    <span className="w-1 h-8 bg-gradient-to-b from-[#a855f7] to-[#c026d3] rounded-full" />
+                                    <span className="uppercase tracking-tighter">By Genre</span>
+                                    <span className="flex-1 border-t border-white/10" />
+                                    {!isLoading && (
+                                        <span className="text-xs font-mono text-[#a855f7]">
+                                            {genreStations.length} genres
+                                        </span>
+                                    )}
+                                </h2>
+                                {isLoading ? (
+                                    <SectionSkeleton />
+                                ) : (
+                                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+                                        {genreStations.map((station) => (
+                                            <RadioStationCard
+                                                key={station.id}
+                                                station={station}
+                                                loadingStation={loadingStation}
+                                                onPlay={() => startRadio(station)}
+                                            />
+                                        ))}
+                                    </div>
+                                )}
+                            </section>
+                        )}
+
+                        {/* Decades */}
+                        {(isLoading || decadeStations.length > 0) && (
+                            <section className="animate-slide-up" style={{ animationDelay: "0.2s" }}>
+                                <h2 className="text-2xl font-black tracking-tight flex items-center gap-3 mb-6">
+                                    <span className="w-1 h-8 bg-gradient-to-b from-[#22c55e] to-[#16a34a] rounded-full" />
+                                    <span className="uppercase tracking-tighter">By Decade</span>
+                                    <span className="flex-1 border-t border-white/10" />
+                                    {!isLoading && (
+                                        <span className="text-xs font-mono text-[#22c55e]">
+                                            {decadeStations.length} decades
+                                        </span>
+                                    )}
+                                </h2>
+                                {isLoading ? (
+                                    <SectionSkeleton />
+                                ) : (
+                                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+                                        {decadeStations.map((station) => (
+                                            <RadioStationCard
+                                                key={station.id}
+                                                station={station}
+                                                loadingStation={loadingStation}
+                                                onPlay={() => startRadio(station)}
+                                            />
+                                        ))}
+                                    </div>
+                                )}
+                            </section>
+                        )}
+
+                        {/* Info panel */}
+                        <section className="animate-slide-up" style={{ animationDelay: "0.3s" }}>
+                            <div className="relative overflow-hidden rounded-lg border-2 border-white/10 bg-gradient-to-br from-[#0f0f0f] to-[#0a0a0a] p-8">
+                                <div className="absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-[#fca208] to-[#f97316]" />
+                                <div className="flex items-center gap-3 mb-4 pb-3 border-b border-white/10">
+                                    <div className="w-2 h-2 bg-[#fca208]" />
+                                    <span className="text-xs font-mono text-white/60 uppercase tracking-wider">
+                                        How It Works
+                                    </span>
+                                </div>
+                                <h3 className="text-xl font-black tracking-tighter text-white mb-3">
+                                    PERSONALIZED RADIO
+                                </h3>
+                                <p className="text-sm font-mono text-gray-500 leading-relaxed max-w-2xl">
+                                    Radio stations are generated from your personal music library. As you add more music,
+                                    new genre and decade stations will automatically appear. Each station requires a minimum
+                                    number of tracks to ensure a good listening experience.
+                                </p>
+                            </div>
+                        </section>
                     </div>
-                </section>
-
-                {/* Genres Section */}
-                {(isLoading || genreStations.length > 0) && (
-                    <section className="mb-10">
-                        <SectionHeader 
-                            title="By Genre" 
-                            description="Shuffle tracks from specific genres" 
-                        />
-                        {isLoading ? (
-                            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
-                                {Array.from({ length: 6 }).map((_, i) => (
-                                    <div key={i} className="aspect-[4/3] rounded-lg bg-white/5 animate-pulse" />
-                                ))}
-                            </div>
-                        ) : (
-                            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
-                                {genreStations.map((station) => (
-                                    <RadioStationCard
-                                        key={station.id}
-                                        station={station}
-                                        onPlay={() => startRadio(station)}
-                                        isLoading={loadingStation === station.id}
-                                    />
-                                ))}
-                            </div>
-                        )}
-                    </section>
-                )}
-
-                {/* Decades Section - Only show if there are decade stations */}
-                {(isLoading || decadeStations.length > 0) && (
-                    <section className="mb-10">
-                        <SectionHeader 
-                            title="By Decade" 
-                            description="Travel through time with your music" 
-                        />
-                        {isLoading ? (
-                            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
-                                {Array.from({ length: 6 }).map((_, i) => (
-                                    <div key={i} className="aspect-[4/3] rounded-lg bg-white/5 animate-pulse" />
-                                ))}
-                            </div>
-                        ) : (
-                            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
-                                {decadeStations.map((station) => (
-                                    <RadioStationCard
-                                        key={station.id}
-                                        station={station}
-                                        onPlay={() => startRadio(station)}
-                                        isLoading={loadingStation === station.id}
-                                    />
-                                ))}
-                            </div>
-                        )}
-                    </section>
-                )}
-
-                {/* Info */}
-                <div className="mt-12 p-4 rounded-lg bg-white/5 border border-white/10">
-                    <h3 className="text-sm font-semibold text-white mb-2">About Radio Stations</h3>
-                    <p className="text-sm text-white/60">
-                        Radio stations are generated from your personal music library. As you add more music, 
-                        new genre and decade stations will automatically appear. Each station requires a minimum 
-                        number of tracks to ensure a good listening experience.
-                    </p>
                 </div>
             </div>
         </div>
     );
 }
-

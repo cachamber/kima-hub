@@ -210,18 +210,17 @@ export default function SettingsPage() {
                 )}
 
                 {/* Save Button - Fixed at bottom */}
-                <div className="sticky bottom-0 pt-8 pb-8 bg-[#0a0a0a]">
+                <div className="sticky bottom-0 pt-8 pb-8 bg-gradient-to-t from-[#0a0a0a] via-[#0a0a0a] to-[#0a0a0a]/80">
                     <div className="relative">
                         <button
                             onClick={handleSaveAll}
                             disabled={isSaving}
-                            className="w-full bg-white text-black font-semibold py-3 px-4 rounded-full
-                                hover:scale-[1.02] active:scale-[0.98] transition-transform
-                                disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+                            className="w-full bg-[#fca208] text-black font-black py-3 px-4 rounded-lg uppercase tracking-wider
+                                hover:bg-[#f97316] active:scale-[0.98] transition-all
+                                disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                            {isSaving ? "Saving..." : "Save"}
+                            {isSaving ? "Saving..." : "Save Changes"}
                         </button>
-                        {/* Status appears below button, absolutely positioned */}
                         <div className="absolute -bottom-6 left-1/2 -translate-x-1/2">
                             <InlineStatus {...saveStatus.props} />
                         </div>

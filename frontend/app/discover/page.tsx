@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { RefreshCw, Music2 } from "lucide-react";
+import { useEffect } from "react";
+import { RefreshCw } from "lucide-react";
 import { cn } from "@/utils/cn";
 import { GradientSpinner } from "@/components/ui/GradientSpinner";
 import { useAudioState, useAudioPlayback } from "@/lib/audio-context";
@@ -10,32 +10,68 @@ import { useDiscoverActions } from "@/features/discover/hooks/useDiscoverActions
 import { usePreviewPlayer } from "@/features/discover/hooks/usePreviewPlayer";
 import { DiscoverHero } from "@/features/discover/components/DiscoverHero";
 import { DiscoverActionBar } from "@/features/discover/components/DiscoverActionBar";
-import { DiscoverSettings } from "@/features/discover/components/DiscoverSettings";
 import { TrackList } from "@/features/discover/components/TrackList";
 import { UnavailableAlbums } from "@/features/discover/components/UnavailableAlbums";
 import { HowItWorks } from "@/features/discover/components/HowItWorks";
+import { useActivityPanelSettings } from "@/lib/activity-panel-settings-context";
+import { DiscoverSettingsTab } from "@/components/activity/DiscoverSettingsTab";
 
 export default function DiscoverWeeklyPage() {
     // Use split hooks to avoid re-renders from currentTime updates
     const { currentTrack } = useAudioState();
     const { isPlaying } = useAudioPlayback();
-    const [showSettings, setShowSettings] = useState(false);
+    const { setSettingsContent } = useActivityPanelSettings();
 
     // Custom hooks - single source of truth for batch status from useDiscoverData
-    const { playlist, config, setConfig, loading, reloadData, batchStatus, refreshBatchStatus, setPendingGeneration, updateTrackLiked, isGenerating } = useDiscoverData();
+    const { playlist, config, setConfig, loading, reloadData, batchStatus, refreshBatchStatus, setPendingGeneration, markGenerationStart, updateTrackLiked, isGenerating } = useDiscoverData();
     const {
         handleGenerate,
         handleLike,
         handlePlayPlaylist,
         handlePlayTrack,
         handleTogglePlay,
-    } = useDiscoverActions(playlist, reloadData, isGenerating, refreshBatchStatus, setPendingGeneration, updateTrackLiked);
+    } = useDiscoverActions(playlist, reloadData, isGenerating, refreshBatchStatus, setPendingGeneration, markGenerationStart, updateTrackLiked);
     const { currentPreview, handleTogglePreview } = usePreviewPlayer();
 
     // Check if we're playing from this playlist
     const isPlaylistPlaying = playlist?.tracks.some(
         (t) => t.id === currentTrack?.id
     );
+
+    // Provide settings content to activity panel
+    useEffect(() => {
+        const handleBackToActivity = () => {
+            window.dispatchEvent(
+                new CustomEvent("set-activity-panel-tab", {
+                    detail: { tab: "active" },
+                })
+            );
+        };
+
+        setSettingsContent(
+            <DiscoverSettingsTab
+                config={config}
+                onUpdateConfig={setConfig}
+                onPlaylistCleared={reloadData}
+                onBack={handleBackToActivity}
+            />
+        );
+
+        // Cleanup when leaving the page
+        return () => {
+            setSettingsContent(null);
+        };
+    }, [config, setConfig, reloadData, setSettingsContent]);
+
+    // Handle settings button click
+    const handleOpenSettings = () => {
+        window.dispatchEvent(new CustomEvent("open-activity-panel"));
+        window.dispatchEvent(
+            new CustomEvent("set-activity-panel-tab", {
+                detail: { tab: "settings" },
+            })
+        );
+    };
 
     if (loading) {
         return (
@@ -46,89 +82,133 @@ export default function DiscoverWeeklyPage() {
     }
 
     return (
-        <div className="min-h-screen">
-            <DiscoverHero playlist={playlist} config={config} />
+        <div className="min-h-screen relative">
+            {/* Static gradient overlay - no animation */}
+            <div className="fixed inset-0 pointer-events-none opacity-50">
+                <div className="absolute inset-0 bg-gradient-to-br from-white/5 via-transparent to-transparent" />
+            </div>
 
-            <DiscoverActionBar
-                playlist={playlist}
-                config={config}
-                isPlaylistPlaying={isPlaylistPlaying || false}
-                isPlaying={isPlaying}
-                onPlayToggle={isPlaylistPlaying && isPlaying ? handleTogglePlay : handlePlayPlaylist}
-                onGenerate={handleGenerate}
-                onToggleSettings={() => setShowSettings(!showSettings)}
-                isGenerating={isGenerating}
-                batchStatus={batchStatus}
-            />
-
-            {showSettings && (
-                <DiscoverSettings
+            <div className="relative">
+                <DiscoverHero
+                    playlist={playlist}
                     config={config}
-                    onUpdateConfig={setConfig}
-                    onPlaylistCleared={reloadData}
+                    onOpenSettings={handleOpenSettings}
                 />
-            )}
 
-            {/* Track Listing */}
-            <div className="px-4 md:px-8 pb-32">
-                {playlist && playlist.tracks.length > 0 ? (
-                        <div className="space-y-6">
-                            <TrackList
-                                tracks={playlist.tracks}
-                                currentTrack={currentTrack}
-                                isPlaying={isPlaying}
-                                onPlayTrack={handlePlayTrack}
-                                onTogglePlay={handleTogglePlay}
-                                onLike={handleLike}
-                            />
+                <DiscoverActionBar
+                    playlist={playlist}
+                    isPlaylistPlaying={isPlaylistPlaying || false}
+                    isPlaying={isPlaying}
+                    onPlayToggle={isPlaylistPlaying && isPlaying ? handleTogglePlay : handlePlayPlaylist}
+                    isGenerating={isGenerating}
+                />
 
-                            <UnavailableAlbums
-                                unavailable={playlist.unavailable}
-                                currentPreview={currentPreview}
-                                onTogglePreview={handleTogglePreview}
-                            />
+                {/* Track Listing */}
+                <div className="px-4 md:px-8 pb-32">
+                    {playlist && playlist.tracks.length > 0 ? (
+                            <div className="space-y-12">
+                                {/* Section header */}
+                                <section className="animate-slide-up" style={{ animationDelay: "0s" }}>
+                                    <h2 className="text-2xl font-black tracking-tight flex items-center gap-3 mb-6">
+                                        <span className="w-1 h-8 bg-gradient-to-b from-[#eab308] to-[#f59e0b] rounded-full" />
+                                        <span className="uppercase tracking-tighter">Playlist</span>
+                                        <span className="flex-1 border-t border-white/10" />
+                                        <span className="text-xs font-mono text-[#a855f7]">
+                                            {playlist?.totalCount || 0} tracks
+                                        </span>
+                                    </h2>
+                                    <TrackList
+                                        tracks={playlist.tracks}
+                                        currentTrack={currentTrack}
+                                        isPlaying={isPlaying}
+                                        onPlayTrack={handlePlayTrack}
+                                        onTogglePlay={handleTogglePlay}
+                                        onLike={handleLike}
+                                    />
+                                </section>
 
-                            <HowItWorks />
-                        </div>
-                    ) : (
-                        <div className="flex flex-col items-center justify-center py-24 text-center">
-                            <div className="w-20 h-20 bg-gradient-to-br from-purple-600/20 to-yellow-600/20 rounded-full flex items-center justify-center mb-4 shadow-xl border border-white/10">
-                                <Music2 className="w-10 h-10 text-purple-400" />
+                                <section className="animate-slide-up" style={{ animationDelay: "0.1s" }}>
+                                    <UnavailableAlbums
+                                        unavailable={playlist.unavailable}
+                                        currentPreview={currentPreview}
+                                        onTogglePreview={handleTogglePreview}
+                                    />
+                                </section>
+
+                                <section className="animate-slide-up" style={{ animationDelay: "0.2s" }}>
+                                    <HowItWorks />
+                                </section>
                             </div>
-                            <h3 className="text-lg font-medium text-white mb-1">
-                                No Discover Weekly Yet
-                            </h3>
-                            <p className="text-sm text-gray-500 mb-6 max-w-md">
-                                Generate your first playlist based on your
-                                listening history!
-                            </p>
-                            <button
-                                onClick={handleGenerate}
-                                disabled={isGenerating}
-                                className={cn(
-                                    "flex items-center gap-2 px-6 py-3 rounded-full text-white font-semibold transition-all",
-                                    isGenerating
-                                        ? "bg-white/5 cursor-not-allowed opacity-50"
-                                        : "bg-purple-600/20 hover:bg-purple-600/30 border border-purple-500/30 hover:scale-105"
-                                )}
-                            >
-                                {isGenerating ? (
-                                    <>
-                                        <GradientSpinner size="sm" />
-                                        {batchStatus?.status === "scanning" 
-                                            ? "Importing tracks..."
-                                            : `Downloading... ${batchStatus?.completed || 0}/${batchStatus?.total || 0}`
-                                        }
-                                    </>
-                                ) : (
-                                    <>
-                                        <RefreshCw className="w-5 h-5" />
-                                        Generate Now
-                                    </>
-                                )}
-                            </button>
-                        </div>
-                    )}
+                        ) : (
+                            <div className="max-w-3xl mx-auto py-16">
+                                {/* Data-driven empty state */}
+                                <div className="relative overflow-hidden rounded-lg border-2 border-white/10 bg-gradient-to-br from-[#0f0f0f] to-[#0a0a0a] p-12 shadow-2xl shadow-black/40">
+                                    {/* Accent line */}
+                                    <div className="absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-[#eab308] to-[#f59e0b]" />
+
+                                    {/* System status */}
+                                    <div className="flex items-center gap-3 mb-8 pb-4 border-b border-white/10">
+                                        <div className="w-2 h-2 bg-[#eab308]" />
+                                        <span className="text-xs font-mono text-white/60 uppercase tracking-wider">
+                                            System Ready
+                                        </span>
+                                    </div>
+
+                                    <h3 className="text-4xl md:text-5xl font-black tracking-tighter text-white mb-4 leading-none">
+                                        PLAYLIST<br/>
+                                        GENERATION
+                                    </h3>
+
+                                    <p className="text-sm font-mono text-gray-500 mb-8 leading-relaxed">
+                                        No active playlist detected. Initialize generation process to analyze listening history
+                                        and create personalized recommendations.
+                                    </p>
+
+                                    {/* Stats grid */}
+                                    <div className="grid grid-cols-3 gap-4 mb-8">
+                                        <div className="border border-white/10 rounded-lg p-4 bg-white/[0.02] hover:bg-white/[0.04] transition-colors">
+                                            <div className="text-2xl font-black text-[#a855f7] mb-1">--</div>
+                                            <div className="text-xs font-mono text-gray-500 uppercase">Tracks</div>
+                                        </div>
+                                        <div className="border border-white/10 rounded-lg p-4 bg-white/[0.02] hover:bg-white/[0.04] transition-colors">
+                                            <div className="text-2xl font-black text-[#a855f7] mb-1">--</div>
+                                            <div className="text-xs font-mono text-gray-500 uppercase">Duration</div>
+                                        </div>
+                                        <div className="border border-white/10 rounded-lg p-4 bg-white/[0.02] hover:bg-white/[0.04] transition-colors">
+                                            <div className="text-2xl font-black text-[#a855f7] mb-1">--</div>
+                                            <div className="text-xs font-mono text-gray-500 uppercase">Artists</div>
+                                        </div>
+                                    </div>
+
+                                    <button
+                                        onClick={handleGenerate}
+                                        disabled={isGenerating}
+                                        className={cn(
+                                            "w-full py-4 px-6 border-2 rounded-lg font-black text-sm tracking-wider uppercase transition-all duration-300",
+                                            isGenerating
+                                                ? "border-white/20 bg-white/5 text-white/30 cursor-not-allowed"
+                                                : "border-[#eab308] bg-[#eab308] text-black hover:bg-[#f59e0b] hover:border-[#f59e0b] hover:scale-[1.02] hover:shadow-lg hover:shadow-[#eab308]/20"
+                                        )}
+                                    >
+                                        {isGenerating ? (
+                                            <span className="flex items-center justify-center gap-3">
+                                                <GradientSpinner size="sm" />
+                                                {batchStatus?.status === "scanning"
+                                                    ? "Processing..."
+                                                    : `Downloading ${batchStatus?.completed || 0}/${batchStatus?.total || 0}`
+                                                }
+                                            </span>
+                                        ) : (
+                                            <span className="flex items-center justify-center gap-3">
+                                                <RefreshCw className="w-4 h-4" />
+                                                Initialize Generation
+                                            </span>
+                                        )}
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+                </div>
             </div>
         </div>
     );

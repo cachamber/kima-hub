@@ -20,6 +20,7 @@ export function useDiscoverData() {
   const [loading, setLoading] = useState(true);
   const [pendingGeneration, setPendingGeneration] = useState(false);
   const wasActiveRef = useRef(false);
+  const generationStartTimeRef = useRef<number | null>(null);
 
   // SSE-populated batch status (populated by useEventSource via queryClient.setQueryData)
   const { data: sseBatchStatus } = useQuery<BatchStatus | null>({
@@ -80,12 +81,27 @@ export function useDiscoverData() {
     // Clear pending state once batch is confirmed active
     if (batchStatus.active) {
       setPendingGeneration(false);
+      generationStartTimeRef.current = null;
+    }
+
+    // Clear pending state if batch is not active (handles immediate failures)
+    // But only after 5 seconds to allow backend time to create the batch
+    if (!batchStatus.active && pendingGeneration) {
+      const timeSinceStart = generationStartTimeRef.current
+        ? Date.now() - generationStartTimeRef.current
+        : Infinity;
+
+      if (timeSinceStart > 5000) {
+        setPendingGeneration(false);
+        generationStartTimeRef.current = null;
+      }
     }
 
     // If batch was active and now isn't, reload data
     if (wasActiveRef.current && !batchStatus.active) {
       wasActiveRef.current = false;
       setPendingGeneration(false);
+      generationStartTimeRef.current = null;
       loadData();
     }
 
@@ -93,7 +109,12 @@ export function useDiscoverData() {
     if (batchStatus.active) {
       wasActiveRef.current = true;
     }
-  }, [batchStatus, loadData]);
+  }, [batchStatus, loadData, pendingGeneration]);
+
+  // Mark when generation starts
+  const markGenerationStart = useCallback(() => {
+    generationStartTimeRef.current = Date.now();
+  }, []);
 
   // Optimistically update a track's liked status
   const updateTrackLiked = useCallback((albumId: string, isLiked: boolean) => {
@@ -119,6 +140,7 @@ export function useDiscoverData() {
     batchStatus,
     refreshBatchStatus: checkBatchStatus,
     setPendingGeneration,
+    markGenerationStart,
     updateTrackLiked,
     isGenerating: pendingGeneration || batchStatus?.active || false,
   };

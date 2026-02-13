@@ -183,7 +183,7 @@ router.post(
 
             // Start async search with onResult callback for SSE streaming
             soulseekService
-                .searchTrack(searchQuery, "", false, 45000, (response) => {
+                .searchTrack(searchQuery, "", undefined, false, 45000, (response) => {
                     // Stream each peer response via SSE
                     const formatted = formatSearchResult(response);
                     if (formatted.length > 0 && userId) {

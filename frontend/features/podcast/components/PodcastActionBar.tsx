@@ -1,6 +1,6 @@
 "use client";
 
-import { ExternalLink, Trash2, Plus, Loader2 } from "lucide-react";
+import { ExternalLink, Trash2, Plus, Loader2, Play, Pause } from "lucide-react";
 import type { ColorPalette } from "@/hooks/useImageColor";
 
 interface PodcastActionBarProps {
@@ -12,6 +12,9 @@ interface PodcastActionBarProps {
     onSubscribe: () => void;
     onRemove: () => void;
     onShowDeleteConfirm: (show: boolean) => void;
+    onPlayLatest?: () => void;
+    isPlayingPodcast?: boolean;
+    onPause?: () => void;
 }
 
 export function PodcastActionBar({
@@ -22,24 +25,41 @@ export function PodcastActionBar({
     onSubscribe,
     onRemove,
     onShowDeleteConfirm,
+    onPlayLatest,
+    isPlayingPodcast,
+    onPause,
 }: PodcastActionBarProps) {
     return (
-        <div className="flex items-center gap-4">
-            {/* Subscribe Button - Yellow primary action */}
+        <div className="flex items-center gap-3">
+            {/* Play / Pause for subscribed podcasts */}
+            {isSubscribed && onPlayLatest && (
+                <button
+                    onClick={isPlayingPodcast ? onPause : onPlayLatest}
+                    className="w-10 h-10 rounded-lg bg-[#3b82f6] hover:bg-[#2563eb] transition-all flex items-center justify-center hover:scale-105 active:scale-95"
+                >
+                    {isPlayingPodcast ? (
+                        <Pause className="w-4 h-4 text-white" />
+                    ) : (
+                        <Play className="w-4 h-4 text-white ml-0.5" fill="white" />
+                    )}
+                </button>
+            )}
+
+            {/* Subscribe Button */}
             {!isSubscribed && (
                 <button
                     onClick={onSubscribe}
                     disabled={isSubscribing}
-                    className="h-12 px-6 rounded-full bg-[#ecb200] hover:bg-[#ffc61a] hover:scale-105 transition-all flex items-center gap-2 font-semibold text-black disabled:opacity-50"
+                    className="h-10 px-5 rounded-lg bg-[#3b82f6] hover:bg-[#2563eb] transition-all flex items-center gap-2 font-black text-sm text-white uppercase tracking-wider disabled:opacity-50 hover:scale-[1.02] active:scale-[0.98]"
                 >
                     {isSubscribing ? (
                         <>
-                            <Loader2 className="w-5 h-5 animate-spin" />
-                            <span>Subscribing...</span>
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                            <span>Subscribing</span>
                         </>
                     ) : (
                         <>
-                            <Plus className="w-5 h-5" />
+                            <Plus className="w-4 h-4" />
                             <span>Subscribe</span>
                         </>
                     )}
@@ -52,41 +72,40 @@ export function PodcastActionBar({
                     href={feedUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="p-2.5 rounded-full text-white/60 hover:text-white hover:bg-white/10 transition-all"
+                    className="p-2.5 rounded-lg text-white/40 hover:text-white hover:bg-white/5 border border-transparent hover:border-white/10 transition-all"
                     title="RSS Feed"
                 >
-                    <ExternalLink className="w-5 h-5" />
+                    <ExternalLink className="w-4 h-4" />
                 </a>
             )}
 
-            {/* Spacer */}
             <div className="flex-1" />
 
-            {/* Remove Podcast Button */}
+            {/* Remove Podcast */}
             {isSubscribed && (
                 <>
                     {!showDeleteConfirm ? (
                         <button
                             onClick={() => onShowDeleteConfirm(true)}
-                            className="flex items-center gap-2 px-4 py-2 rounded-full text-red-400/80 hover:text-red-400 hover:bg-red-500/10 transition-all text-sm"
+                            className="flex items-center gap-2 px-3 py-2 rounded-lg text-red-400/60 hover:text-red-400 hover:bg-red-500/10 border border-transparent hover:border-red-500/20 transition-all text-xs font-mono uppercase tracking-wider"
                         >
-                            <Trash2 className="w-4 h-4" />
+                            <Trash2 className="w-3.5 h-3.5" />
                             <span className="hidden md:inline">Remove</span>
                         </button>
                     ) : (
                         <div className="flex items-center gap-2">
-                            <span className="text-sm text-white/50 hidden md:inline">
+                            <span className="text-xs font-mono text-white/40 hidden md:inline uppercase tracking-wider">
                                 Remove podcast?
                             </span>
                             <button
                                 onClick={onRemove}
-                                className="px-4 py-2 rounded-full text-sm font-medium bg-red-500/20 text-red-400 hover:bg-red-500/30 transition-all"
+                                className="px-3 py-2 rounded-lg text-xs font-black uppercase tracking-wider bg-red-500/20 text-red-400 hover:bg-red-500/30 border border-red-500/20 transition-all"
                             >
                                 Confirm
                             </button>
                             <button
                                 onClick={() => onShowDeleteConfirm(false)}
-                                className="px-4 py-2 rounded-full text-sm font-medium bg-white/5 text-white/70 hover:bg-white/10 transition-all"
+                                className="px-3 py-2 rounded-lg text-xs font-mono uppercase tracking-wider bg-white/5 text-white/50 hover:bg-white/10 border border-white/10 transition-all"
                             >
                                 Cancel
                             </button>

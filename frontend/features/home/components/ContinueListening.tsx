@@ -6,42 +6,23 @@ import { Music, Disc, BookOpen } from "lucide-react";
 import { api } from "@/lib/api";
 import { HorizontalCarousel, CarouselItem } from "@/components/ui/HorizontalCarousel";
 import { memo } from "react";
-
-interface ContinueListeningItem {
-    id: string;
-    mbid?: string;
-    name: string;
-    type: "artist" | "podcast" | "audiobook";
-    coverArt?: string;
-    progress?: number;
-    author?: string;
-}
+import { ListenedItem } from "../types";
 
 interface ContinueListeningProps {
-    items: ContinueListeningItem[];
+    items: ListenedItem[];
 }
 
-// Helper to get the correct image source
-const getArtistImageSrc = (coverArt: string | undefined) => {
-    if (!coverArt) {
-        return null;
-    }
-    return api.getCoverArtUrl(coverArt, 300);
-};
-
-const getImageForItem = (item: ContinueListeningItem) => {
+const getImageForItem = (item: ListenedItem) => {
     if (item.type === "audiobook") {
         return api.getCoverArtUrl(`/audiobooks/${item.id}/cover`, 300);
     }
-
     if (item.coverArt) {
-        return getArtistImageSrc(item.coverArt);
+        return api.getCoverArtUrl(item.coverArt, 300);
     }
-
     return null;
 };
 
-const getDescriptionLabel = (item: ContinueListeningItem) => {
+const getDescriptionLabel = (item: ListenedItem) => {
     if (item.type === "podcast") {
         if (
             item.author &&
@@ -52,24 +33,40 @@ const getDescriptionLabel = (item: ContinueListeningItem) => {
         }
         return "Podcast";
     }
-
     if (item.type === "audiobook") {
         return item.author && item.author.trim().length > 0
             ? item.author
             : "Audiobook";
     }
-
     return "Artist";
 };
 
+const TYPE_COLORS: Record<string, { border: string; accent: string; gradient: string }> = {
+    artist: {
+        border: "hover:border-[#ec4899]/40",
+        accent: "from-[#ec4899] to-[#db2777]",
+        gradient: "hover:shadow-[#ec4899]/10",
+    },
+    podcast: {
+        border: "hover:border-[#3b82f6]/40",
+        accent: "from-[#3b82f6] to-[#2563eb]",
+        gradient: "hover:shadow-[#3b82f6]/10",
+    },
+    audiobook: {
+        border: "hover:border-[#f59e0b]/40",
+        accent: "from-[#f59e0b] to-[#d97706]",
+        gradient: "hover:shadow-[#f59e0b]/10",
+    },
+};
+
 interface ContinueListeningCardProps {
-    item: ContinueListeningItem;
+    item: ListenedItem;
     index: number;
 }
 
-const ContinueListeningCard = memo(function ContinueListeningCard({ 
-    item, 
-    index 
+const ContinueListeningCard = memo(function ContinueListeningCard({
+    item,
+    index,
 }: ContinueListeningCardProps) {
     const isPodcast = item.type === "podcast";
     const isAudiobook = item.type === "audiobook";
@@ -83,6 +80,7 @@ const ContinueListeningCard = memo(function ContinueListeningCard({
         (isPodcast || isAudiobook) &&
         item.progress &&
         item.progress > 0;
+    const colors = TYPE_COLORS[item.type] || TYPE_COLORS.artist;
 
     return (
         <CarouselItem>
@@ -91,42 +89,46 @@ const ContinueListeningCard = memo(function ContinueListeningCard({
                 data-tv-card
                 data-tv-card-index={index}
                 tabIndex={0}
+                className="group block"
             >
-                <div className="p-3 rounded-md group cursor-pointer hover:bg-white/5 transition-colors h-full flex flex-col">
-                    <div className="aspect-square bg-[#282828] rounded-full mb-3 flex items-center justify-center overflow-hidden relative shadow-lg shrink-0">
-                        {imageSrc ? (
-                            <Image
-                                src={imageSrc}
-                                alt={item.name}
-                                fill
-                                className="object-cover group-hover:scale-105 transition-transform duration-300"
-                                sizes="180px"
-                                priority={false}
-                                unoptimized
-                            />
-                        ) : isPodcast ? (
-                            <Disc className="w-10 h-10 text-gray-600" />
-                        ) : isAudiobook ? (
-                            <BookOpen className="w-10 h-10 text-gray-600" />
-                        ) : (
-                            <Music className="w-10 h-10 text-gray-600" />
-                        )}
+                <div className={`relative bg-[#0a0a0a] border border-white/10 rounded-lg overflow-hidden ${colors.border} transition-all duration-300 hover:shadow-lg ${colors.gradient} mx-1`}>
+                    <div className="relative aspect-square">
+                        <div className="w-full h-full bg-[#181818] flex items-center justify-center overflow-hidden">
+                            {imageSrc ? (
+                                <Image
+                                    src={imageSrc}
+                                    alt={item.name}
+                                    fill
+                                    className="object-cover group-hover:scale-110 transition-transform duration-500"
+                                    sizes="180px"
+                                    priority={false}
+                                    unoptimized
+                                />
+                            ) : isPodcast ? (
+                                <Disc className="w-10 h-10 text-gray-700" />
+                            ) : isAudiobook ? (
+                                <BookOpen className="w-10 h-10 text-gray-700" />
+                            ) : (
+                                <Music className="w-10 h-10 text-gray-700" />
+                            )}
+                        </div>
                         {hasProgress && (
                             <div className="absolute bottom-0 left-0 right-0 h-1 bg-black/50">
                                 <div
-                                    className="h-full bg-[#ecb200]"
-                                    style={{
-                                        width: `${item.progress}%`,
-                                    }}
+                                    className={`h-full bg-gradient-to-r ${colors.accent}`}
+                                    style={{ width: `${item.progress}%` }}
                                 />
                             </div>
                         )}
+                        {!hasProgress && (
+                            <div className={`absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r ${colors.accent} transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300`} />
+                        )}
                     </div>
-                    <div className="flex-1 flex flex-col">
-                        <h3 className="text-sm font-semibold text-white truncate">
+                    <div className="p-3 bg-gradient-to-b from-[#0a0a0a] to-[#0f0f0f]">
+                        <h3 className="text-sm font-black text-white truncate tracking-tight">
                             {item.name}
                         </h3>
-                        <p className="text-xs text-gray-400 truncate mt-0.5">
+                        <p className="text-xs font-mono text-gray-500 uppercase tracking-wider truncate mt-0.5">
                             {getDescriptionLabel(item)}
                         </p>
                     </div>
@@ -136,16 +138,18 @@ const ContinueListeningCard = memo(function ContinueListeningCard({
     );
 });
 
-export function ContinueListening({ items }: ContinueListeningProps) {
+const ContinueListening = memo(function ContinueListening({ items }: ContinueListeningProps) {
     return (
         <HorizontalCarousel>
             {items.map((item, index) => (
-                <ContinueListeningCard 
-                    key={`${item.type}-${item.id}`} 
-                    item={item} 
-                    index={index} 
+                <ContinueListeningCard
+                    key={`${item.type}-${item.id}`}
+                    item={item}
+                    index={index}
                 />
             ))}
         </HorizontalCarousel>
     );
-}
+});
+
+export { ContinueListening };

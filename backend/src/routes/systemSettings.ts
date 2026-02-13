@@ -99,10 +99,11 @@ router.get("/", async (req, res) => {
                     musicPath: "/music",
                     downloadPath: "/downloads",
                     autoSync: true,
-                    autoEnrichMetadata: true,
-                    maxConcurrentDownloads: 3,
-                    downloadRetryAttempts: 3,
-                    transcodeCacheMaxGb: 10,
+autoEnrichMetadata: true,
+                     maxConcurrentDownloads: 3,
+                     downloadRetryAttempts: 3,
+                     transcodeCacheMaxGb: 10,
+                     soulseekConcurrentDownloads: 4,
                 },
             });
         }

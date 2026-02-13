@@ -77,64 +77,71 @@ export function ActiveDownloadsTab() {
 
     return (
         <div className="flex flex-col h-full">
-            {/* Header */}
-            <div className="flex items-center justify-between px-3 py-2 border-b border-white/5">
-                <span className="text-xs text-white/40">
-                    {downloads.length} downloading
-                </span>
-                <div className="flex items-center gap-3">
-                    <button
-                        onClick={handleCancelAll}
-                        className="text-xs text-white/40 hover:text-red-400 transition-colors"
-                        title="Cancel all downloads"
-                    >
-                        Cancel all
-                    </button>
-                    <span className="flex items-center gap-1.5 text-xs text-green-400">
-                        <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
-                        Active
+            {/* Header - monospace terminal style */}
+            <div className="flex items-center justify-between px-3 py-2 border-b-2 border-white/10">
+                <div className="flex items-center gap-2">
+                    <span className="w-1.5 h-1.5 rounded-full bg-[#22c55e] animate-pulse" />
+                    <span className="text-[10px] font-mono font-bold text-gray-600 uppercase tracking-wider">
+                        {String(downloads.length).padStart(2, "0")} ACTIVE
                     </span>
                 </div>
+                <button
+                    onClick={handleCancelAll}
+                    className="text-[10px] font-mono font-bold text-gray-600 hover:text-red-400 uppercase tracking-wider transition-colors"
+                    title="Cancel all downloads"
+                >
+                    CANCEL
+                </button>
             </div>
 
-            {/* Download list */}
+            {/* Download list - data stream style */}
             <div className="flex-1 overflow-y-auto">
-                {downloads.map((download) => (
+                {downloads.map((download, index) => (
                     <div
                         key={download.id}
-                        className="px-3 py-3 border-b border-white/5 hover:bg-white/5 transition-colors group"
+                        className="px-3 py-3 border-b border-white/5 border-l-2 border-[#22c55e] bg-[#0f0f0f] hover:bg-white/5 transition-colors group"
                     >
                         <div className="flex items-start gap-3">
+                            {/* Index number */}
+                            <div className="flex-shrink-0 w-6 mt-0.5">
+                                <span className="text-[10px] font-mono font-bold text-gray-700">
+                                    {String(index + 1).padStart(2, "0")}
+                                </span>
+                            </div>
+
+                            {/* Status spinner */}
                             <div className="mt-0.5 shrink-0">
                                 {cancelling.has(download.id) ? (
-                                    <Loader2 className="w-4 h-4 text-white/40 animate-spin" />
+                                    <Loader2 className="w-4 h-4 text-gray-600 animate-spin" />
                                 ) : (
                                     <GradientSpinner size="sm" />
                                 )}
                             </div>
+
+                            {/* Content */}
                             <div className="flex-1 min-w-0">
-                                <p className="text-sm font-medium text-white truncate">
+                                <p className="text-xs font-black tracking-tight text-white truncate uppercase mb-1">
                                     {download.subject}
                                 </p>
-                                <div className="flex items-center gap-2 mt-1 flex-wrap">
+                                <div className="flex items-center gap-2 flex-wrap">
                                     <span
                                         className={cn(
-                                            "text-xs font-medium capitalize",
+                                            "text-[9px] font-mono font-bold uppercase tracking-wider",
                                             download.status === "processing"
                                                 ? "text-blue-400"
-                                                : "text-yellow-400"
+                                                : "text-[#eab308]"
                                         )}
                                     >
                                         {download.status}
                                     </span>
                                     {download.metadata?.statusText && (
                                         <>
-                                            <span className="text-xs text-white/30">
+                                            <span className="text-[9px] font-mono text-gray-700">
                                                 •
                                             </span>
                                             <span
                                                 className={cn(
-                                                    "text-xs font-medium",
+                                                    "text-[9px] font-mono font-bold uppercase tracking-wider",
                                                     download.metadata
                                                         .currentSource ===
                                                         "lidarr"
@@ -146,32 +153,34 @@ export function ActiveDownloadsTab() {
                                             </span>
                                         </>
                                     )}
-                                    <span className="text-xs text-white/30">
+                                    <span className="text-[9px] font-mono text-gray-700">
                                         •
                                     </span>
-                                    <span className="text-xs text-white/30 capitalize flex items-center gap-1">
+                                    <span className="text-[9px] font-mono text-gray-600 uppercase tracking-wider flex items-center gap-1">
                                         {download.type === "album" ? (
-                                            <Disc className="w-3 h-3" />
+                                            <Disc className="w-2.5 h-2.5" />
                                         ) : (
-                                            <Music className="w-3 h-3" />
+                                            <Music className="w-2.5 h-2.5" />
                                         )}
                                         {download.type}
                                     </span>
-                                    <span className="text-xs text-white/30">
+                                    <span className="text-[9px] font-mono text-gray-700">
                                         •
                                     </span>
-                                    <span className="text-xs text-white/30">
+                                    <span className="text-[9px] font-mono text-gray-700 uppercase tracking-wider">
                                         {formatTime(download.createdAt)}
                                     </span>
                                 </div>
                             </div>
+
+                            {/* Cancel button */}
                             <button
                                 onClick={() => handleCancel(download.id)}
                                 disabled={cancelling.has(download.id)}
-                                className="p-1 opacity-0 group-hover:opacity-100 hover:bg-white/10 rounded transition-all shrink-0"
+                                className="p-1 hover:bg-white/10 transition-colors shrink-0"
                                 title="Cancel download"
                             >
-                                <X className="w-4 h-4 text-white/40 hover:text-red-400" />
+                                <X className="w-3 h-3 text-gray-700 hover:text-red-400" />
                             </button>
                         </div>
                     </div>

@@ -21,11 +21,12 @@ export interface Artist {
  */
 export interface ListenedItem {
     id: string;
+    mbid?: string;
     name: string;
     coverArt?: string;
     type: 'artist' | 'podcast' | 'audiobook';
-    progress?: number; // 0-100 percentage for podcasts/audiobooks
-    author?: string; // For podcasts and audiobooks
+    progress?: number;
+    author?: string;
 }
 
 /**
@@ -69,4 +70,19 @@ export interface PopularArtist {
     name: string;
     image?: string;
     listeners?: number;
+}
+
+/**
+ * Playlist preview from external sources (Deezer, etc.)
+ */
+export interface PlaylistPreview {
+    id: string;
+    source: string;
+    type: string;
+    title: string;
+    description: string | null;
+    creator: string;
+    imageUrl: string | null;
+    trackCount: number;
+    url: string;
 }

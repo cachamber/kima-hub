@@ -11,18 +11,18 @@ interface SettingsInputProps {
     className?: string;
 }
 
-export function SettingsInput({ 
-    id, 
-    type = "text", 
-    value, 
-    onChange, 
+export function SettingsInput({
+    id,
+    type = "text",
+    value,
+    onChange,
     placeholder,
     disabled,
     className = ""
 }: SettingsInputProps) {
     const [showPassword, setShowPassword] = useState(false);
     const isPassword = type === "password";
-    
+
     return (
         <div className={`relative ${className}`}>
             <input
@@ -33,13 +33,14 @@ export function SettingsInput({
                 placeholder={placeholder}
                 disabled={disabled}
                 className={`
-                    w-full bg-[#333] text-white text-sm
-                    px-3 py-2 rounded-md
-                    border-0 outline-none
-                    focus:ring-2 focus:ring-white/20
-                    placeholder:text-gray-500
-                    transition-colors
-                    hover:bg-[#404040] focus:bg-[#404040]
+                    w-full bg-white/5 text-white text-sm font-mono
+                    px-3 py-2 rounded-lg
+                    border border-white/10 outline-none
+                    focus:ring-2 focus:ring-[#fca208]/30 focus:border-[#fca208]/40
+                    placeholder:text-white/20
+                    transition-all
+                    hover:bg-white/[0.08] hover:border-white/20
+                    focus:bg-white/[0.08]
                     ${isPassword ? 'pr-10' : ''}
                     ${disabled ? 'opacity-50 cursor-not-allowed' : ''}
                 `}
@@ -48,7 +49,7 @@ export function SettingsInput({
                 <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white transition-colors"
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-white/30 hover:text-white/60 transition-colors"
                 >
                     {showPassword ? (
                         <EyeOff className="w-4 h-4" />
@@ -60,4 +61,3 @@ export function SettingsInput({
         </div>
     );
 }
-

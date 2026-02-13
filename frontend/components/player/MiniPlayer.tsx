@@ -231,17 +231,17 @@ export function MiniPlayer() {
                     <div
                         className="rounded-l-xl p-[2px]"
                         style={{
-                            background: "linear-gradient(90deg, #a855f7 0%, #f5c518 100%)",
+                            background: "linear-gradient(90deg, #fca200 0%, #f97316 100%)",
                         }}
                     >
                         <div className="rounded-l-[10px] overflow-hidden">
-                            <div className="relative bg-gradient-to-r from-[#2d1847] to-[#1a1a2e]">
-                                <div className="absolute inset-0 bg-gradient-to-r from-[#a855f7]/40 to-[#f5c518]/30" />
-                                
+                            <div className="relative bg-gradient-to-r from-[#1a1508] to-[#0f0f0f]">
+                                <div className="absolute inset-0 bg-gradient-to-r from-brand/30 to-[#f97316]/20" />
+
                                 {/* Progress bar at top */}
                                 <div className="relative h-[2px] bg-white/20 w-full">
                                     <div
-                                        className="h-full bg-gradient-to-r from-[#a855f7] to-[#f5c518] transition-all duration-150"
+                                        className="h-full bg-brand transition-all duration-150"
                                         style={{ width: `${progress}%` }}
                                     />
                                 </div>
@@ -296,19 +296,19 @@ export function MiniPlayer() {
                 <div
                     className="rounded-[14px] p-[2px]"
                     style={{
-                        background: "linear-gradient(90deg, #f5c518 0%, #a855f7 50%, #f5c518 100%)",
+                        background: "linear-gradient(90deg, #fca200 0%, #f97316 50%, #fca200 100%)",
                     }}
                 >
                     {/* Inner container with overflow hidden for proper clipping */}
                     <div className="rounded-[12px] overflow-hidden">
                         {/* Single solid background with gradient overlay - prevents corner bleed */}
-                        <div className="relative bg-gradient-to-r from-[#2a1a3f] via-[#3d2060] to-[#2a1a3f]">
-                            <div className="absolute inset-0 bg-gradient-to-r from-[#f5c518]/25 via-[#a855f7]/35 to-[#f5c518]/25" />
+                        <div className="relative bg-gradient-to-r from-[#1a1508] via-[#1a1200] to-[#1a1508]">
+                            <div className="absolute inset-0 bg-gradient-to-r from-brand/25 via-[#f97316]/35 to-brand/25" />
 
                             {/* Progress bar at top - inside the clipped container */}
                             <div className="relative h-[2px] bg-white/20 w-full">
                                 <div
-                                    className="h-full bg-gradient-to-r from-[#f5c518] via-[#e6a700] to-[#a855f7] transition-all duration-150"
+                                    className="h-full bg-brand transition-all duration-150"
                                     style={{ width: `${progress}%` }}
                                 />
                             </div>
@@ -377,8 +377,8 @@ export function MiniPlayer() {
                                             className={cn(
                                                 "w-10 h-10 flex items-center justify-center rounded-full transition-colors",
                                                 vibeMode
-                                                    ? "text-[#f5c518]"
-                                                    : "text-white/80 hover:text-[#f5c518]"
+                                                    ? "text-brand"
+                                                    : "text-white/80 hover:text-brand"
                                             )}
                                             aria-label={
                                                 vibeMode
@@ -419,8 +419,8 @@ export function MiniPlayer() {
                                             audioError
                                                 ? "bg-red-500 text-white hover:bg-red-400"
                                                 : isBuffering
-                                                ? "bg-white/80 text-black"
-                                                : "bg-white text-black hover:scale-105"
+                                                ? "bg-[#fca200]/80 text-black"
+                                                : "bg-[#fca200] text-black hover:scale-105"
                                         )}
                                         aria-label={
                                             audioError
@@ -509,8 +509,8 @@ export function MiniPlayer() {
             )}
 
             <div className="bg-gradient-to-t from-[#080808] via-[#0c0c0c] to-[#0a0a0a] border-t border-white/[0.08] relative">
-                {/* Subtle top glow */}
-                <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent" />
+                {/* Brand accent line */}
+                <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-brand/40 to-transparent" />
 
                 {/* Progress Bar */}
                 <SeekSlider
@@ -534,10 +534,9 @@ export function MiniPlayer() {
                         {mediaLink ? (
                             <Link
                                 href={mediaLink}
-                                className="relative flex-shrink-0 group w-12 h-12"
+                                className="relative flex-shrink-0 w-12 h-12"
                             >
-                                <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent rounded-full blur-sm opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                                <div className="relative w-full h-full bg-gradient-to-br from-[#2a2a2a] to-[#1a1a1a] rounded-full overflow-hidden shadow-lg flex items-center justify-center">
+                                <div className="relative w-full h-full bg-gradient-to-br from-[#2a2a2a] to-[#1a1a1a] rounded-lg overflow-hidden shadow-lg flex items-center justify-center">
                                     {coverUrl ? (
                                         <Image
                                             key={coverUrl}
@@ -556,7 +555,7 @@ export function MiniPlayer() {
                             </Link>
                         ) : (
                             <div className="relative flex-shrink-0 w-12 h-12">
-                                <div className="relative w-full h-full bg-gradient-to-br from-[#2a2a2a] to-[#1a1a1a] rounded-full overflow-hidden shadow-lg flex items-center justify-center">
+                                <div className="relative w-full h-full bg-gradient-to-br from-[#2a2a2a] to-[#1a1a1a] rounded-lg overflow-hidden shadow-lg flex items-center justify-center">
                                     <MusicIcon className="w-6 h-6 text-gray-500" />
                                 </div>
                             </div>
@@ -620,7 +619,7 @@ export function MiniPlayer() {
                                 "rounded p-1.5 transition-colors",
                                 hasMedia && canSkip
                                     ? isShuffle
-                                        ? "text-green-500 hover:text-green-400"
+                                        ? "text-brand hover:text-brand-hover"
                                         : "text-gray-400 hover:text-white"
                                     : "text-gray-600 cursor-not-allowed"
                             )}
@@ -681,9 +680,9 @@ export function MiniPlayer() {
                             className={cn(
                                 "w-8 h-8 rounded-full flex items-center justify-center transition",
                                 hasMedia && !isBuffering
-                                    ? "bg-white text-black hover:scale-105"
+                                    ? "bg-[#fca200] text-black hover:scale-105"
                                     : isBuffering
-                                    ? "bg-white/80 text-black"
+                                    ? "bg-[#fca200]/80 text-black"
                                     : "bg-gray-700 text-gray-500 cursor-not-allowed"
                             )}
                             aria-label={isPlaying ? "Pause" : "Play"}
@@ -747,7 +746,7 @@ export function MiniPlayer() {
                                 "rounded p-1.5 transition-colors",
                                 hasMedia && canSkip
                                     ? repeatMode !== "off"
-                                        ? "text-green-500 hover:text-green-400"
+                                        ? "text-brand hover:text-brand-hover"
                                         : "text-gray-400 hover:text-white"
                                     : "text-gray-600 cursor-not-allowed"
                             )}

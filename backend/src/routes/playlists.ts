@@ -807,7 +807,8 @@ router.post("/:id/pending/:trackId/retry", async (req, res) => {
         // This way we can tell the user immediately if it's not found
         const searchResult = await soulseekService.searchTrack(
             pendingTrack.spotifyArtist,
-            pendingTrack.spotifyTitle
+            pendingTrack.spotifyTitle,
+            pendingTrack.spotifyAlbum !== "Unknown Album" ? pendingTrack.spotifyAlbum : undefined
         );
 
         if (!searchResult.found || searchResult.allMatches.length === 0) {

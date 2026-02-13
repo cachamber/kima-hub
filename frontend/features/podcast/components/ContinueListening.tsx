@@ -28,14 +28,12 @@ export function ContinueListening({
         return null;
     }
 
-    // Get the most recently played episode
     const recentEpisode = inProgressEpisodes.reduce((prev, current) => {
         const prevDate = new Date(prev.progress?.lastPlayedAt || 0);
         const currentDate = new Date(current.progress?.lastPlayedAt || 0);
         return currentDate > prevDate ? current : prev;
     });
 
-    // Find the index in sorted episodes
     const currentIndex = sortedEpisodes.findIndex(
         (ep) => ep.id === recentEpisode.id
     );
@@ -50,29 +48,34 @@ export function ContinueListening({
 
     return (
         <section>
-            <h2 className="text-xl font-bold mb-4">Continue Listening</h2>
-            <div className="space-y-2">
-                {/* Previous Episode - Faded */}
+            <div className="flex items-center gap-3 mb-6">
+                <span className="w-1 h-8 bg-gradient-to-b from-[#3b82f6] to-[#2563eb] rounded-full shrink-0" />
+                <h2 className="text-2xl font-black tracking-tighter uppercase">Continue Listening</h2>
+                <span className="flex-1 border-t border-white/10" />
+            </div>
+
+            <div className="space-y-1.5">
+                {/* Previous Episode */}
                 {previousEpisode && (
                     <div
-                        className="flex items-center gap-3 p-3 rounded-md hover:bg-white/5 transition-all cursor-pointer opacity-50 hover:opacity-70"
+                        className="flex items-center gap-3 p-3 rounded-lg border border-transparent hover:border-white/5 hover:bg-white/[0.02] transition-all cursor-pointer opacity-40 hover:opacity-60"
                         onClick={() => onPlayEpisode(previousEpisode)}
                     >
-                        <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center shrink-0">
-                            <Play className="w-3 h-3 text-white/70" />
+                        <div className="w-8 h-8 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center shrink-0">
+                            <Play className="w-3 h-3 text-white/50" />
                         </div>
                         <div className="flex-1 min-w-0">
-                            <h3 className="font-medium text-white/80 truncate text-sm">
+                            <h3 className="font-black text-white/80 truncate text-sm tracking-tight">
                                 {previousEpisode.title}
                             </h3>
-                            <p className="text-xs text-white/40">Previous episode</p>
+                            <p className="text-[10px] font-mono text-white/30 uppercase tracking-wider">Previous episode</p>
                         </div>
                     </div>
                 )}
 
-                {/* Current Episode - Prominent */}
+                {/* Current Episode */}
                 <div
-                    className="flex items-center gap-4 p-4 rounded-lg bg-white/5 border border-[#ecb200]/30 hover:border-[#ecb200]/50 transition-all cursor-pointer"
+                    className="flex items-center gap-4 p-4 rounded-lg bg-[#0a0a0a] border-2 border-[#3b82f6]/30 hover:border-[#3b82f6]/50 transition-all cursor-pointer"
                     onClick={() => onPlayPause(recentEpisode)}
                 >
                     <button
@@ -80,36 +83,36 @@ export function ContinueListening({
                             e.stopPropagation();
                             onPlayPause(recentEpisode);
                         }}
-                        className="w-12 h-12 rounded-full bg-[#ecb200] hover:bg-[#ffc61a] hover:scale-105 transition-all flex items-center justify-center shrink-0"
+                        className="w-12 h-12 rounded-lg bg-[#3b82f6] hover:bg-[#2563eb] hover:scale-105 transition-all flex items-center justify-center shrink-0"
                     >
                         {isCurrentPlaying && isPlaying ? (
-                            <Pause className="w-5 h-5 text-black" />
+                            <Pause className="w-5 h-5 text-white" />
                         ) : (
-                            <Play className="w-5 h-5 text-black ml-0.5" fill="black" />
+                            <Play className="w-5 h-5 text-white ml-0.5" fill="white" />
                         )}
                     </button>
                     <div className="flex-1 min-w-0">
-                        <h3 className="font-semibold text-white truncate">
+                        <h3 className="font-black text-white truncate tracking-tight">
                             {recentEpisode.title}
                         </h3>
-                        <div className="flex items-center gap-3 mt-1 text-xs text-white/50">
+                        <div className="flex items-center gap-3 mt-1 text-[10px] font-mono text-white/40 uppercase tracking-wider">
                             <span>{formatDuration(recentEpisode.duration)}</span>
-                            <span>•</span>
+                            <span className="text-white/20">|</span>
                             <span>{formatDate(recentEpisode.publishedAt)}</span>
                         </div>
                         {/* Progress Bar */}
                         {recentEpisode.progress && (
                             <div className="mt-2">
                                 <div className="flex items-center gap-2">
-                                    <div className="flex-1 h-1 bg-white/10 rounded-full overflow-hidden">
+                                    <div className="flex-1 h-1 bg-white/5 rounded-full overflow-hidden">
                                         <div
-                                            className="h-full bg-[#ecb200] rounded-full transition-all"
+                                            className="h-full bg-[#3b82f6] rounded-full transition-all"
                                             style={{
                                                 width: `${recentEpisode.progress.progress}%`,
                                             }}
                                         />
                                     </div>
-                                    <span className="text-xs text-[#ecb200]">
+                                    <span className="text-[10px] font-mono text-[#3b82f6]">
                                         {Math.floor(recentEpisode.progress.progress)}%
                                     </span>
                                 </div>
@@ -118,20 +121,20 @@ export function ContinueListening({
                     </div>
                 </div>
 
-                {/* Next Episode - Faded */}
+                {/* Next Episode */}
                 {nextEpisode && (
                     <div
-                        className="flex items-center gap-3 p-3 rounded-md hover:bg-white/5 transition-all cursor-pointer opacity-50 hover:opacity-70"
+                        className="flex items-center gap-3 p-3 rounded-lg border border-transparent hover:border-white/5 hover:bg-white/[0.02] transition-all cursor-pointer opacity-40 hover:opacity-60"
                         onClick={() => onPlayEpisode(nextEpisode)}
                     >
-                        <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center shrink-0">
-                            <Play className="w-3 h-3 text-white/70" />
+                        <div className="w-8 h-8 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center shrink-0">
+                            <Play className="w-3 h-3 text-white/50" />
                         </div>
                         <div className="flex-1 min-w-0">
-                            <h3 className="font-medium text-white/80 truncate text-sm">
+                            <h3 className="font-black text-white/80 truncate text-sm tracking-tight">
                                 {nextEpisode.title}
                             </h3>
-                            <p className="text-xs text-white/40">Next episode</p>
+                            <p className="text-[10px] font-mono text-white/30 uppercase tracking-wider">Next episode</p>
                         </div>
                     </div>
                 )}

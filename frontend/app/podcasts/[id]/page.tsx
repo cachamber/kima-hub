@@ -1,13 +1,12 @@
 "use client";
 
+import DOMPurify from "dompurify";
 import { GradientSpinner } from "@/components/ui/GradientSpinner";
 import { useImageColor } from "@/hooks/useImageColor";
 
-// Hooks
 import { usePodcastData } from "@/features/podcast/hooks/usePodcastData";
 import { usePodcastActions } from "@/features/podcast/hooks/usePodcastActions";
 
-// Components
 import { PodcastHero } from "@/features/podcast/components/PodcastHero";
 import { PodcastActionBar } from "@/features/podcast/components/PodcastActionBar";
 import { ContinueListening } from "@/features/podcast/components/ContinueListening";
@@ -16,7 +15,6 @@ import { PreviewEpisodes } from "@/features/podcast/components/PreviewEpisodes";
 import { SimilarPodcasts } from "@/features/podcast/components/SimilarPodcasts";
 
 export default function PodcastDetailPage() {
-    // Data hook
     const {
         podcastId,
         podcast,
@@ -32,10 +30,8 @@ export default function PodcastDetailPage() {
         sortedEpisodes,
     } = usePodcastData();
 
-    // Extract colors from the proxied image URL (uses token for CORS canvas access)
     const { colors } = useImageColor(colorExtractionImage);
 
-    // Action hooks - pass sortedEpisodes for queue building
     const {
         isSubscribing,
         showDeleteConfirm,
@@ -47,12 +43,12 @@ export default function PodcastDetailPage() {
         handleMarkEpisodeComplete,
         isEpisodePlaying,
         isPlaying,
+        pause,
     } = usePodcastActions(podcastId, sortedEpisodes);
 
-    // Loading state
     if (isLoading) {
         return (
-            <div className="flex items-center justify-center min-h-screen">
+            <div className="flex items-center justify-center min-h-screen bg-[#0a0a0a]">
                 <GradientSpinner size="md" />
             </div>
         );
@@ -60,16 +56,15 @@ export default function PodcastDetailPage() {
 
     if (!podcast && !previewData) {
         return (
-            <div className="flex items-center justify-center min-h-screen">
-                <p className="text-gray-500">Podcast not found</p>
+            <div className="flex items-center justify-center min-h-screen bg-[#0a0a0a]">
+                <p className="text-xs font-mono text-gray-500 uppercase tracking-wider">Podcast not found</p>
             </div>
         );
     }
 
-    // Safety check
     if (!displayData) {
         return (
-            <div className="flex items-center justify-center min-h-screen">
+            <div className="flex items-center justify-center min-h-screen bg-[#0a0a0a]">
                 <GradientSpinner size="md" />
             </div>
         );
@@ -80,8 +75,21 @@ export default function PodcastDetailPage() {
         ? podcast.episodes.length
         : previewData?.episodeCount || 0;
 
+    const handlePlayLatest = () => {
+        if (sortedEpisodes.length > 0 && podcast) {
+            // Play the most recent unfinished episode, or the latest episode
+            const unfinished = sortedEpisodes.find(
+                (ep) => !ep.progress?.isFinished
+            );
+            handlePlayEpisode(unfinished || sortedEpisodes[0], podcast);
+        }
+    };
+
+    // Check if any episode from this podcast is currently playing
+    const isPlayingPodcast = sortedEpisodes.some((ep) => isEpisodePlaying(ep.id)) && isPlaying;
+
     return (
-        <div className="min-h-screen flex flex-col">
+        <div className="min-h-screen flex flex-col bg-gradient-to-b from-[#0a0a0a] to-black">
             <PodcastHero
                 title={displayData.title}
                 author={displayData.author}
@@ -101,67 +109,101 @@ export default function PodcastDetailPage() {
                     onSubscribe={() => handleSubscribe(previewData)}
                     onRemove={handleRemovePodcast}
                     onShowDeleteConfirm={setShowDeleteConfirm}
+                    onPlayLatest={isSubscribed ? handlePlayLatest : undefined}
+                    isPlayingPodcast={isPlayingPodcast}
+                    onPause={pause}
                 />
             </PodcastHero>
 
             {/* Main Content */}
             <div className="relative flex-1">
-                {/* Fixed height gradient - not dependent on content */}
+                {/* Color gradient continuation */}
                 <div
                     className="absolute inset-x-0 top-0 pointer-events-none"
                     style={{
                         height: "25vh",
                         background: colors
-                            ? `linear-gradient(to bottom, ${colors.vibrant}15 0%, ${colors.vibrant}08 40%, transparent 100%)`
+                            ? `linear-gradient(to bottom, ${colors.vibrant}10 0%, ${colors.vibrant}05 40%, transparent 100%)`
                             : "transparent",
                     }}
                 />
 
-                <div className="relative px-4 md:px-8 py-6 space-y-8">
-                    {/* Continue Listening - Only for subscribed podcasts */}
+                <div className="relative max-w-[1800px] mx-auto px-4 md:px-8 py-8 space-y-10">
+                    {/* Continue Listening */}
                     {podcast && inProgressEpisodes.length > 0 && (
-                        <ContinueListening
-                            podcast={podcast}
-                            inProgressEpisodes={inProgressEpisodes}
-                            sortedEpisodes={sortedEpisodes}
-                            isEpisodePlaying={isEpisodePlaying}
-                            isPlaying={isPlaying}
-                            onPlayEpisode={(episode) => handlePlayEpisode(episode, podcast)}
-                            onPlayPause={(episode) =>
-                                handlePlayPauseEpisode(episode, podcast)
-                            }
-                        />
+                        <div className="animate-slide-up" style={{ animationDelay: "0s" }}>
+                            <ContinueListening
+                                podcast={podcast}
+                                inProgressEpisodes={inProgressEpisodes}
+                                sortedEpisodes={sortedEpisodes}
+                                isEpisodePlaying={isEpisodePlaying}
+                                isPlaying={isPlaying}
+                                onPlayEpisode={(episode) => handlePlayEpisode(episode, podcast)}
+                                onPlayPause={(episode) =>
+                                    handlePlayPauseEpisode(episode, podcast)
+                                }
+                            />
+                        </div>
                     )}
 
-                    {/* Preview Mode - Show Episode Teasers */}
+                    {/* Preview Mode */}
                     {!podcast && previewData && (
-                        <PreviewEpisodes
-                            previewData={previewData}
-                            colors={colors}
-                            isSubscribing={isSubscribing}
-                            onSubscribe={() => handleSubscribe(previewData)}
-                        />
+                        <div className="animate-slide-up" style={{ animationDelay: "0s" }}>
+                            <PreviewEpisodes
+                                previewData={previewData}
+                                colors={colors}
+                                isSubscribing={isSubscribing}
+                                onSubscribe={() => handleSubscribe(previewData)}
+                            />
+                        </div>
                     )}
 
-                    {/* All Episodes - Only Show When Subscribed */}
+                    {/* All Episodes */}
                     {podcast && (
-                        <EpisodeList
-                            podcast={podcast}
-                            episodes={sortedEpisodes}
-                            sortOrder={sortOrder}
-                            onSortOrderChange={setSortOrder}
-                            isEpisodePlaying={isEpisodePlaying}
-                            isPlaying={isPlaying}
-                            onPlayPause={(episode) =>
-                                handlePlayPauseEpisode(episode, podcast)
-                            }
-                            onPlay={(episode) => handlePlayEpisode(episode, podcast)}
-                            onMarkComplete={handleMarkEpisodeComplete}
-                        />
+                        <div className="animate-slide-up" style={{ animationDelay: "0.1s" }}>
+                            <EpisodeList
+                                podcast={podcast}
+                                episodes={sortedEpisodes}
+                                sortOrder={sortOrder}
+                                onSortOrderChange={setSortOrder}
+                                isEpisodePlaying={isEpisodePlaying}
+                                isPlaying={isPlaying}
+                                onPlayPause={(episode) =>
+                                    handlePlayPauseEpisode(episode, podcast)
+                                }
+                                onPlay={(episode) => handlePlayEpisode(episode, podcast)}
+                                onMarkComplete={handleMarkEpisodeComplete}
+                            />
+                        </div>
+                    )}
+
+                    {/* About - for subscribed podcasts */}
+                    {podcast?.description && (
+                        <div className="animate-slide-up" style={{ animationDelay: "0.2s" }}>
+                            <section>
+                                <div className="flex items-center gap-3 mb-4">
+                                    <span className="w-1 h-6 bg-gradient-to-b from-[#3b82f6] to-[#2563eb] rounded-full shrink-0" />
+                                    <h2 className="text-xl font-black tracking-tighter uppercase">About</h2>
+                                    <span className="flex-1 border-t border-white/10" />
+                                </div>
+                                <div className="relative overflow-hidden rounded-lg border border-white/10 bg-[#0a0a0a] p-5">
+                                    <div
+                                        className="prose prose-invert prose-sm max-w-none text-white/50 [&_a]:text-[#3b82f6] [&_a]:no-underline [&_a:hover]:underline text-sm leading-relaxed"
+                                        dangerouslySetInnerHTML={{
+                                            __html: DOMPurify.sanitize(podcast.description || ""),
+                                        }}
+                                    />
+                                </div>
+                            </section>
+                        </div>
                     )}
 
                     {/* Similar Podcasts */}
-                    <SimilarPodcasts podcasts={similarPodcasts} />
+                    {similarPodcasts.length > 0 && (
+                        <div className="animate-slide-up" style={{ animationDelay: "0.3s" }}>
+                            <SimilarPodcasts podcasts={similarPodcasts} />
+                        </div>
+                    )}
                 </div>
             </div>
         </div>

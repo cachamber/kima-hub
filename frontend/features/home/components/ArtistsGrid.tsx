@@ -6,26 +6,11 @@ import { Music } from "lucide-react";
 import { api } from "@/lib/api";
 import { memo } from "react";
 import { HorizontalCarousel, CarouselItem } from "@/components/ui/HorizontalCarousel";
-
-interface Artist {
-    id: string;
-    mbid?: string;
-    name: string;
-    coverArt?: string;
-    albumCount?: number;
-}
+import { Artist } from "../types";
 
 interface ArtistsGridProps {
     artists: Artist[];
 }
-
-// Helper to get the correct image source
-const getArtistImageSrc = (coverArt: string | undefined) => {
-    if (!coverArt) {
-        return null;
-    }
-    return api.getCoverArtUrl(coverArt, 300);
-};
 
 interface ArtistCardProps {
     artist: Artist;
@@ -34,7 +19,7 @@ interface ArtistCardProps {
 
 const ArtistCard = memo(
     function ArtistCard({ artist, index }: ArtistCardProps) {
-        const imageSrc = getArtistImageSrc(artist.coverArt);
+        const imageSrc = artist.coverArt ? api.getCoverArtUrl(artist.coverArt, 300) : null;
 
         return (
             <CarouselItem>
@@ -43,27 +28,35 @@ const ArtistCard = memo(
                     data-tv-card
                     data-tv-card-index={index}
                     tabIndex={0}
+                    className="group block"
                 >
-                    <div className="p-3 rounded-md group cursor-pointer hover:bg-white/5 transition-colors">
-                        <div className="aspect-square bg-[#282828] rounded-full mb-3 flex items-center justify-center overflow-hidden relative shadow-lg">
-                            {artist.coverArt && imageSrc ? (
-                                <Image
-                                    src={imageSrc}
-                                    alt={artist.name}
-                                    fill
-                                    className="object-cover group-hover:scale-105 transition-transform duration-300"
-                                    sizes="180px"
-                                    priority={false}
-                                    unoptimized
-                                />
-                            ) : (
-                                <Music className="w-10 h-10 text-gray-600" />
-                            )}
+                    <div className="relative bg-[#0a0a0a] border border-white/10 rounded-lg overflow-hidden hover:border-[#ec4899]/40 transition-all duration-300 hover:shadow-lg hover:shadow-[#ec4899]/10 mx-1">
+                        <div className="relative aspect-square">
+                            <div className="w-full h-full bg-[#181818] flex items-center justify-center overflow-hidden">
+                                {imageSrc ? (
+                                    <Image
+                                        src={imageSrc}
+                                        alt={artist.name}
+                                        fill
+                                        className="object-cover group-hover:scale-110 transition-transform duration-500"
+                                        sizes="180px"
+                                        priority={false}
+                                        unoptimized
+                                    />
+                                ) : (
+                                    <Music className="w-10 h-10 text-gray-700" />
+                                )}
+                            </div>
+                            <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-[#ec4899] to-[#db2777] transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300" />
                         </div>
-                        <h3 className="text-sm font-semibold text-white truncate">
-                            {artist.name}
-                        </h3>
-                        <p className="text-xs text-gray-400 mt-0.5">Artist</p>
+                        <div className="p-3 bg-gradient-to-b from-[#0a0a0a] to-[#0f0f0f]">
+                            <h3 className="text-sm font-black text-white truncate tracking-tight">
+                                {artist.name}
+                            </h3>
+                            <p className="text-xs font-mono text-gray-500 uppercase tracking-wider mt-0.5">
+                                Artist
+                            </p>
+                        </div>
                     </div>
                 </Link>
             </CarouselItem>
@@ -84,4 +77,4 @@ const ArtistsGrid = memo(function ArtistsGrid({ artists }: ArtistsGridProps) {
     );
 });
 
-export { ArtistsGrid, getArtistImageSrc };
+export { ArtistsGrid };

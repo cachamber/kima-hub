@@ -98,7 +98,7 @@ router.post("/generate", async (req, res) => {
         logger.debug(`\n Queuing Discover Weekly generation for user ${userId}`);
 
         // Add generation job to queue
-        const job = await discoverQueue.add({ userId });
+        const job = await discoverQueue.add("discover-weekly", { userId });
 
         res.json({
             message: "Discover Weekly generation started",

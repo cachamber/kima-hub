@@ -6,35 +6,23 @@ import { Music } from "lucide-react";
 import { api } from "@/lib/api";
 import { HorizontalCarousel, CarouselItem } from "@/components/ui/HorizontalCarousel";
 import { memo } from "react";
-
-interface PopularArtist {
-    id?: string;
-    name: string;
-    image?: string;
-    listeners?: number;
-}
+import { PopularArtist } from "../types";
 
 interface PopularArtistsGridProps {
     artists: PopularArtist[];
 }
-
-// Always proxy images through the backend for caching and mobile compatibility
-const getProxiedImageUrl = (imageUrl: string | undefined): string | null => {
-    if (!imageUrl) return null;
-    return api.getCoverArtUrl(imageUrl, 300);
-};
 
 interface PopularArtistCardProps {
     artist: PopularArtist;
     index: number;
 }
 
-const PopularArtistCard = memo(function PopularArtistCard({ 
-    artist, 
-    index 
+const PopularArtistCard = memo(function PopularArtistCard({
+    artist,
+    index,
 }: PopularArtistCardProps) {
-    const imageUrl = getProxiedImageUrl(artist.image);
-    
+    const imageUrl = artist.image ? api.getCoverArtUrl(artist.image, 300) : null;
+
     return (
         <CarouselItem>
             <Link
@@ -42,28 +30,34 @@ const PopularArtistCard = memo(function PopularArtistCard({
                 data-tv-card
                 data-tv-card-index={index}
                 tabIndex={0}
+                className="group block"
             >
-                <div className="p-3 rounded-md group cursor-pointer hover:bg-white/5 transition-colors">
-                    <div className="aspect-square bg-[#282828] rounded-full mb-3 flex items-center justify-center overflow-hidden relative shadow-lg">
-                        {imageUrl ? (
-                            <Image
-                                src={imageUrl}
-                                alt={artist.name}
-                                fill
-                                sizes="180px"
-                                className="object-cover group-hover:scale-105 transition-transform duration-300"
-                                unoptimized
-                            />
-                        ) : (
-                            <Music className="w-10 h-10 text-gray-600" />
-                        )}
+                <div className="relative bg-[#0a0a0a] border border-white/10 rounded-lg overflow-hidden hover:border-[#ec4899]/40 transition-all duration-300 hover:shadow-lg hover:shadow-[#ec4899]/10 mx-1">
+                    <div className="relative aspect-square">
+                        <div className="w-full h-full bg-[#181818] flex items-center justify-center overflow-hidden">
+                            {imageUrl ? (
+                                <Image
+                                    src={imageUrl}
+                                    alt={artist.name}
+                                    fill
+                                    sizes="180px"
+                                    className="object-cover group-hover:scale-110 transition-transform duration-500"
+                                    unoptimized
+                                />
+                            ) : (
+                                <Music className="w-10 h-10 text-gray-700" />
+                            )}
+                        </div>
+                        <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-[#ec4899] to-[#db2777] transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300" />
                     </div>
-                    <h3 className="text-sm font-semibold text-white truncate">
-                        {artist.name}
-                    </h3>
-                    <p className="text-xs text-gray-400 mt-0.5">
-                        {artist.listeners?.toLocaleString()} listeners
-                    </p>
+                    <div className="p-3 bg-gradient-to-b from-[#0a0a0a] to-[#0f0f0f]">
+                        <h3 className="text-sm font-black text-white truncate tracking-tight">
+                            {artist.name}
+                        </h3>
+                        <p className="text-xs font-mono text-gray-500 uppercase tracking-wider mt-0.5">
+                            {artist.listeners?.toLocaleString()} listeners
+                        </p>
+                    </div>
                 </div>
             </Link>
         </CarouselItem>
@@ -71,7 +65,7 @@ const PopularArtistCard = memo(function PopularArtistCard({
 });
 
 export const PopularArtistsGrid = memo(function PopularArtistsGrid({
-    artists
+    artists,
 }: PopularArtistsGridProps) {
     return (
         <HorizontalCarousel>

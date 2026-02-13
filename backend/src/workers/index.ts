@@ -2,13 +2,9 @@ import { logger } from "../utils/logger";
 import {
     scanQueue,
     discoverQueue,
-    imageQueue,
-    validationQueue,
 } from "./queues";
 import { processScan } from "./processors/scanProcessor";
 import { processDiscoverWeekly } from "./processors/discoverProcessor";
-import { processImageOptimization } from "./processors/imageProcessor";
-import { processValidation } from "./processors/validationProcessor";
 import {
     startUnifiedEnrichmentWorker,
     stopUnifiedEnrichmentWorker,
@@ -28,15 +24,12 @@ import { simpleDownloadManager } from "../services/simpleDownloadManager";
 import { queueCleaner } from "../jobs/queueCleaner";
 import { enrichmentStateService } from "../services/enrichmentState";
 
-// Track intervals and timeouts for cleanup
-const intervals: NodeJS.Timeout[] = [];
+// Track timeouts for cleanup
 const timeouts: NodeJS.Timeout[] = [];
 
 // Register processors with named job types
 scanQueue.process("scan", processScan);
-discoverQueue.process(processDiscoverWeekly);
-imageQueue.process(processImageOptimization);
-validationQueue.process(processValidation);
+discoverQueue.process("discover-weekly", processDiscoverWeekly);
 
 // Register download queue callback for unavailable albums
 downloadQueueManager.onUnavailableAlbum(async (info) => {
@@ -128,34 +121,6 @@ discoverQueue.on("failed", (job, err) => {
 
 discoverQueue.on("active", (job) => {
     logger.debug(` Discover job ${job.id} started for user ${job.data.userId}`);
-});
-
-// Event handlers for image queue
-imageQueue.on("completed", (job, result) => {
-    logger.debug(
-        `Image job ${job.id} completed: ${
-            result.success ? "success" : result.error
-        }`
-    );
-});
-
-imageQueue.on("failed", (job, err) => {
-    logger.error(`Image job ${job.id} failed:`, err.message);
-});
-
-// Event handlers for validation queue
-validationQueue.on("completed", (job, result) => {
-    logger.debug(
-        `Validation job ${job.id} completed: ${result.tracksChecked} checked, ${result.tracksRemoved} removed`
-    );
-});
-
-validationQueue.on("failed", (job, err) => {
-    logger.error(` Validation job ${job.id} failed:`, err.message);
-});
-
-validationQueue.on("active", (job) => {
-    logger.debug(` Validation job ${job.id} started`);
 });
 
 logger.debug("Worker processors registered and event handlers attached");
@@ -353,12 +318,6 @@ export async function shutdownWorkers(): Promise<void> {
     // Shutdown download queue manager
     downloadQueueManager.shutdown();
 
-    // Clear all intervals
-    for (const interval of intervals) {
-        clearInterval(interval);
-    }
-    intervals.length = 0;
-
     // Clear all timeouts
     for (const timeout of timeouts) {
         clearTimeout(timeout);
@@ -368,19 +327,15 @@ export async function shutdownWorkers(): Promise<void> {
     // Remove all event listeners to prevent memory leaks
     scanQueue.removeAllListeners();
     discoverQueue.removeAllListeners();
-    imageQueue.removeAllListeners();
-    validationQueue.removeAllListeners();
 
     // Close all queues gracefully
     await Promise.all([
         scanQueue.close(),
         discoverQueue.close(),
-        imageQueue.close(),
-        validationQueue.close(),
     ]);
 
     logger.debug("Workers shutdown complete");
 }
 
 // Export queues for use in other modules
-export { scanQueue, discoverQueue, imageQueue, validationQueue };
+export { scanQueue, discoverQueue };

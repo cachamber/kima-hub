@@ -11,6 +11,7 @@ import { AuthenticatedLayout } from "@/components/layout/AuthenticatedLayout";
 import { QueryProvider } from "@/lib/query-client";
 import { ServiceWorkerRegistration } from "@/components/ServiceWorkerRegistration";
 import { GlobalErrorBoundary } from "@/components/providers/GlobalErrorBoundary";
+import { ActivityPanelSettingsProvider } from "@/lib/activity-panel-settings-context";
 
 const montserrat = Montserrat({
     weight: ["300", "400", "500", "600", "700", "800"],
@@ -66,12 +67,14 @@ export default function RootLayout({
                                 <DownloadProgressProvider>
                                     <DownloadProvider>
                                         <ConditionalAudioProvider>
-                                        <ToastProvider>
-                                            <AuthenticatedLayout>
-                                                {children}
-                                            </AuthenticatedLayout>
-                                        </ToastProvider>
-                                    </ConditionalAudioProvider>
+                                            <ToastProvider>
+                                                <ActivityPanelSettingsProvider>
+                                                    <AuthenticatedLayout>
+                                                        {children}
+                                                    </AuthenticatedLayout>
+                                                </ActivityPanelSettingsProvider>
+                                            </ToastProvider>
+                                        </ConditionalAudioProvider>
                                     </DownloadProvider>
                                 </DownloadProgressProvider>
                             </QueryProvider>

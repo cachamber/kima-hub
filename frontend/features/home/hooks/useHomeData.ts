@@ -16,6 +16,7 @@ import type {
     Audiobook,
     Mix,
     PopularArtist,
+    PlaylistPreview,
 } from "../types";
 import {
     useRecentlyListenedQuery,
@@ -29,18 +30,6 @@ import {
     useBrowseAllQuery,
     queryKeys,
 } from "@/hooks/useQueries";
-
-interface PlaylistPreview {
-    id: string;
-    source: string;
-    type: string;
-    title: string;
-    description: string | null;
-    creator: string;
-    imageUrl: string | null;
-    trackCount: number;
-    url: string;
-}
 
 export interface UseHomeDataReturn {
     // Data sections

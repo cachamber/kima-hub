@@ -1,19 +1,38 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import Image from "next/image";
 
+function deriveProgress(p: number): number {
+    return Math.min(p, 90);
+}
+
+function deriveSteps(p: number): string[] {
+    const steps: string[] = [];
+    if (p >= 15) steps.push("tracks");
+    if (p >= 30) steps.push("library");
+    if (p >= 50) steps.push("albums");
+    if (p >= 70) steps.push("indexes");
+    return steps;
+}
+
+function deriveMessage(p: number): string {
+    if (p > 0 && p < 30) return "Discovering tracks...";
+    if (p >= 30 && p < 60) return "Indexing albums...";
+    if (p >= 60 && p < 90) return "Organizing artists...";
+    if (p >= 90) return "Almost done...";
+    return "Scanning your music library...";
+}
+
 export default function SyncPage() {
     useRouter();
     const queryClient = useQueryClient();
-    const [syncing, setSyncing] = useState(true);
-    const [progress, setProgress] = useState(0);
-    const [message, setMessage] = useState("Scanning your music library...");
-    const [error, setError] = useState("");
-    const [completedSteps, setCompletedSteps] = useState<string[]>([]);
+    const [initError, setInitError] = useState("");
+    const [initFailed, setInitFailed] = useState(false);
+    const [postScanDone, setPostScanDone] = useState(false);
     const [scanJobId, setScanJobId] = useState<string | null>(null);
     const handledRef = useRef(false);
 
@@ -32,6 +51,58 @@ export default function SyncPage() {
         refetchOnWindowFocus: false,
     });
 
+    // Derive display state from scanStatus (no setState in effects)
+    const { progress, message, completedSteps, syncing, error } = useMemo(() => {
+        if (initFailed) {
+            return {
+                progress: 0,
+                message: "",
+                completedSteps: [] as string[],
+                syncing: false,
+                error: initError,
+            };
+        }
+
+        if (scanStatus?.status === "failed") {
+            return {
+                progress: 0,
+                message: "",
+                completedSteps: [] as string[],
+                syncing: false,
+                error: "Scan failed. You can skip and try again later.",
+            };
+        }
+
+        if (scanStatus?.status === "completed") {
+            return {
+                progress: postScanDone ? 100 : 90,
+                message: postScanDone ? "All set! Redirecting..." : "Syncing audiobooks...",
+                completedSteps: ["tracks", "library", "albums", "indexes"],
+                syncing: true,
+                error: "",
+            };
+        }
+
+        if (scanStatus?.status === "active") {
+            const p = scanStatus.progress || 0;
+            return {
+                progress: deriveProgress(p),
+                message: deriveMessage(p),
+                completedSteps: deriveSteps(p),
+                syncing: true,
+                error: "",
+            };
+        }
+
+        return {
+            progress: 0,
+            message: "Scanning your music library...",
+            completedSteps: [] as string[],
+            syncing: true,
+            error: "",
+        };
+    }, [scanStatus, postScanDone, initFailed, initError]);
+
     // Start scan on mount
     useEffect(() => {
         let mounted = true;
@@ -41,12 +112,11 @@ export default function SyncPage() {
                 const scanResult = await api.scanLibrary();
                 if (!mounted) return;
                 setScanJobId(scanResult.jobId);
-                setMessage("Scanning your music library...");
             } catch (err: unknown) {
                 console.error("Sync error:", err);
                 if (!mounted) return;
-                setError("Failed to start sync. You can skip and start manually later.");
-                setSyncing(false);
+                setInitError("Failed to start sync. You can skip and start manually later.");
+                setInitFailed(true);
             }
         };
 
@@ -54,51 +124,26 @@ export default function SyncPage() {
         return () => { mounted = false; };
     }, []);
 
-    // React to SSE-driven scan status changes
+    // Handle post-scan side effects (audiobook sync, redirect)
     useEffect(() => {
         if (!scanStatus || handledRef.current) return;
+        if (scanStatus.status !== "completed") return;
 
-        if (scanStatus.status === "active") {
-            const p = scanStatus.progress || 0;
-            setProgress(Math.min(p, 90));
+        handledRef.current = true;
 
-            const steps: string[] = [];
-            if (p >= 15) steps.push("tracks");
-            if (p >= 30) steps.push("library");
-            if (p >= 50) steps.push("albums");
-            if (p >= 70) steps.push("indexes");
-            setCompletedSteps(steps);
+        (async () => {
+            try {
+                await api.post("/audiobooks/sync");
+            } catch (audiobookError) {
+                console.error("Audiobook sync failed:", audiobookError);
+            }
 
-            if (p > 0 && p < 30) setMessage("Discovering tracks...");
-            else if (p >= 30 && p < 60) setMessage("Indexing albums...");
-            else if (p >= 60 && p < 90) setMessage("Organizing artists...");
-            else if (p >= 90) setMessage("Almost done...");
-        } else if (scanStatus.status === "completed") {
-            handledRef.current = true;
-            setProgress(90);
-            setCompletedSteps(["tracks", "library", "albums", "indexes"]);
-
-            // Post-scan operations
-            (async () => {
-                try {
-                    setMessage("Syncing audiobooks...");
-                    await api.post("/audiobooks/sync");
-                } catch (audiobookError) {
-                    console.error("Audiobook sync failed:", audiobookError);
-                }
-
-                setProgress(100);
-                setMessage("All set! Redirecting...");
-                setTimeout(() => {
-                    window.location.href = "/";
-                }, 1500);
-            })();
-        } else if (scanStatus.status === "failed") {
-            handledRef.current = true;
-            setError("Scan failed. You can skip and try again later.");
-            setSyncing(false);
-        }
-    }, [scanStatus, queryClient]);
+            setPostScanDone(true);
+            setTimeout(() => {
+                window.location.href = "/";
+            }, 1500);
+        })();
+    }, [scanStatus]);
 
     const handleSkip = () => {
         window.location.href = "/";

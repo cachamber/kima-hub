@@ -163,7 +163,7 @@ export function OverlayPlayer() {
             if (result.success && result.trackCount > 0) {
                 toast.success(`Vibe mode on`, {
                     description: `${result.trackCount} similar tracks queued`,
-                    icon: <AudioWaveform className="w-4 h-4 text-[#f5c518]" />,
+                    icon: <AudioWaveform className="w-4 h-4 text-brand" />,
                 });
             } else {
                 toast.error("Couldn't find matching tracks");
@@ -178,7 +178,7 @@ export function OverlayPlayer() {
 
     return (
         <div
-            className="fixed inset-0 bg-gradient-to-b from-[#1a1a2e] via-[#121218] to-[#000000] z-[9999] flex flex-col overflow-hidden"
+            className="fixed inset-0 bg-gradient-to-b from-[#141210] via-[#0a0a0a] to-[#000000] z-[9999] flex flex-col overflow-hidden"
             onTouchStart={isMobileOrTablet ? handleTouchStart : undefined}
             onTouchMove={isMobileOrTablet ? handleTouchMove : undefined}
             onTouchEnd={isMobileOrTablet ? handleTouchEnd : undefined}
@@ -200,7 +200,7 @@ export function OverlayPlayer() {
                     <ChevronDown className="w-7 h-7" />
                 </button>
                 {/* Now Playing indicator */}
-                <span className="text-xs text-gray-500 uppercase tracking-widest font-medium">
+                <span className="text-xs text-gray-500 uppercase tracking-widest font-mono font-medium">
                     Now Playing
                 </span>
                 <div className="w-11" /> {/* Spacer for centering */}
@@ -222,7 +222,7 @@ export function OverlayPlayer() {
                             "absolute inset-0 rounded-2xl blur-2xl opacity-50",
                             vibeMode
                                 ? "bg-gradient-to-br from-brand/30 via-transparent to-purple-500/30"
-                                : "bg-gradient-to-br from-[#f5c518]/20 via-transparent to-[#a855f7]/20"
+                                : "bg-gradient-to-br from-brand/20 via-transparent to-[#f97316]/20"
                         )}
                     />
 
@@ -275,12 +275,12 @@ export function OverlayPlayer() {
                                 onClick={returnToPreviousMode}
                                 className="block hover:underline"
                             >
-                                <h1 className="text-xl font-bold text-white mb-1 truncate">
+                                <h1 className="text-xl font-bold text-white mb-1 truncate tracking-tight">
                                     {title}
                                 </h1>
                             </Link>
                         ) : (
-                            <h1 className="text-xl font-bold text-white mb-1 truncate">
+                            <h1 className="text-xl font-bold text-white mb-1 truncate tracking-tight">
                                 {title}
                             </h1>
                         )}
@@ -316,7 +316,7 @@ export function OverlayPlayer() {
                             showHandle={false}
                             className="mb-2"
                         />
-                        <div className="flex justify-between text-xs text-gray-500 font-medium tabular-nums">
+                        <div className="flex justify-between text-xs text-gray-500 font-mono font-medium tabular-nums">
                             <span>{formatTime(displayTime)}</span>
                             <span>
                                 {playbackType === "podcast" || playbackType === "audiobook"
@@ -373,8 +373,8 @@ export function OverlayPlayer() {
                                 audioError
                                     ? "bg-red-500 text-white hover:bg-red-400"
                                     : isBuffering
-                                    ? "bg-white/80 text-black"
-                                    : "bg-white text-black"
+                                    ? "bg-[#fca200]/80 text-black"
+                                    : "bg-[#fca200] text-black"
                             )}
                             disabled={isBuffering}
                             title={
@@ -436,7 +436,7 @@ export function OverlayPlayer() {
                                 !canSkip
                                     ? "text-gray-700 cursor-not-allowed"
                                     : isShuffle
-                                    ? "text-[#f5c518]"
+                                    ? "text-brand"
                                     : "text-gray-500 hover:text-white"
                             )}
                             title="Shuffle"
@@ -452,7 +452,7 @@ export function OverlayPlayer() {
                                 !canSkip
                                     ? "text-gray-700 cursor-not-allowed"
                                     : repeatMode !== "off"
-                                    ? "text-[#f5c518]"
+                                    ? "text-brand"
                                     : "text-gray-500 hover:text-white"
                             )}
                             title={
@@ -480,8 +480,8 @@ export function OverlayPlayer() {
                                     !canSkip
                                         ? "text-gray-700 cursor-not-allowed"
                                         : vibeMode
-                                        ? "text-[#f5c518]"
-                                        : "text-gray-500 hover:text-[#f5c518]"
+                                        ? "text-brand"
+                                        : "text-gray-500 hover:text-brand"
                                 )}
                                 title={
                                     vibeMode

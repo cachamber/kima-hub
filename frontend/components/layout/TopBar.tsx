@@ -53,7 +53,6 @@ export function TopBar() {
         refetchOnWindowFocus: false,
     });
 
-    const isScanning = !!scanJobId && scanStatus?.status === "active";
     const isPolling = !!scanJobId && (!scanStatus || scanStatus.status === "active");
 
     // Handle scan completion/failure

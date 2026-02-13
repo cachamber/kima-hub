@@ -31,10 +31,9 @@ interface CacheSectionProps {
     onUpdate: (updates: Partial<SystemSettings>) => void;
 }
 
-// Progress bar component
 function ProgressBar({
     progress,
-    color = "bg-[#ecb200]",
+    color = "bg-[#fca208]",
     showPercentage = true,
 }: {
     progress: number;
@@ -43,14 +42,14 @@ function ProgressBar({
 }) {
     return (
         <div className="flex items-center gap-2 flex-1">
-            <div className="flex-1 h-1.5 bg-white/10 rounded-full overflow-hidden">
+            <div className="flex-1 h-1.5 bg-white/5 rounded-full overflow-hidden">
                 <div
                     className={`h-full ${color} transition-all duration-500 ease-out`}
                     style={{ width: `${Math.min(100, progress)}%` }}
                 />
             </div>
             {showPercentage && (
-                <span className="text-xs text-white/50 w-10 text-right">
+                <span className="text-[10px] font-mono text-white/30 w-10 text-right uppercase tracking-wider">
                     {progress}%
                 </span>
             )}
@@ -58,7 +57,6 @@ function ProgressBar({
     );
 }
 
-// Enrichment stage component
 function EnrichmentStage({
     icon: Icon,
     label,
@@ -93,7 +91,7 @@ function EnrichmentStage({
                 {isComplete ? (
                     <CheckCircle className="w-4 h-4 text-green-400" />
                 ) : hasActivity ? (
-                    <Loader2 className="w-4 h-4 text-[#ecb200] animate-spin" />
+                    <Loader2 className="w-4 h-4 text-[#fca208] animate-spin" />
                 ) : (
                     <Icon className="w-4 h-4 text-white/40" />
                 )}
@@ -104,12 +102,12 @@ function EnrichmentStage({
                         {label}
                     </span>
                     {isBackground && !isComplete && (
-                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-white/10 text-white/50">
+                        <span className="text-[10px] font-mono px-1.5 py-0.5 rounded-lg bg-white/5 border border-white/10 text-white/40 uppercase tracking-wider">
                             background
                         </span>
                     )}
                 </div>
-                <p className="text-xs text-white/40 mt-0.5">{description}</p>
+                <p className="text-[10px] font-mono text-white/30 mt-0.5 uppercase tracking-wider">{description}</p>
                 <div className="flex items-center gap-2 mt-2">
                     <ProgressBar
                         progress={progress}
@@ -118,16 +116,16 @@ function EnrichmentStage({
                                 ? "bg-green-500"
                                 : isBackground
                                 ? "bg-purple-500"
-                                : "bg-[#ecb200]"
+                                : "bg-[#fca208]"
                         }
                     />
                 </div>
-                <div className="flex items-center gap-3 mt-1 text-[10px] text-white/30">
+                <div className="flex items-center gap-3 mt-1 text-[10px] font-mono text-white/20 uppercase tracking-wider">
                     <span>
                         {completed} / {total}
                     </span>
                     {processing > 0 && (
-                        <span className="text-[#ecb200]">
+                        <span className="text-[#fca208]">
                             {processing} processing
                         </span>
                     )}
@@ -139,6 +137,16 @@ function EnrichmentStage({
         </div>
     );
 }
+
+const sliderClass = `w-32 h-1.5 bg-white/5 rounded-lg appearance-none cursor-pointer
+    [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3.5 [&::-webkit-slider-thumb]:h-3.5
+    [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-gradient-to-r
+    [&::-webkit-slider-thumb]:from-[#fca208] [&::-webkit-slider-thumb]:to-[#f97316]
+    [&::-webkit-slider-thumb]:shadow-lg [&::-webkit-slider-thumb]:shadow-[#fca208]/20
+    hover:[&::-webkit-slider-thumb]:scale-110 [&::-webkit-slider-thumb]:transition-transform`;
+
+const secondaryBtnClass = `px-4 py-1.5 text-xs font-mono bg-white/5 border border-white/10 text-white/70 rounded-lg uppercase tracking-wider
+    hover:bg-white/10 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed transition-all w-fit`;
 
 export function CacheSection({ settings, onUpdate }: CacheSectionProps) {
     const { musicCNN, vibeEmbeddings, loading: featuresLoading } = useFeatures();
@@ -166,14 +174,12 @@ export function CacheSection({ settings, onUpdate }: CacheSectionProps) {
     const queryClient = useQueryClient();
     const syncStartTimeRef = useRef<number>(0);
 
-    // Check URL hash for auto-opening failures modal
     useEffect(() => {
         if (window.location.hash === "#enrichment-failures") {
             setShowFailuresModal(true);
         }
     }, []);
 
-    // Fetch enrichment progress
     const {
         data: enrichmentProgress,
         refetch: refetchProgress,
@@ -188,7 +194,6 @@ export function CacheSection({ settings, onUpdate }: CacheSectionProps) {
         retry: 3,
     });
 
-    // Fetch enrichment state
     const { data: enrichmentState } = useQuery({
         queryKey: ["enrichment-status"],
         queryFn: () => enrichmentApi.getStatus(),
@@ -196,14 +201,12 @@ export function CacheSection({ settings, onUpdate }: CacheSectionProps) {
         staleTime: 1000,
     });
 
-    // Fetch failure counts
     const { data: failureCounts } = useQuery({
         queryKey: ["enrichment-failure-counts"],
         queryFn: () => enrichmentApi.getFailureCounts(),
         refetchInterval: 10000,
     });
 
-    // Fetch concurrency config
     const { data: concurrencyConfig, isLoading: isConcurrencyLoading } =
         useQuery({
             queryKey: ["enrichment-concurrency"],
@@ -211,52 +214,36 @@ export function CacheSection({ settings, onUpdate }: CacheSectionProps) {
             staleTime: 0,
         });
 
-    // Fetch audio analyzer workers config
     const { data: workersConfig, isLoading: isWorkersLoading } = useQuery({
         queryKey: ["analysis-workers"],
         queryFn: () => enrichmentApi.getAnalysisWorkers(),
         staleTime: 0,
     });
 
-    // Update concurrency mutation with optimistic updates
-    // Note: We do NOT invalidate on onSettled because the optimistic update
-    // already provides the correct UI state. Invalidating causes a race condition
-    // where the refetch returns stale data before the server update completes,
-    // causing the slider to "bounce" between values.
     const setConcurrencyMutation = useMutation({
         mutationFn: (concurrency: number) =>
             enrichmentApi.setConcurrency(concurrency),
         onMutate: async (newConcurrency) => {
-            // Cancel outgoing refetches
             await queryClient.cancelQueries({
                 queryKey: ["enrichment-concurrency"],
             });
-
-            // Snapshot previous value
             const previousConcurrency = queryClient.getQueryData([
                 "enrichment-concurrency",
             ]);
-
-            // Optimistically update to new value
             queryClient.setQueryData(["enrichment-concurrency"], {
                 concurrency: newConcurrency,
-                artistsPerMin: newConcurrency * 6, // Approximate estimate
+                artistsPerMin: newConcurrency * 6,
             });
-
             return { previousConcurrency };
         },
         onError: (err, newConcurrency, context) => {
-            // Rollback on error
             queryClient.setQueryData(
                 ["enrichment-concurrency"],
                 context?.previousConcurrency
             );
         },
-        // Removed onSettled invalidation - optimistic update handles UI,
-        // and the query will refetch naturally based on staleTime
     });
 
-    // Update audio analyzer workers mutation with optimistic updates
     const setAnalysisWorkersMutation = useMutation({
         mutationFn: (workers: number) =>
             enrichmentApi.setAnalysisWorkers(workers),
@@ -264,11 +251,9 @@ export function CacheSection({ settings, onUpdate }: CacheSectionProps) {
             await queryClient.cancelQueries({
                 queryKey: ["analysis-workers"],
             });
-
             const previousWorkers = queryClient.getQueryData([
                 "analysis-workers",
             ]);
-
             queryClient.setQueryData(["analysis-workers"], {
                 workers: newWorkers,
                 cpuCores: workersConfig?.cpuCores || 4,
@@ -277,7 +262,6 @@ export function CacheSection({ settings, onUpdate }: CacheSectionProps) {
                     workersConfig?.cpuCores || 4
                 } available CPU cores`,
             });
-
             return { previousWorkers };
         },
         onError: (err, newWorkers, context) => {
@@ -288,14 +272,12 @@ export function CacheSection({ settings, onUpdate }: CacheSectionProps) {
         },
     });
 
-    // Fetch CLAP analyzer workers config
     const { data: clapWorkersConfig, isLoading: isClapWorkersLoading } = useQuery({
         queryKey: ["clap-workers"],
         queryFn: () => enrichmentApi.getClapWorkers(),
         staleTime: 0,
     });
 
-    // Update CLAP analyzer workers mutation with optimistic updates
     const setClapWorkersMutation = useMutation({
         mutationFn: (workers: number) =>
             enrichmentApi.setClapWorkers(workers),
@@ -303,11 +285,9 @@ export function CacheSection({ settings, onUpdate }: CacheSectionProps) {
             await queryClient.cancelQueries({
                 queryKey: ["clap-workers"],
             });
-
             const previousWorkers = queryClient.getQueryData([
                 "clap-workers",
             ]);
-
             queryClient.setQueryData(["clap-workers"], {
                 workers: newWorkers,
                 cpuCores: clapWorkersConfig?.cpuCores || 4,
@@ -316,7 +296,6 @@ export function CacheSection({ settings, onUpdate }: CacheSectionProps) {
                     clapWorkersConfig?.cpuCores || 4
                 } available CPU cores`,
             });
-
             return { previousWorkers };
         },
         onError: (err, newWorkers, context) => {
@@ -327,24 +306,19 @@ export function CacheSection({ settings, onUpdate }: CacheSectionProps) {
         },
     });
 
-    // Use query data directly instead of local state
     const enrichmentSpeed = concurrencyConfig?.concurrency ?? 1;
 
-    // Poll enrichment status when syncing to detect completion
     useEffect(() => {
         if (!syncing) return;
 
-        const maxPollDuration = 5 * 60 * 1000; // 5 minutes max
-        const pollInterval = 2000; // Check every 2 seconds
-
+        const maxPollDuration = 5 * 60 * 1000;
+        const pollInterval = 2000;
         const startTime = syncStartTimeRef.current;
 
         const checkStatus = async () => {
             try {
                 const status = await enrichmentApi.getStatus();
                 const elapsed = Date.now() - startTime;
-
-                // Stop polling if idle or max duration exceeded
                 if (status?.status === "idle" || elapsed > maxPollDuration) {
                     setSyncing(false);
                     refetchProgress();
@@ -355,7 +329,6 @@ export function CacheSection({ settings, onUpdate }: CacheSectionProps) {
         };
 
         const intervalId = setInterval(checkStatus, pollInterval);
-
         return () => clearInterval(intervalId);
     }, [syncing, refetchProgress]);
 
@@ -371,20 +344,17 @@ export function CacheSection({ settings, onUpdate }: CacheSectionProps) {
         syncStartTimeRef.current = Date.now();
         setError(null);
         try {
-            // Always sync audiobooks if Audiobookshelf is enabled (independent of enrichment setting)
             if (settings.audiobookshelfEnabled) {
                 await api.post("/audiobooks/sync", {});
             }
             await api.post("/podcasts/sync-covers", {});
-            // Use the new fast incremental sync endpoint
             await api.syncLibraryEnrichment();
             refreshNotifications();
             refetchProgress();
-            // Don't set syncing to false here - let the polling effect handle it
         } catch (err) {
             console.error("Sync error:", err);
             setError("Failed to sync");
-            setSyncing(false); // Only stop on error
+            setSyncing(false);
         }
     };
 
@@ -553,14 +523,14 @@ export function CacheSection({ settings, onUpdate }: CacheSectionProps) {
                 {isProgressPending ? (
                     <div className="mb-6 p-4 bg-white/5 rounded-lg border border-white/10 flex items-center gap-2">
                         <Loader2 className="w-4 h-4 animate-spin text-white/40" />
-                        <span className="text-sm text-white/40">Loading enrichment status...</span>
+                        <span className="text-xs font-mono text-white/30 uppercase tracking-wider">Loading enrichment status...</span>
                     </div>
                 ) : isProgressError && !enrichmentProgress ? (
                     <div className="mb-6 p-4 bg-white/5 rounded-lg border border-red-500/20 flex items-center justify-between">
-                        <span className="text-sm text-red-400">Failed to load enrichment status</span>
+                        <span className="text-xs font-mono text-red-400 uppercase tracking-wider">Failed to load enrichment status</span>
                         <button
                             onClick={() => refetchProgress()}
-                            className="px-3 py-1 text-xs bg-white/10 text-white/70 rounded-full hover:bg-white/15 transition-colors"
+                            className="px-3 py-1 text-[10px] font-mono bg-white/5 border border-white/10 text-white/50 rounded-lg hover:bg-white/10 transition-colors uppercase tracking-wider"
                         >
                             Retry
                         </button>
@@ -573,7 +543,7 @@ export function CacheSection({ settings, onUpdate }: CacheSectionProps) {
                             </h3>
                             {enrichmentProgress.coreComplete &&
                                 !enrichmentProgress.isFullyComplete && (
-                                    <span className="text-xs text-purple-400 flex items-center gap-1">
+                                    <span className="text-[10px] font-mono text-purple-400 flex items-center gap-1 uppercase tracking-wider">
                                         <Loader2 className="w-3 h-3 animate-spin" />
                                         {enrichmentProgress.audioAnalysis.pending > 0 || enrichmentProgress.audioAnalysis.processing > 0
                                             ? "Audio analysis running"
@@ -581,7 +551,7 @@ export function CacheSection({ settings, onUpdate }: CacheSectionProps) {
                                     </span>
                                 )}
                             {enrichmentProgress.isFullyComplete && (
-                                <span className="text-xs text-green-400 flex items-center gap-1">
+                                <span className="text-[10px] font-mono text-green-400 flex items-center gap-1 uppercase tracking-wider">
                                     <CheckCircle className="w-3 h-3" />
                                     Complete
                                 </span>
@@ -589,7 +559,7 @@ export function CacheSection({ settings, onUpdate }: CacheSectionProps) {
                         </div>
 
                         <div className="space-y-1">
-                            {/* Artist Metadata with Re-run button */}
+                            {/* Artist Metadata */}
                             <div className="flex items-start gap-2">
                                 <div className="flex-1">
                                     <EnrichmentStage
@@ -605,14 +575,14 @@ export function CacheSection({ settings, onUpdate }: CacheSectionProps) {
                                 <button
                                     onClick={handleResetArtists}
                                     disabled={resettingArtists || syncing || reEnriching || isEnrichmentActive}
-                                    className="mt-1 px-2 py-1 text-[10px] bg-white/5 text-white/60 rounded-full
-                                        hover:bg-white/10 hover:text-white/80 disabled:opacity-30 disabled:cursor-not-allowed transition-colors whitespace-nowrap"
+                                    className="mt-1 px-2 py-1 text-[10px] font-mono bg-white/5 border border-white/10 text-white/40 rounded-lg
+                                        hover:bg-white/10 hover:text-white/60 disabled:opacity-30 disabled:cursor-not-allowed transition-all whitespace-nowrap uppercase tracking-wider"
                                 >
                                     {resettingArtists ? "Resetting..." : "Re-run"}
                                 </button>
                             </div>
 
-                            {/* Mood Tags with Re-run button */}
+                            {/* Mood Tags */}
                             <div className="flex items-start gap-2">
                                 <div className="flex-1">
                                     <EnrichmentStage
@@ -629,14 +599,14 @@ export function CacheSection({ settings, onUpdate }: CacheSectionProps) {
                                 <button
                                     onClick={handleResetMoodTags}
                                     disabled={resettingMoodTags || syncing || reEnriching || isEnrichmentActive}
-                                    className="mt-1 px-2 py-1 text-[10px] bg-white/5 text-white/60 rounded-full
-                                        hover:bg-white/10 hover:text-white/80 disabled:opacity-30 disabled:cursor-not-allowed transition-colors whitespace-nowrap"
+                                    className="mt-1 px-2 py-1 text-[10px] font-mono bg-white/5 border border-white/10 text-white/40 rounded-lg
+                                        hover:bg-white/10 hover:text-white/60 disabled:opacity-30 disabled:cursor-not-allowed transition-all whitespace-nowrap uppercase tracking-wider"
                                 >
                                     {resettingMoodTags ? "Resetting..." : "Re-run"}
                                 </button>
                             </div>
 
-                            {/* Audio Analysis with Re-run button */}
+                            {/* Audio Analysis */}
                             {!featuresLoading && musicCNN ? (
                                 <div className="flex items-start gap-2">
                                     <div className="flex-1">
@@ -661,23 +631,23 @@ export function CacheSection({ settings, onUpdate }: CacheSectionProps) {
                                     <button
                                         onClick={handleResetAudioAnalysis}
                                         disabled={resettingAudio || syncing || reEnriching || isEnrichmentActive}
-                                        className="mt-1 px-2 py-1 text-[10px] bg-white/5 text-white/60 rounded-full
-                                            hover:bg-white/10 hover:text-white/80 disabled:opacity-30 disabled:cursor-not-allowed transition-colors whitespace-nowrap"
+                                        className="mt-1 px-2 py-1 text-[10px] font-mono bg-white/5 border border-white/10 text-white/40 rounded-lg
+                                            hover:bg-white/10 hover:text-white/60 disabled:opacity-30 disabled:cursor-not-allowed transition-all whitespace-nowrap uppercase tracking-wider"
                                     >
                                         {resettingAudio ? "Resetting..." : "Re-run"}
                                     </button>
                                 </div>
                             ) : !featuresLoading ? (
                                 <div className="opacity-50 py-2">
-                                    <h4 className="text-sm font-medium text-gray-300">Audio Analysis</h4>
-                                    <p className="text-sm text-gray-500">Not available (lite mode)</p>
-                                    <p className="text-xs text-gray-600 mt-1">
+                                    <h4 className="text-sm font-medium text-white/50">Audio Analysis</h4>
+                                    <p className="text-xs font-mono text-white/30 uppercase tracking-wider">Not available (lite mode)</p>
+                                    <p className="text-[10px] font-mono text-white/20 mt-1 uppercase tracking-wider">
                                         Remove docker-compose.override.yml and restart to enable
                                     </p>
                                 </div>
                             ) : null}
 
-                            {/* CLAP Embeddings (Vibe Similarity) with Re-run button */}
+                            {/* CLAP Embeddings */}
                             {!featuresLoading && vibeEmbeddings ? (
                                 enrichmentProgress.clapEmbeddings && (
                                     <div className="flex items-start gap-2">
@@ -697,8 +667,8 @@ export function CacheSection({ settings, onUpdate }: CacheSectionProps) {
                                         <button
                                             onClick={handleResetVibeEmbeddings}
                                             disabled={resettingVibe || syncing || reEnriching || isEnrichmentActive}
-                                            className="mt-1 px-2 py-1 text-[10px] bg-white/5 text-white/60 rounded-full
-                                                hover:bg-white/10 hover:text-white/80 disabled:opacity-30 disabled:cursor-not-allowed transition-colors whitespace-nowrap"
+                                            className="mt-1 px-2 py-1 text-[10px] font-mono bg-white/5 border border-white/10 text-white/40 rounded-lg
+                                                hover:bg-white/10 hover:text-white/60 disabled:opacity-30 disabled:cursor-not-allowed transition-all whitespace-nowrap uppercase tracking-wider"
                                         >
                                             {resettingVibe ? "Resetting..." : "Re-run"}
                                         </button>
@@ -706,9 +676,9 @@ export function CacheSection({ settings, onUpdate }: CacheSectionProps) {
                                 )
                             ) : !featuresLoading ? (
                                 <div className="opacity-50 py-2">
-                                    <h4 className="text-sm font-medium text-gray-300">Vibe Similarity</h4>
-                                    <p className="text-sm text-gray-500">Not available (lite mode)</p>
-                                    <p className="text-xs text-gray-600 mt-1">
+                                    <h4 className="text-sm font-medium text-white/50">Vibe Similarity</h4>
+                                    <p className="text-xs font-mono text-white/30 uppercase tracking-wider">Not available (lite mode)</p>
+                                    <p className="text-[10px] font-mono text-white/20 mt-1 uppercase tracking-wider">
                                         Remove docker-compose.override.yml and restart to enable
                                     </p>
                                 </div>
@@ -717,14 +687,13 @@ export function CacheSection({ settings, onUpdate }: CacheSectionProps) {
 
                         {/* Control Buttons */}
                         <div className="flex flex-wrap gap-2 mt-4 pt-3 border-t border-white/10">
-                            {/* Main Actions */}
                             <button
                                 onClick={handleSyncAndEnrich}
                                 disabled={
                                     syncing || reEnriching || isEnrichmentActive
                                 }
-                                className="px-3 py-1.5 text-xs bg-white text-black font-medium rounded-full
-                                hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed transition-transform"
+                                className="px-3 py-1.5 text-xs font-black bg-[#fca208] text-black rounded-lg uppercase tracking-wider
+                                hover:bg-[#f97316] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                             >
                                 {syncing ? "Syncing..." : "Sync New"}
                             </button>
@@ -733,20 +702,19 @@ export function CacheSection({ settings, onUpdate }: CacheSectionProps) {
                                 disabled={
                                     syncing || reEnriching || isEnrichmentActive
                                 }
-                                className="px-3 py-1.5 text-xs bg-[#333] text-white rounded-full
-                                hover:bg-[#404040] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                className="px-3 py-1.5 text-xs font-mono bg-white/5 border border-white/10 text-white/70 rounded-lg uppercase tracking-wider
+                                hover:bg-white/10 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed transition-all"
                             >
                                 {reEnriching ? "Starting..." : "Re-enrich All"}
                             </button>
 
-                            {/* Control Actions */}
                             {isEnrichmentActive && (
                                 <>
                                     {enrichmentState?.status === "running" ? (
                                         <button
                                             onClick={handlePause}
-                                            className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-yellow-600 text-white rounded-full
-                                            hover:bg-yellow-700 transition-colors"
+                                            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-mono bg-yellow-600/20 border border-yellow-600/30 text-yellow-400 rounded-lg uppercase tracking-wider
+                                            hover:bg-yellow-600/30 transition-colors"
                                         >
                                             <Pause className="w-3 h-3" />
                                             Pause
@@ -754,8 +722,8 @@ export function CacheSection({ settings, onUpdate }: CacheSectionProps) {
                                     ) : (
                                         <button
                                             onClick={handleResume}
-                                            className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-green-600 text-white rounded-full
-                                            hover:bg-green-700 transition-colors"
+                                            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-mono bg-green-600/20 border border-green-600/30 text-green-400 rounded-lg uppercase tracking-wider
+                                            hover:bg-green-600/30 transition-colors"
                                         >
                                             <Play className="w-3 h-3" />
                                             Resume
@@ -763,8 +731,8 @@ export function CacheSection({ settings, onUpdate }: CacheSectionProps) {
                                     )}
                                     <button
                                         onClick={handleStop}
-                                        className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-red-600 text-white rounded-full
-                                        hover:bg-red-700 transition-colors"
+                                        className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-mono bg-red-600/20 border border-red-600/30 text-red-400 rounded-lg uppercase tracking-wider
+                                        hover:bg-red-600/30 transition-colors"
                                     >
                                         <StopCircle className="w-3 h-3" />
                                         Stop
@@ -772,12 +740,11 @@ export function CacheSection({ settings, onUpdate }: CacheSectionProps) {
                                 </>
                             )}
 
-                            {/* Failures Button */}
                             {totalFailures > 0 && (
                                 <button
                                     onClick={() => setShowFailuresModal(true)}
-                                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-red-500/20 text-red-400 border border-red-500/30 rounded-full
-                                    hover:bg-red-500/30 transition-colors ml-auto"
+                                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-mono bg-red-500/10 text-red-400 border border-red-500/20 rounded-lg uppercase tracking-wider
+                                    hover:bg-red-500/20 transition-colors ml-auto"
                                 >
                                     <AlertTriangle className="w-3 h-3" />
                                     View Failures ({totalFailures})
@@ -788,11 +755,11 @@ export function CacheSection({ settings, onUpdate }: CacheSectionProps) {
                         {/* Status Message */}
                         {enrichmentState &&
                             enrichmentState.status !== "idle" && (
-                                <div className="mt-3 p-2 bg-white/5 rounded text-xs">
+                                <div className="mt-3 p-2 bg-white/[0.02] rounded-lg border border-white/5 text-xs">
                                     <div className="flex items-center gap-2">
                                         {enrichmentState.status ===
                                             "running" && (
-                                            <Loader2 className="w-3 h-3 animate-spin text-[#ecb200]" />
+                                            <Loader2 className="w-3 h-3 animate-spin text-[#fca208]" />
                                         )}
                                         {enrichmentState.status ===
                                             "paused" && (
@@ -802,7 +769,7 @@ export function CacheSection({ settings, onUpdate }: CacheSectionProps) {
                                             "stopping" && (
                                             <StopCircle className="w-3 h-3 text-red-400 animate-pulse" />
                                         )}
-                                        <span className="text-white/70">
+                                        <span className="text-white/50 font-mono">
                                             {enrichmentState.status ===
                                                 "running" &&
                                                 `Processing ${enrichmentState.currentPhase}...`}
@@ -821,7 +788,7 @@ export function CacheSection({ settings, onUpdate }: CacheSectionProps) {
                                         enrichmentState.currentPhase ===
                                             "artists" &&
                                         enrichmentState.artists?.current && (
-                                            <div className="mt-1 text-white/50 truncate">
+                                            <div className="mt-1 text-white/30 font-mono truncate">
                                                 Current:{" "}
                                                 {
                                                     enrichmentState.artists
@@ -833,7 +800,7 @@ export function CacheSection({ settings, onUpdate }: CacheSectionProps) {
                                         enrichmentState.currentPhase ===
                                             "tracks" &&
                                         enrichmentState.tracks?.current && (
-                                            <div className="mt-1 text-white/50 truncate">
+                                            <div className="mt-1 text-white/30 font-mono truncate">
                                                 Current:{" "}
                                                 {enrichmentState.tracks.current}
                                             </div>
@@ -860,11 +827,9 @@ export function CacheSection({ settings, onUpdate }: CacheSectionProps) {
                                     maxCacheSizeMb: parseInt(e.target.value),
                                 })
                             }
-                            className="w-32 h-1 bg-[#404040] rounded-lg appearance-none cursor-pointer
-                            [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3
-                            [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white"
+                            className={sliderClass}
                         />
-                        <span className="text-sm text-white w-16 text-right">
+                        <span className="text-xs font-mono text-white/50 w-16 text-right">
                             {(settings.maxCacheSizeMb / 1024).toFixed(1)} GB
                         </span>
                     </div>
@@ -887,11 +852,9 @@ export function CacheSection({ settings, onUpdate }: CacheSectionProps) {
                                     ),
                                 })
                             }
-                            className="w-32 h-1 bg-[#404040] rounded-lg appearance-none cursor-pointer
-                            [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3
-                            [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white"
+                            className={sliderClass}
                         />
-                        <span className="text-sm text-white w-16 text-right">
+                        <span className="text-xs font-mono text-white/50 w-16 text-right">
                             {settings.transcodeCacheMaxGb} GB
                         </span>
                     </div>
@@ -928,7 +891,7 @@ export function CacheSection({ settings, onUpdate }: CacheSectionProps) {
                 {settings.autoEnrichMetadata && (
                     <SettingsRow
                         label="Metadata Fetch Speed"
-                        description="Parallel Last.fm/MusicBrainz requests for artist bios and mood tags. Higher = faster but may trigger rate limits."
+                        description="Parallel Last.fm/MusicBrainz requests for artist bios and mood tags"
                     >
                         <div className="flex items-center gap-3">
                             <input
@@ -941,19 +904,16 @@ export function CacheSection({ settings, onUpdate }: CacheSectionProps) {
                                     const newSpeed = parseInt(e.target.value);
                                     setConcurrencyMutation.mutate(newSpeed);
                                 }}
-                                className="w-32 h-1 bg-[#404040] rounded-lg appearance-none cursor-pointer
-                                disabled:opacity-50 disabled:cursor-not-allowed
-                                [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3
-                                [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white"
+                                className={`${sliderClass} disabled:opacity-50 disabled:cursor-not-allowed`}
                             />
                             <div className="flex flex-col items-end gap-0.5">
                                 {isConcurrencyLoading ? (
-                                    <span className="text-sm text-white/50 w-24 text-right">
+                                    <span className="text-xs font-mono text-white/30 w-24 text-right uppercase tracking-wider">
                                         Loading...
                                     </span>
                                 ) : (
                                     <>
-                                        <span className="text-sm text-white w-24 text-right">
+                                        <span className="text-xs font-mono text-white/50 w-24 text-right">
                                             {enrichmentSpeed === 1
                                                 ? "Conservative"
                                                 : enrichmentSpeed === 2
@@ -965,7 +925,7 @@ export function CacheSection({ settings, onUpdate }: CacheSectionProps) {
                                                 : "Maximum"}
                                         </span>
                                         {concurrencyConfig && (
-                                            <span className="text-xs text-white/50 w-24 text-right">
+                                            <span className="text-[10px] font-mono text-white/30 w-24 text-right uppercase tracking-wider">
                                                 ~
                                                 {
                                                     concurrencyConfig.artistsPerMin
@@ -984,7 +944,7 @@ export function CacheSection({ settings, onUpdate }: CacheSectionProps) {
                 {settings.autoEnrichMetadata && !featuresLoading && musicCNN && (
                     <SettingsRow
                         label="Audio Analysis Workers"
-                        description="CPU workers for Essentia ML analysis (BPM, key, mood, energy). Lower values reduce CPU usage on older systems."
+                        description="CPU workers for Essentia ML analysis"
                     >
                         <div className="flex items-center gap-3">
                             <input
@@ -999,24 +959,21 @@ export function CacheSection({ settings, onUpdate }: CacheSectionProps) {
                                         newWorkers
                                     );
                                 }}
-                                className="w-32 h-1 bg-[#404040] rounded-lg appearance-none cursor-pointer
-                                disabled:opacity-50 disabled:cursor-not-allowed
-                                [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3
-                                [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white"
+                                className={`${sliderClass} disabled:opacity-50 disabled:cursor-not-allowed`}
                             />
                             <div className="flex flex-col items-end gap-0.5">
                                 {isWorkersLoading ? (
-                                    <span className="text-sm text-white/50 w-24 text-right">
+                                    <span className="text-xs font-mono text-white/30 w-24 text-right uppercase tracking-wider">
                                         Loading...
                                     </span>
                                 ) : (
                                     <>
-                                        <span className="text-sm text-white w-24 text-right">
+                                        <span className="text-xs font-mono text-white/50 w-24 text-right">
                                             {workersConfig?.workers ?? 2}{" "}
                                             workers
                                         </span>
                                         {workersConfig && (
-                                            <span className="text-xs text-white/50 w-24 text-right">
+                                            <span className="text-[10px] font-mono text-white/30 w-24 text-right uppercase tracking-wider">
                                                 {workersConfig.cpuCores} cores
                                                 available
                                             </span>
@@ -1032,7 +989,7 @@ export function CacheSection({ settings, onUpdate }: CacheSectionProps) {
                 {settings.autoEnrichMetadata && !featuresLoading && vibeEmbeddings && (
                     <SettingsRow
                         label="Vibe Embedding Workers"
-                        description="CPU workers for CLAP embeddings (vibe similarity). More memory intensive - reduce on systems with less RAM."
+                        description="CPU workers for CLAP embeddings (vibe similarity)"
                     >
                         <div className="flex items-center gap-3">
                             <input
@@ -1045,24 +1002,21 @@ export function CacheSection({ settings, onUpdate }: CacheSectionProps) {
                                     const newWorkers = parseInt(e.target.value);
                                     setClapWorkersMutation.mutate(newWorkers);
                                 }}
-                                className="w-32 h-1 bg-[#404040] rounded-lg appearance-none cursor-pointer
-                                disabled:opacity-50 disabled:cursor-not-allowed
-                                [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3
-                                [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white"
+                                className={`${sliderClass} disabled:opacity-50 disabled:cursor-not-allowed`}
                             />
                             <div className="flex flex-col items-end gap-0.5">
                                 {isClapWorkersLoading ? (
-                                    <span className="text-sm text-white/50 w-24 text-right">
+                                    <span className="text-xs font-mono text-white/30 w-24 text-right uppercase tracking-wider">
                                         Loading...
                                     </span>
                                 ) : (
                                     <>
-                                        <span className="text-sm text-white w-24 text-right">
+                                        <span className="text-xs font-mono text-white/50 w-24 text-right">
                                             {clapWorkersConfig?.workers ?? 2}{" "}
                                             workers
                                         </span>
                                         {clapWorkersConfig && (
-                                            <span className="text-xs text-white/50 w-24 text-right">
+                                            <span className="text-[10px] font-mono text-white/30 w-24 text-right uppercase tracking-wider">
                                                 {clapWorkersConfig.cpuCores} cores
                                                 available
                                             </span>
@@ -1073,21 +1027,20 @@ export function CacheSection({ settings, onUpdate }: CacheSectionProps) {
                         </div>
                     </SettingsRow>
                 )}
+
                 {/* Cache Actions */}
                 <div className="flex flex-col gap-3 pt-4">
                     <button
                         onClick={handleClearCaches}
                         disabled={clearingCaches}
-                        className="px-4 py-1.5 text-sm bg-[#333] text-white rounded-full w-fit
-                        hover:bg-[#404040] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        className={secondaryBtnClass}
                     >
                         {clearingCaches ? "Clearing..." : "Clear All Caches"}
                     </button>
                     <button
                         onClick={handleCleanupStaleJobs}
                         disabled={cleaningStaleJobs}
-                        className="px-4 py-1.5 text-sm bg-[#333] text-white rounded-full w-fit
-                        hover:bg-[#404040] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        className={secondaryBtnClass}
                     >
                         {cleaningStaleJobs
                             ? "Cleaning..."
@@ -1097,8 +1050,7 @@ export function CacheSection({ settings, onUpdate }: CacheSectionProps) {
                         <button
                             onClick={handleRetryFailedAnalysis}
                             disabled={retryingFailed || isEnrichmentActive}
-                            className="px-4 py-1.5 text-sm bg-[#333] text-white rounded-full w-fit
-                            hover:bg-[#404040] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                            className={secondaryBtnClass}
                         >
                             {retryingFailed
                                 ? "Retrying..."
@@ -1106,12 +1058,12 @@ export function CacheSection({ settings, onUpdate }: CacheSectionProps) {
                         </button>
                     )}
                     {retryResult && (
-                        <p className="text-sm text-green-400">
+                        <p className="text-xs font-mono text-green-400 uppercase tracking-wider">
                             Reset {retryResult.reset} failed tracks to pending
                         </p>
                     )}
                     {cleanupResult && cleanupResult.totalCleaned > 0 && (
-                        <p className="text-sm text-green-400">
+                        <p className="text-xs font-mono text-green-400 uppercase tracking-wider">
                             Cleaned:{" "}
                             {cleanupResult.cleaned.discoveryBatches.cleaned}{" "}
                             batches,{" "}
@@ -1123,11 +1075,11 @@ export function CacheSection({ settings, onUpdate }: CacheSectionProps) {
                         </p>
                     )}
                     {cleanupResult && cleanupResult.totalCleaned === 0 && (
-                        <p className="text-sm text-white/50">
+                        <p className="text-xs font-mono text-white/30 uppercase tracking-wider">
                             No stale jobs found
                         </p>
                     )}
-                    {error && <p className="text-sm text-red-400">{error}</p>}
+                    {error && <p className="text-xs font-mono text-red-400 uppercase tracking-wider">{error}</p>}
                 </div>
             </SettingsSection>
 

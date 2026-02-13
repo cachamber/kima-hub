@@ -304,89 +304,103 @@ export class DiscoverWeeklyService {
             const jobs = await prisma.downloadJob.findMany({
                 where: { discoveryBatchId: batch.id },
             });
-    
-            // Create concurrent acquisition promises
-            const acquisitionPromises = jobs.map(async (job) => {
+
+            // Process albums through acquisition service queue
+            // The acquisitionService has an internal queue that respects the user's soulseekConcurrentDownloads setting
+            discoveryLogger.info(
+                `Processing ${jobs.length} albums (concurrency controlled by acquisition service)`,
+                1
+            );
+
+            // Helper to process a single job
+            const processJob = async (job: any, index: number) => {
                 const metadata = job.metadata as any;
-    
+
                 discoveryLogger.info(
-                    `Acquiring: ${metadata.artistName} - ${metadata.albumTitle}`,
+                    `[${index + 1}/${jobs.length}] Acquiring: ${metadata.artistName} - ${metadata.albumTitle}`,
                     1
                 );
-    
-                const result = await acquisitionService.acquireAlbum(
-                    {
-                        albumTitle: metadata.albumTitle,
-                        artistName: metadata.artistName,
-                        mbid: metadata.albumMbid,
-                        lastfmUrl: undefined,
-                    },
-                    {
-                        userId: userId,
-                        discoveryBatchId: batch.id,
-                        existingJobId: job.id,
-                    }
-                );
-    
-                if (result.success) {
-                    discoveryLogger.success(
-                        `Acquired via ${result.source}: ${metadata.artistName} - ${metadata.albumTitle}`,
-                        1
-                    );
-    
-                    const newStatus = result.source === "soulseek" ? "completed" : "processing";
-                    await prisma.downloadJob.update({
-                        where: { id: job.id },
-                        data: {
-                            status: newStatus,
-                            lidarrRef: result.correlationId || null,
-                            completedAt: newStatus === "completed" ? new Date() : null,
+
+                try {
+                    const result = await acquisitionService.acquireAlbum(
+                        {
+                            albumTitle: metadata.albumTitle,
+                            artistName: metadata.artistName,
+                            mbid: metadata.albumMbid,
+                            lastfmUrl: undefined,
                         },
-                    });
-                } else {
+                        {
+                            userId: userId,
+                            discoveryBatchId: batch.id,
+                            existingJobId: job.id,
+                        }
+                    );
+
+                    if (result.success) {
+                        downloadsStarted++;
+                        discoveryLogger.success(
+                            `Acquired via ${result.source}: ${metadata.artistName} - ${metadata.albumTitle}`,
+                            1
+                        );
+
+                        const newStatus = result.source === "soulseek" ? "completed" : "processing";
+                        await prisma.downloadJob.update({
+                            where: { id: job.id },
+                            data: {
+                                status: newStatus,
+                                lidarrRef: result.correlationId || null,
+                                completedAt: newStatus === "completed" ? new Date() : null,
+                            },
+                        });
+                    } else {
+                        downloadsFailed++;
+                        discoveryLogger.error(
+                            `Failed to acquire: ${metadata.albumTitle} - ${result.error}`,
+                            1
+                        );
+
+                        await prisma.downloadJob.update({
+                            where: { id: job.id },
+                            data: {
+                                status: "failed",
+                                error: result.error,
+                                completedAt: new Date(),
+                            },
+                        });
+
+                        await discoveryBatchLogger.error(
+                            batch.id,
+                            `Failed to acquire ${metadata.albumTitle}: ${result.error}`
+                        );
+                    }
+                } catch (error: any) {
+                    downloadsFailed++;
+                    const errorMsg = error?.message || String(error);
                     discoveryLogger.error(
-                        `Failed to acquire: ${metadata.albumTitle} - ${result.error}`,
+                        `Exception acquiring ${metadata.albumTitle}: ${errorMsg}`,
                         1
                     );
-    
+
                     await prisma.downloadJob.update({
                         where: { id: job.id },
                         data: {
                             status: "failed",
-                            error: result.error,
+                            error: errorMsg,
                             completedAt: new Date(),
                         },
                     });
-    
+
                     await discoveryBatchLogger.error(
                         batch.id,
-                        `Failed to acquire ${metadata.albumTitle}: ${result.error}`
+                        `Exception acquiring ${metadata.albumTitle}: ${errorMsg}`
                     );
                 }
-    
-                return { job, result };
-            });
-    
-            // Execute all acquisitions concurrently
-            const results = await Promise.allSettled(acquisitionPromises);
-    
-            // Process results and update counters
-            results.forEach((settledResult, index) => {
-                if (settledResult.status === 'fulfilled') {
-                    const { result } = settledResult.value;
-                    if (result.success) {
-                        downloadsStarted++;
-                    } else {
-                        downloadsFailed++;
-                    }
-                } else {
-                    downloadsFailed++;
-                    const job = jobs[index];
-                    const metadata = job.metadata as any;
-                    logger.error(`[Discover] Failed to acquire ${metadata.albumTitle}: ${settledResult.reason}`);
-                }
-            });
-    
+            };
+
+            // Process all jobs - acquisitionService internal queue handles concurrency
+            const promises = jobs.map((job, index) => processJob(job, index));
+            await Promise.allSettled(promises);
+
             // Log batch completion summary
             logger.info(`[Discover] Batch complete: ${downloadsStarted} succeeded, ${downloadsFailed} failed`);
 

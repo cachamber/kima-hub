@@ -9,13 +9,10 @@ import { useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "@/hooks/useQueries";
 import { useAuth } from "@/lib/auth-context";
 import { useAudioControls } from "@/lib/audio-context";
-import { Play, Music, Eye, EyeOff } from "lucide-react";
+import { Play, Music, Eye, EyeOff, ListMusic } from "lucide-react";
 import { GradientSpinner } from "@/components/ui/GradientSpinner";
 import { api } from "@/lib/api";
 import { cn } from "@/utils/cn";
-
-// Lidify brand yellow
-const LIDIFY_YELLOW = "#ecb200";
 
 interface PlaylistItem {
     id: string;
@@ -38,7 +35,6 @@ interface Playlist {
     };
 }
 
-// Generate mosaic cover from playlist tracks
 function PlaylistMosaic({
     items,
     size = 4,
@@ -56,7 +52,6 @@ function PlaylistMosaic({
         );
         if (tracksWithCovers.length === 0) return [];
 
-        // Get unique cover arts (up to 4)
         const uniqueCovers = Array.from(
             new Set(tracksWithCovers.map((item) => item.track.album!.coverArt))
         ).slice(0, size);
@@ -68,11 +63,11 @@ function PlaylistMosaic({
         return (
             <div
                 className={cn(
-                    "w-full h-full flex items-center justify-center bg-gradient-to-br from-[#282828] to-[#181818]",
+                    "w-full h-full flex items-center justify-center bg-[#0a0a0a]",
                     greyed && "opacity-50"
                 )}
             >
-                <Music className="w-10 h-10 text-gray-600" />
+                <Music className="w-10 h-10 text-white/10" />
             </div>
         );
     }
@@ -113,9 +108,9 @@ function PlaylistMosaic({
                 (_, index) => (
                     <div
                         key={`empty-${index}`}
-                        className="relative bg-[#282828] flex items-center justify-center"
+                        className="relative bg-[#0a0a0a] flex items-center justify-center"
                     >
-                        <Music className="w-5 h-5 text-gray-600" />
+                        <Music className="w-5 h-5 text-white/10" />
                     </div>
                 )
             )}
@@ -154,7 +149,7 @@ function PlaylistCard({
         <Link href={`/playlist/${playlist.id}`}>
             <div
                 className={cn(
-                    "group cursor-pointer p-3 rounded-md transition-colors hover:bg-white/5",
+                    "group cursor-pointer p-3 rounded-lg transition-all border border-transparent hover:bg-white/[0.03] hover:border-white/5",
                     isHiddenView && "opacity-60 hover:opacity-100"
                 )}
                 data-tv-card
@@ -162,24 +157,24 @@ function PlaylistCard({
                 tabIndex={0}
             >
                 {/* Cover Image */}
-                <div className="relative aspect-square mb-3 rounded-md overflow-hidden bg-[#282828] shadow-lg">
+                <div className="relative aspect-square mb-3 rounded-lg overflow-hidden bg-[#0a0a0a] border border-white/10 shadow-lg">
                     <PlaylistMosaic
                         items={playlist.items}
                         greyed={isHiddenView}
                     />
 
-                    {/* Hide/Unhide button for shared playlists */}
+                    {/* Hide/Unhide button */}
                     {isShared && (
                         <button
                             onClick={handleToggleHide}
                             disabled={isHiding}
                             className={cn(
-                                "absolute top-2 right-2 w-7 h-7 rounded-full flex items-center justify-center",
-                                "bg-black/60  transition-all duration-200",
+                                "absolute top-2 right-2 w-7 h-7 rounded-lg flex items-center justify-center",
+                                "bg-black/60 transition-all duration-200",
                                 "opacity-0 group-hover:opacity-100",
                                 playlist.isHidden
                                     ? "text-green-400"
-                                    : "text-gray-400",
+                                    : "text-white/40",
                                 isHiding && "opacity-50 cursor-not-allowed"
                             )}
                             title={
@@ -203,32 +198,34 @@ function PlaylistCard({
                             e.stopPropagation();
                             onPlay(playlist.id);
                         }}
-                        style={{ backgroundColor: LIDIFY_YELLOW }}
                         className={cn(
-                            "absolute bottom-2 right-2 w-10 h-10 rounded-full flex items-center justify-center",
-                            "shadow-lg shadow-black/40 transition-all duration-200",
-                            "hover:scale-105 hover:brightness-110",
+                            "absolute bottom-2 right-2 w-10 h-10 rounded-lg flex items-center justify-center",
+                            "bg-[#fca208] shadow-lg shadow-[#fca208]/20 transition-all duration-200",
+                            "hover:bg-[#f97316] hover:scale-105",
                             "opacity-0 translate-y-2 group-hover:opacity-100 group-hover:translate-y-0"
                         )}
                         title="Play playlist"
                     >
                         <Play className="w-4 h-4 fill-current ml-0.5 text-black" />
                     </button>
+
+                    {/* Bottom accent line */}
+                    <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-[#fca208] to-[#f97316] transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300 origin-left" />
                 </div>
 
                 {/* Title and info */}
                 <h3
                     className={cn(
-                        "text-sm font-semibold truncate",
-                        isHiddenView ? "text-gray-400" : "text-white"
+                        "text-sm font-black truncate tracking-tight",
+                        isHiddenView ? "text-white/40" : "text-white"
                     )}
                 >
                     {playlist.name}
                 </h3>
-                <p className="text-xs text-gray-400 mt-0.5 truncate">
+                <p className="text-[10px] font-mono text-white/30 mt-0.5 truncate uppercase tracking-wider">
                     {isShared && playlist.user?.username ? (
-                        <span className="text-gray-500">
-                            By {playlist.user.username} ·{" "}
+                        <span>
+                            {playlist.user.username} | {" "}
                         </span>
                     ) : null}
                     {playlist.trackCount || 0}{" "}
@@ -246,10 +243,8 @@ export default function PlaylistsPage() {
     const queryClient = useQueryClient();
     const [showHiddenTab, setShowHiddenTab] = useState(false);
 
-    // Use React Query hook for playlists
     const { data: playlists = [], isLoading } = usePlaylistsQuery();
 
-    // Separate visible and hidden playlists
     const { visiblePlaylists, hiddenPlaylists } = useMemo(() => {
         const visible: Playlist[] = [];
         const hidden: Playlist[] = [];
@@ -265,7 +260,6 @@ export default function PlaylistsPage() {
         return { visiblePlaylists: visible, hiddenPlaylists: hidden };
     }, [playlists]);
 
-    // Listen for playlist events and invalidate cache
     useEffect(() => {
         const handlePlaylistEvent = () => {
             queryClient.invalidateQueries({ queryKey: queryKeys.playlists() });
@@ -314,7 +308,6 @@ export default function PlaylistsPage() {
             } else {
                 await api.unhidePlaylist(playlistId);
             }
-            // Invalidate and refetch playlists
             queryClient.invalidateQueries({ queryKey: queryKeys.playlists() });
         } catch (error) {
             console.error("Failed to toggle playlist visibility:", error);
@@ -323,7 +316,7 @@ export default function PlaylistsPage() {
 
     if (isLoading) {
         return (
-            <div className="flex items-center justify-center min-h-screen">
+            <div className="flex items-center justify-center min-h-screen bg-[#0a0a0a]">
                 <GradientSpinner size="md" />
             </div>
         );
@@ -334,118 +327,149 @@ export default function PlaylistsPage() {
         : visiblePlaylists;
 
     return (
-        <div className="min-h-screen relative">
-            {/* Quick gradient fade - yellow to purple */}
-            <div className="absolute inset-0 pointer-events-none">
-                <div
-                    className="absolute inset-0 bg-gradient-to-b from-[#ecb200]/15 via-purple-900/10 to-transparent"
-                    style={{ height: "35vh" }}
-                />
-                <div
-                    className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,var(--tw-gradient-stops))] from-[#ecb200]/8 via-transparent to-transparent"
-                    style={{ height: "25vh" }}
-                />
-            </div>
-
-            {/* Header */}
-            <div className="relative px-6 pt-6 pb-4">
-                <div className="flex items-center justify-between">
-                    <div>
-                        <h1 className="text-2xl font-bold text-white">
-                            Playlists
-                        </h1>
-                        <p className="text-sm text-gray-400 mt-0.5">
-                            {visiblePlaylists.length}{" "}
-                            {visiblePlaylists.length === 1
-                                ? "playlist"
-                                : "playlists"}
-                        </p>
+        <div className="min-h-screen bg-gradient-to-b from-[#0a0a0a] to-black">
+            {/* Editorial Header */}
+            <div className="relative px-4 md:px-8 pt-8 pb-6">
+                <div className="max-w-[1800px] mx-auto">
+                    {/* System status */}
+                    <div className="flex items-center gap-2 mb-4 animate-slide-up" style={{ animationDelay: "0s" }}>
+                        <div className="w-1.5 h-1.5 bg-[#fca208] rounded-full" />
+                        <span className="text-xs font-mono text-white/50 uppercase tracking-wider">
+                            Your Library
+                        </span>
                     </div>
 
-                    <div className="flex items-center gap-2">
-                        {/* Browse Public Playlists */}
-                        <Link
-                            href="/browse/playlists"
-                            className="px-4 py-2 rounded-full text-sm font-medium bg-[#ecb200] text-black hover:brightness-110 transition-all"
-                        >
-                            Browse Playlists
-                        </Link>
-
-                        {/* Hidden Playlists Toggle */}
-                        {hiddenPlaylists.length > 0 && (
-                            <button
-                                onClick={() => setShowHiddenTab(!showHiddenTab)}
-                                className={cn(
-                                    "px-4 py-2 rounded-full text-sm font-medium transition-all",
-                                    showHiddenTab
-                                        ? "bg-white/10 text-white"
-                                        : "bg-transparent text-gray-400 hover:text-white hover:bg-white/5"
+                    <div className="flex items-end justify-between gap-4 animate-slide-up" style={{ animationDelay: "0.05s" }}>
+                        <div>
+                            <h1 className="text-5xl md:text-6xl lg:text-7xl font-black tracking-tighter text-white leading-none">
+                                PLAY<br />
+                                <span className="text-[#fca208]">LISTS</span>
+                            </h1>
+                            <div className="flex items-center gap-3 mt-3 text-xs font-mono text-white/40 uppercase tracking-wider">
+                                <span className="font-black text-white text-sm normal-case tracking-tight">
+                                    {visiblePlaylists.length} {visiblePlaylists.length === 1 ? "playlist" : "playlists"}
+                                </span>
+                                {hiddenPlaylists.length > 0 && (
+                                    <>
+                                        <span className="text-white/20">|</span>
+                                        <span>{hiddenPlaylists.length} hidden</span>
+                                    </>
                                 )}
+                            </div>
+                        </div>
+
+                        <div className="flex items-center gap-2 shrink-0">
+                            <Link
+                                href="/browse/playlists"
+                                className="px-4 py-2 rounded-lg text-xs font-black bg-[#fca208] text-black hover:bg-[#f97316] transition-colors uppercase tracking-wider"
                             >
-                                {showHiddenTab
-                                    ? "Show All"
-                                    : `Hidden (${hiddenPlaylists.length})`}
-                            </button>
-                        )}
+                                Browse
+                            </Link>
+
+                            {hiddenPlaylists.length > 0 && (
+                                <button
+                                    onClick={() => setShowHiddenTab(!showHiddenTab)}
+                                    className={cn(
+                                        "px-4 py-2 rounded-lg text-xs font-mono transition-all uppercase tracking-wider",
+                                        showHiddenTab
+                                            ? "bg-white/10 text-white border border-white/20"
+                                            : "bg-white/5 border border-white/10 text-white/40 hover:text-white/70 hover:border-white/20"
+                                    )}
+                                >
+                                    {showHiddenTab
+                                        ? "Show All"
+                                        : `Hidden (${hiddenPlaylists.length})`}
+                                </button>
+                            )}
+                        </div>
                     </div>
                 </div>
             </div>
 
             {/* Content */}
-            <div className="relative px-4 pb-24">
-                {/* Hidden playlists notice */}
-                {showHiddenTab && (
-                    <div className="mx-2 mb-4 px-4 py-3 bg-white/5 rounded-lg">
-                        <p className="text-sm text-gray-400">
-                            Hidden playlists won&apos;t appear in your library. Hover
-                            and click the eye icon to restore.
-                        </p>
-                    </div>
-                )}
-
-                {displayedPlaylists.length > 0 ? (
-                    <div
-                        data-tv-section="playlists"
-                        className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7 gap-2"
-                    >
-                        {displayedPlaylists.map(
-                            (playlist: Playlist, index: number) => (
-                                <PlaylistCard
-                                    key={playlist.id}
-                                    playlist={playlist}
-                                    index={index}
-                                    onPlay={handlePlayPlaylist}
-                                    onToggleHide={handleToggleHide}
-                                    isHiddenView={showHiddenTab}
-                                />
-                            )
-                        )}
-                    </div>
-                ) : (
-                    <div className="flex flex-col items-center justify-center py-24 text-center">
-                        <div className="w-16 h-16 rounded-full bg-white/5 flex items-center justify-center mb-4">
-                            <Music className="w-8 h-8 text-gray-500" />
+            <div className="relative px-4 md:px-8 pb-24">
+                <div className="max-w-[1800px] mx-auto">
+                    {/* Hidden playlists notice */}
+                    {showHiddenTab && (
+                        <div className="mb-6 px-4 py-3 bg-white/5 rounded-lg border border-white/10 animate-slide-up" style={{ animationDelay: "0s" }}>
+                            <p className="text-xs font-mono text-white/40 uppercase tracking-wider">
+                                Hidden playlists won&apos;t appear in your library. Hover
+                                and click the eye icon to restore.
+                            </p>
                         </div>
-                        <h2 className="text-lg font-semibold text-white mb-1">
-                            {showHiddenTab
-                                ? "No hidden playlists"
-                                : "No playlists yet"}
-                        </h2>
-                        <p className="text-sm text-gray-400 max-w-sm">
-                            {showHiddenTab
-                                ? "You haven't hidden any playlists"
-                                : "Create your first playlist by adding songs from albums or artists"}
-                        </p>
-                        {!showHiddenTab && (
-                            <Link
-                                href="/browse/playlists"
-                                className="mt-6 px-5 py-2.5 rounded-full text-sm font-medium bg-[#ecb200] text-black hover:brightness-110 transition-all"
+                    )}
+
+                    {displayedPlaylists.length > 0 ? (
+                        <div className="animate-slide-up" style={{ animationDelay: "0.1s" }}>
+                            {/* Section header */}
+                            <div className="flex items-center gap-3 mb-6">
+                                <span className="w-1 h-8 bg-gradient-to-b from-[#fca208] to-[#f97316] rounded-full shrink-0" />
+                                <h2 className="text-2xl font-black tracking-tighter uppercase">
+                                    {showHiddenTab ? "Hidden" : "All Playlists"}
+                                </h2>
+                                <span className="text-xs font-mono text-[#fca208]">
+                                    {displayedPlaylists.length}
+                                </span>
+                                <span className="flex-1 border-t border-white/10" />
+                            </div>
+
+                            <div
+                                data-tv-section="playlists"
+                                className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7 gap-2"
                             >
-                                Browse Playlists
-                            </Link>
-                        )}
-                    </div>
-                )}
+                                {displayedPlaylists.map(
+                                    (playlist: Playlist, index: number) => (
+                                        <PlaylistCard
+                                            key={playlist.id}
+                                            playlist={playlist}
+                                            index={index}
+                                            onPlay={handlePlayPlaylist}
+                                            onToggleHide={handleToggleHide}
+                                            isHiddenView={showHiddenTab}
+                                        />
+                                    )
+                                )}
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="animate-slide-up" style={{ animationDelay: "0.1s" }}>
+                            <div className="relative overflow-hidden rounded-lg border-2 border-white/10 bg-gradient-to-br from-[#0f0f0f] to-[#0a0a0a] p-12 shadow-2xl shadow-black/40">
+                                <div className="absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-[#fca208] to-[#f97316]" />
+
+                                <div className="flex items-center gap-3 mb-8 pb-4 border-b border-white/10">
+                                    <div className="w-2 h-2 bg-[#fca208]" />
+                                    <span className="text-xs font-mono text-white/60 uppercase tracking-wider">
+                                        {showHiddenTab ? "No Hidden Playlists" : "Getting Started"}
+                                    </span>
+                                </div>
+
+                                <div className="flex flex-col items-center text-center">
+                                    <div className="w-16 h-16 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center mb-6">
+                                        <ListMusic className="w-8 h-8 text-white/10" />
+                                    </div>
+                                    <h2 className="text-2xl font-black tracking-tighter text-white mb-2 uppercase">
+                                        {showHiddenTab
+                                            ? "No hidden playlists"
+                                            : "No playlists yet"}
+                                    </h2>
+                                    <p className="text-xs font-mono text-white/30 max-w-sm uppercase tracking-wider leading-relaxed">
+                                        {showHiddenTab
+                                            ? "You haven't hidden any playlists"
+                                            : "Create your first playlist by adding songs from albums or artists"}
+                                    </p>
+                                    {!showHiddenTab && (
+                                        <Link
+                                            href="/browse/playlists"
+                                            className="mt-8 px-6 py-3 rounded-lg text-xs font-black bg-[#fca208] text-black hover:bg-[#f97316] transition-colors uppercase tracking-wider"
+                                        >
+                                            Browse Playlists
+                                        </Link>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </div>
             </div>
         </div>
     );

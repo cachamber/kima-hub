@@ -16,20 +16,15 @@
  * - Playlists: 1 minute (user may be actively modifying)
  */
 
-import { useQuery, useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
-import type { Artist, Album, Track } from "@/features/library/types";
 
 export const queryKeys = {
     // Artist queries
     artist: (id: string) => ["artist", id] as const,
-    artistLibrary: (id: string) => ["artist", "library", id] as const,
-    artistDiscovery: (id: string) => ["artist", "discovery", id] as const,
 
     // Album queries
     album: (id: string) => ["album", id] as const,
-    albumLibrary: (id: string) => ["album", "library", id] as const,
-    albumDiscovery: (id: string) => ["album", "discovery", id] as const,
     albums: (filters?: Record<string, unknown>) => ["albums", filters] as const,
 
     // Library queries
@@ -94,8 +89,6 @@ export const queryKeys = {
 
     // Browse (Deezer playlists/radios)
     browseAll: () => ["browse", "all"] as const,
-    browseFeatured: (limit?: number) => ["browse", "featured", limit] as const,
-    browseRadios: (limit?: number) => ["browse", "radios", limit] as const,
 };
 
 /**
@@ -131,42 +124,6 @@ export function useArtistQuery(id: string | undefined) {
 }
 
 /**
- * Hook to fetch artist data from library only
- *
- * @param id - Artist ID
- * @returns Query result with artist data from library
- */
-export function useArtistLibraryQuery(id: string | undefined) {
-    return useQuery({
-        queryKey: queryKeys.artistLibrary(id || ""),
-        queryFn: async () => {
-            if (!id) throw new Error("Artist ID is required");
-            return await api.getArtist(id);
-        },
-        enabled: !!id,
-        staleTime: 10 * 60 * 1000, // 10 minutes
-    });
-}
-
-/**
- * Hook to fetch artist data from discovery only
- *
- * @param id - Artist name or MusicBrainz ID
- * @returns Query result with artist data from Last.fm
- */
-export function useArtistDiscoveryQuery(nameOrMbid: string | undefined) {
-    return useQuery({
-        queryKey: queryKeys.artistDiscovery(nameOrMbid || ""),
-        queryFn: async () => {
-            if (!nameOrMbid) throw new Error("Artist name or MBID is required");
-            return await api.getArtistDiscovery(nameOrMbid);
-        },
-        enabled: !!nameOrMbid,
-        staleTime: 10 * 60 * 1000, // 10 minutes
-    });
-}
-
-/**
  * Hook to fetch album data with automatic library/discovery fallback
  *
  * Cache time: 10 minutes (album data rarely changes)
@@ -194,42 +151,6 @@ export function useAlbumQuery(id: string | undefined) {
         enabled: !!id,
         staleTime: 10 * 60 * 1000, // 10 minutes
         retry: 1,
-    });
-}
-
-/**
- * Hook to fetch album data from library only
- *
- * @param id - Album ID
- * @returns Query result with album data from library
- */
-export function useAlbumLibraryQuery(id: string | undefined) {
-    return useQuery({
-        queryKey: queryKeys.albumLibrary(id || ""),
-        queryFn: async () => {
-            if (!id) throw new Error("Album ID is required");
-            return await api.getAlbum(id);
-        },
-        enabled: !!id,
-        staleTime: 10 * 60 * 1000, // 10 minutes
-    });
-}
-
-/**
- * Hook to fetch album data from discovery only
- *
- * @param rgMbid - Release Group MusicBrainz ID
- * @returns Query result with album data from Last.fm
- */
-export function useAlbumDiscoveryQuery(rgMbid: string | undefined) {
-    return useQuery({
-        queryKey: queryKeys.albumDiscovery(rgMbid || ""),
-        queryFn: async () => {
-            if (!rgMbid) throw new Error("Album MBID is required");
-            return await api.getAlbumDiscovery(rgMbid);
-        },
-        enabled: !!rgMbid,
-        staleTime: 10 * 60 * 1000, // 10 minutes
     });
 }
 
@@ -318,28 +239,6 @@ interface LibraryTracksParams {
     enabled?: boolean;
 }
 
-// Page response types for infinite queries
-interface ArtistsPageResponse {
-    artists: Artist[];
-    total: number;
-    offset: number;
-    limit: number;
-}
-
-interface AlbumsPageResponse {
-    albums: Album[];
-    total: number;
-    offset: number;
-    limit: number;
-}
-
-interface TracksPageResponse {
-    tracks: Track[];
-    total: number;
-    offset: number;
-    limit: number;
-}
-
 /**
  * Hook to fetch library artists with pagination and filtering
  *
@@ -372,76 +271,6 @@ export function useLibraryArtistsQuery({
 }
 
 /**
- * Hook to fetch library albums with infinite pagination and filtering
- *
- * Cache time: 2 minutes (may change as user adds music)
- */
-export function useLibraryAlbumsInfiniteQuery(
-    {
-        filter = "owned",
-        sortBy = "name",
-        limit = 40,
-        enabled = true,
-    }: Omit<LibraryAlbumsParams, 'page'> & { enabled?: boolean } = {},
-) {
-    return useInfiniteQuery<AlbumsPageResponse, Error, { pages: AlbumsPageResponse[], pageParams: number[] }, readonly unknown[], number>({
-        queryKey: queryKeys.libraryAlbums({ filter, sortBy, limit }),
-        queryFn: async ({ pageParam }) => {
-            const offset = (pageParam - 1) * limit;
-            const response = await api.getAlbums({ limit, offset, filter, sortBy });
-            return {
-                albums: response.albums,
-                total: response.total,
-                offset: response.offset,
-                limit: response.limit,
-            };
-        },
-        getNextPageParam: (lastPage: AlbumsPageResponse, allPages: AlbumsPageResponse[]) => {
-            const totalItems = lastPage.total;
-            const fetchedItems = allPages.flatMap(page => page.albums).length;
-            return fetchedItems < totalItems ? allPages.length + 1 : undefined;
-        },
-        initialPageParam: 1,
-        enabled,
-    });
-}
-
-/**
- * Hook to fetch library artists with infinite pagination and filtering
- *
- * Cache time: 2 minutes (may change as user adds music)
- */
-export function useLibraryArtistsInfiniteQuery(
-    {
-        filter = "owned",
-        sortBy = "name",
-        limit = 40,
-        enabled = true,
-    }: Omit<LibraryArtistsParams, 'page'> & { enabled?: boolean } = {},
-) {
-    return useInfiniteQuery<ArtistsPageResponse, Error, { pages: ArtistsPageResponse[], pageParams: number[] }, readonly unknown[], number>({
-        queryKey: queryKeys.libraryArtists({ filter, sortBy, limit }),
-        queryFn: async ({ pageParam }) => {
-            const offset = (pageParam - 1) * limit;
-            const response = await api.getArtists({ limit, offset, filter, sortBy });
-            return {
-                artists: response.artists,
-                total: response.total,
-                offset: response.offset,
-                limit: response.limit,
-            };
-        },
-        getNextPageParam: (lastPage: ArtistsPageResponse, allPages: ArtistsPageResponse[]) => {
-            const totalItems = lastPage.total;
-            const fetchedItems = allPages.flatMap(page => page.artists).length;
-            return fetchedItems < totalItems ? allPages.length + 1 : undefined;
-        },
-        initialPageParam: 1,
-        enabled,
-    });
-}
-
-/**
  * Hook to fetch library albums with pagination and filtering
  *
  * Cache time: 2 minutes (may change as user adds music)
@@ -464,40 +293,6 @@ export function useLibraryAlbumsQuery({
             limit: response.limit,
         }),
         staleTime: 2 * 60 * 1000,
-        enabled,
-    });
-}
-
-/**
- * Hook to fetch library tracks with infinite pagination
- *
- * Cache time: 2 minutes (may change as user adds music)
- */
-export function useLibraryTracksInfiniteQuery(
-    {
-        sortBy = "name",
-        limit = 40,
-        enabled = true,
-    }: Omit<LibraryTracksParams, 'page'> & { enabled?: boolean } = {},
-) {
-    return useInfiniteQuery<TracksPageResponse, Error, { pages: TracksPageResponse[], pageParams: number[] }, readonly unknown[], number>({
-        queryKey: queryKeys.libraryTracks({ sortBy, limit }),
-        queryFn: async ({ pageParam }) => {
-            const offset = (pageParam - 1) * limit;
-            const response = await api.getTracks({ limit, offset, sortBy });
-            return {
-                tracks: response.tracks,
-                total: response.total,
-                offset: response.offset,
-                limit: response.limit,
-            };
-        },
-        getNextPageParam: (lastPage: TracksPageResponse, allPages: TracksPageResponse[]) => {
-            const totalItems = lastPage.total;
-            const fetchedItems = allPages.flatMap(page => page.tracks).length;
-            return fetchedItems < totalItems ? allPages.length + 1 : undefined;
-        },
-        initialPageParam: 1,
         enabled,
     });
 }
@@ -993,43 +788,5 @@ export function useBrowseAllQuery() {
             return api.get<BrowseAllResponse>("/browse/all");
         },
         staleTime: 10 * 60 * 1000, // 10 minutes - playlists don't change often
-    });
-}
-
-/**
- * Hook to fetch featured playlists from Deezer
- *
- * @param limit - Maximum number of playlists to fetch
- * @returns Query result with featured playlists
- */
-export function useFeaturedPlaylistsQuery(limit: number = 50) {
-    return useQuery({
-        queryKey: queryKeys.browseFeatured(limit),
-        queryFn: async (): Promise<PlaylistPreview[]> => {
-            const response = await api.get<{ playlists: PlaylistPreview[] }>(
-                `/browse/playlists/featured?limit=${limit}`,
-            );
-            return response.playlists;
-        },
-        staleTime: 10 * 60 * 1000, // 10 minutes
-    });
-}
-
-/**
- * Hook to fetch radio stations from Deezer
- *
- * @param limit - Maximum number of radios to fetch
- * @returns Query result with radio stations
- */
-export function useRadiosQuery(limit: number = 50) {
-    return useQuery({
-        queryKey: queryKeys.browseRadios(limit),
-        queryFn: async (): Promise<PlaylistPreview[]> => {
-            const response = await api.get<{ radios: PlaylistPreview[] }>(
-                `/browse/radios?limit=${limit}`,
-            );
-            return response.radios;
-        },
-        staleTime: 10 * 60 * 1000, // 10 minutes
     });
 }

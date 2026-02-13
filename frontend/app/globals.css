@@ -27,6 +27,19 @@
     --color-ai: #a855f7; /* AI features - Purple */
     --color-ai-dark: #9333ea; /* AI selected */
 
+    /* Content Type Colors (for section headers) */
+    --color-featured: #eab308;
+    --color-tracks: #a855f7;
+    --color-tracks-dark: #c026d3;
+    --color-albums: #22c55e;
+    --color-albums-dark: #16a34a;
+    --color-podcasts: #3b82f6;
+    --color-podcasts-dark: #2563eb;
+    --color-audiobooks: #f59e0b;
+    --color-artists: #ec4899;
+    --color-p2p: #ec4899;
+    --color-discover: #a855f7;
+
     /* Status */
     --color-success: #22c55e;
     --color-warning: #f59e0b;
