@@ -95,6 +95,10 @@ export function AudioControlsProvider({ children }: { children: ReactNode }) {
     useEffect(() => {
         currentTimeRef.current = playback.currentTime;
     }, [playback.currentTime]);
+    const currentIndexRef = useRef(state.currentIndex);
+    useEffect(() => {
+        currentIndexRef.current = state.currentIndex;
+    }, [state.currentIndex]);
     const upNextInsertRef = useRef<number>(0);
     const shuffleInsertPosRef = useRef<number>(0);
     const lastQueueInsertAtRef = useRef<number | null>(null);
@@ -429,6 +433,7 @@ export function AudioControlsProvider({ children }: { children: ReactNode }) {
                 if (state.repeatMode === "all") {
                     nextIndex = state.shuffleIndices[0];
                 } else {
+                    playback.setIsPlaying(false);
                     return;
                 }
             }
@@ -439,6 +444,7 @@ export function AudioControlsProvider({ children }: { children: ReactNode }) {
                 if (state.repeatMode === "all") {
                     nextIndex = 0;
                 } else {
+                    playback.setIsPlaying(false);
                     return;
                 }
             }
@@ -595,12 +601,11 @@ export function AudioControlsProvider({ children }: { children: ReactNode }) {
                 const newQueue = [...prev];
                 newQueue.splice(index, 1);
 
-                if (index < state.currentIndex) {
+                const curIdx = currentIndexRef.current;
+
+                if (index < curIdx) {
                     state.setCurrentIndex((prevIndex) => prevIndex - 1);
-                } else if (
-                    index === state.currentIndex &&
-                    index === newQueue.length
-                ) {
+                } else if (index === curIdx && index === newQueue.length) {
                     state.setCurrentIndex(0);
                     if (newQueue.length > 0) {
                         state.setCurrentTrack(newQueue[0]);
