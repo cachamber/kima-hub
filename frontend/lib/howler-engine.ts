@@ -103,7 +103,10 @@ class HowlerEngine {
             const savedMuted = localStorage.getItem('lidify_muted');
 
             if (savedVolume) {
-                this.state.volume = parseFloat(savedVolume);
+                const parsed = parseFloat(savedVolume);
+                if (!isNaN(parsed)) {
+                    this.state.volume = Math.max(0, Math.min(1, parsed));
+                }
             }
             if (savedMuted === 'true') {
                 this.state.isMuted = true;
@@ -353,7 +356,14 @@ class HowlerEngine {
         // Ensure volume is set correctly before playing
         const targetVolume = this.state.isMuted ? 0 : this.state.volume;
         this.howl.volume(targetVolume);
-        this.howl.play();
+        try {
+            this.howl.play();
+        } catch (err) {
+            console.error("[HowlerEngine] Failed to play:", err);
+            this.state.isPlaying = false;
+            this.userInitiatedPlay = false;
+            this.emit("playerror", { error: err });
+        }
     }
 
     /**
@@ -378,6 +388,14 @@ class HowlerEngine {
      */
     seek(time: number): void {
         if (!this.howl) return;
+
+        // Clamp to valid range
+        const duration = this.howl.duration() || 0;
+        if (duration > 0) {
+            time = Math.max(0, Math.min(time, duration));
+        } else {
+            time = Math.max(0, time);
+        }
 
         // Set seek lock - this prevents timeupdate from emitting stale values
         this.isSeeking = true;
