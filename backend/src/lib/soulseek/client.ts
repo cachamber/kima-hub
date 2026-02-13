@@ -57,6 +57,8 @@ export class SlskClient extends (EventEmitter as new () => TypedEventEmitter<Sls
   private reconnectTimeout: NodeJS.Timeout | null = null
   private autoReconnect = true
   private credentials: { username: string; password: string } | null = null
+  private readonly DOWNLOAD_TTL = 5 * 60 * 1000 // 5 minutes
+  private downloadCleanupInterval: NodeJS.Timeout | null = null
 
   constructor({
     serverAddress = {
@@ -114,6 +116,11 @@ export class SlskClient extends (EventEmitter as new () => TypedEventEmitter<Sls
     })
 
     this.wirePeerMessageHandlers()
+
+    // Start download cleanup interval
+    this.downloadCleanupInterval = setInterval(() => {
+      this.cleanupStuckDownloads()
+    }, 60000) // Check every minute
   }
 
   private wireServerHandlers() {
@@ -514,7 +521,7 @@ export class SlskClient extends (EventEmitter as new () => TypedEventEmitter<Sls
 
     peer.send('queueUpload', { filename })
 
-    const download: RequestedDownload = {
+    const download: RequestedDownload & { startedAt: number } = {
       status: 'requested',
       username,
       filename,
@@ -522,6 +529,7 @@ export class SlskClient extends (EventEmitter as new () => TypedEventEmitter<Sls
       stream: new stream.PassThrough(),
       events: new EventEmitter() as SlskDownloadEventEmitter,
       requestQueuePosition: () => peer.send('placeInQueueRequest', { filename }),
+      startedAt: Date.now(),
     }
 
     this.downloads.push(download)
@@ -530,6 +538,34 @@ export class SlskClient extends (EventEmitter as new () => TypedEventEmitter<Sls
     peer.send('placeInQueueRequest', { filename })
 
     return download
+  }
+
+  private cleanupStuckDownloads(): void {
+    const now = Date.now()
+    const before = this.downloads.length
+
+    this.downloads = this.downloads.filter((download) => {
+      const downloadWithTime = download as RequestedDownload & { startedAt?: number }
+      if (!downloadWithTime.startedAt) {
+        return true // Keep downloads without timestamp (shouldn't happen)
+      }
+
+      const age = now - downloadWithTime.startedAt
+      if (age > this.DOWNLOAD_TTL) {
+        try {
+          download.stream?.destroy()
+        } catch {
+          // Ignore cleanup errors
+        }
+        return false // Remove from array
+      }
+      return true // Keep in array
+    })
+
+    const cleaned = before - this.downloads.length
+    if (cleaned > 0) {
+      this.emit('client-error', new Error(`Cleaned up ${cleaned} stuck downloads`))
+    }
   }
 
   async getPeerByUsername(username: string, timeout = DEFAULT_GET_PEER_BY_USERNAME_TIMEOUT) {
@@ -656,6 +692,10 @@ export class SlskClient extends (EventEmitter as new () => TypedEventEmitter<Sls
     if (this.reconnectTimeout) {
       clearTimeout(this.reconnectTimeout)
       this.reconnectTimeout = null
+    }
+    if (this.downloadCleanupInterval) {
+      clearInterval(this.downloadCleanupInterval)
+      this.downloadCleanupInterval = null
     }
     this.server.destroy()
     this.listen.destroy()
