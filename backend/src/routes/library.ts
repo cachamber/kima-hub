@@ -187,9 +187,6 @@ router.post("/scan", async (req, res) => {
 
         // Organize any Soulseek downloads and run legacy migration/cleanup
         try {
-            const { organizeSingles } = await import(
-                "../workers/organizeSingles"
-            );
             logger.info("[Scan] Organizing Soulseek downloads before scan...");
             await organizeSingles();
             logger.info("[Scan] Soulseek organization complete");

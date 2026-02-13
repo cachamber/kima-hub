@@ -1,6 +1,5 @@
 import { prisma } from "../utils/db";
 import { logger } from "../utils/logger";
-import { enrichmentFailureService } from "./enrichmentFailureService";
 
 const STALE_THRESHOLD_MINUTES = 30; // Longer than audio analysis due to CLAP processing time
 

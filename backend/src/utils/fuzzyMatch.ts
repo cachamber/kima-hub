@@ -37,7 +37,7 @@ export function normalizeForMatching(str: string): string {
  * - Contains check (substring)
  * - Word overlap
  */
-export function calculateSimilarity(str1: string, str2: string): number {
+function calculateSimilarity(str1: string, str2: string): number {
     const normalized1 = normalizeForMatching(str1);
     const normalized2 = normalizeForMatching(str2);
 

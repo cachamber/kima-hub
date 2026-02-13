@@ -36,47 +36,11 @@ export function canonicalizeVariousArtists(name: string): string {
 }
 
 /**
- * Check if a platform-specific artist ID is Various Artists
- */
-export function isVariousArtistsById(platform: 'deezer' | 'spotify', id: string | number): boolean {
-    if (platform === 'deezer' && String(id) === '5080') {
-        return true;
-    }
-    // Add other platform IDs as needed
-    return false;
-}
-
-/**
  * Strip diacritics/accents from a string
  * e.g., "Ólafur" → "Olafur", "Björk" → "Bjork"
  */
 function stripDiacritics(str: string): string {
     return str.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-}
-
-/**
- * Check if a string contains any diacritics/accents
- * Used to prefer the accented version when merging duplicates
- */
-export function hasDiacritics(str: string): boolean {
-    return str !== stripDiacritics(str);
-}
-
-/**
- * Given two artist names, return the "preferred" one
- * Prefers the accented version as it's likely the official spelling
- * e.g., "Olafur Arnalds" vs "Ólafur Arnalds" → "Ólafur Arnalds"
- */
-export function getPreferredArtistName(name1: string, name2: string): string {
-    const has1 = hasDiacritics(name1);
-    const has2 = hasDiacritics(name2);
-    
-    // If one has accents and the other doesn't, prefer the accented one
-    if (has2 && !has1) return name2;
-    if (has1 && !has2) return name1;
-    
-    // If both or neither have accents, prefer the longer/more complete one
-    return name1.length >= name2.length ? name1 : name2;
 }
 
 /**
@@ -173,37 +137,6 @@ export function areArtistNamesSimilar(
     // Use fuzzy matching to catch typos
     const similarity = fuzz.ratio(normalized1, normalized2);
     return similarity >= threshold;
-}
-
-/**
- * Find the best matching artist from a list of candidates
- * @param targetName The name to match
- * @param candidates List of candidate artist names
- * @param threshold Minimum similarity score (0-100), default 95
- * @returns The best matching artist name, or null if no good match
- */
-export function findBestArtistMatch(
-    targetName: string,
-    candidates: string[],
-    threshold: number = 95
-): string | null {
-    if (targetName == null || !candidates?.length) return null;
-    const normalizedTarget = normalizeArtistName(targetName);
-
-    let bestMatch: string | null = null;
-    let bestScore = 0;
-
-    for (const candidate of candidates) {
-        const normalizedCandidate = normalizeArtistName(candidate);
-        const score = fuzz.ratio(normalizedTarget, normalizedCandidate);
-
-        if (score >= threshold && score > bestScore) {
-            bestScore = score;
-            bestMatch = candidate;
-        }
-    }
-
-    return bestMatch;
 }
 
 /**

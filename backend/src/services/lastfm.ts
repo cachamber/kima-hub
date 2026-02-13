@@ -3,7 +3,6 @@ import { logger } from "../utils/logger";
 import * as fuzz from "fuzzball";
 import { config } from "../config";
 import { redisClient } from "../utils/redis";
-import { getSystemSettings } from "../utils/systemSettings";
 import { fanartService } from "./fanart";
 import { deezerService } from "./deezer";
 import { rateLimiter } from "./rateLimiter";

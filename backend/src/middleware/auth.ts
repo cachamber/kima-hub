@@ -27,15 +27,7 @@ declare global {
     }
 }
 
-export interface AuthenticatedRequest extends Request {
-    user: {
-        id: string;
-        username: string;
-        role: string;
-    };
-}
-
-export interface JWTPayload {
+interface JWTPayload {
     userId: string;
     username: string;
     role: string;

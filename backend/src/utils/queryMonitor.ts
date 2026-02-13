@@ -23,11 +23,3 @@ export function enableSlowQueryMonitoring() {
         `Slow query monitoring enabled (threshold: ${SLOW_QUERY_THRESHOLD_MS}ms)`
     );
 }
-
-/**
- * Log query statistics for debugging
- */
-export async function logQueryStats() {
-    const stats = await (prisma as any).$metrics?.json();
-    logger.debug("Database Query Stats:", JSON.stringify(stats, null, 2));
-}

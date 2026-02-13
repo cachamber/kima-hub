@@ -16,7 +16,6 @@ class FanartService {
     private client: AxiosInstance;
     private apiKey: string | null = null;
     private initialized: boolean = false;
-    private noKeyWarningShown: boolean = false;
 
     constructor() {
         this.client = axios.create({
