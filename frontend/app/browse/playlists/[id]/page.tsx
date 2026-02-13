@@ -20,14 +20,12 @@ import { useToast } from "@/lib/toast-context";
 import { cn } from "@/utils/cn";
 import { GradientSpinner } from "@/components/ui/GradientSpinner";
 
-// Deezer icon component
 const DeezerIcon = ({ className }: { className?: string }) => (
     <svg viewBox="0 0 24 24" className={className} fill="currentColor">
         <path d="M18.81 4.16v3.03H24V4.16h-5.19zM6.27 8.38v3.027h5.189V8.38h-5.19zm12.54 0v3.027H24V8.38h-5.19zM6.27 12.595v3.027h5.189v-3.027h-5.19zm6.27 0v3.027h5.19v-3.027h-5.19zm6.27 0v3.027H24v-3.027h-5.19zM0 16.81v3.029h5.19v-3.03H0zm6.27 0v3.029h5.189v-3.03h-5.19zm6.27 0v3.029h5.19v-3.03h-5.19zm6.27 0v3.029H24v-3.03h-5.19z" />
     </svg>
 );
 
-// Types for Deezer playlist
 interface DeezerTrack {
     deezerId: string;
     title: string;
@@ -59,20 +57,17 @@ export default function DeezerPlaylistDetailPage() {
     const { toast } = useToast();
     const playlistId = params.id as string;
 
-    // State
     const [playlist, setPlaylist] = useState<DeezerPlaylistFull | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [isImporting] = useState(false);
 
-    // Preview playback state
     const [playingTrackId, setPlayingTrackId] = useState<string | null>(null);
     const [isPreviewPlaying, setIsPreviewPlaying] = useState(false);
     const [previewVolume] = useState(0.5);
     const [isMuted, setIsMuted] = useState(false);
     const audioRef = useRef<HTMLAudioElement | null>(null);
 
-    // Fetch playlist data
     useEffect(() => {
         async function fetchPlaylist() {
             setIsLoading(true);
@@ -83,37 +78,32 @@ export default function DeezerPlaylistDetailPage() {
                 );
                 setPlaylist(data);
             } catch (err) {
-                const message =
-                    err instanceof Error
-                        ? err.message
-                        : "Failed to load playlist";
+                const message = err instanceof Error ? err.message : "Failed to load playlist";
                 setError(message);
             } finally {
                 setIsLoading(false);
             }
         }
-
         fetchPlaylist();
     }, [playlistId]);
 
-    // Cleanup audio on unmount
     useEffect(() => {
         return () => {
             if (audioRef.current) {
                 audioRef.current.pause();
+                audioRef.current.src = "";
+                audioRef.current.load();
                 audioRef.current = null;
             }
         };
     }, []);
 
-    // Handle preview playback
     const handlePlayPreview = (track: DeezerTrack) => {
         if (!track.previewUrl) {
             toast.error("No preview available for this track");
             return;
         }
 
-        // If clicking the same track, toggle play/pause
         if (playingTrackId === track.deezerId) {
             if (isPreviewPlaying && audioRef.current) {
                 audioRef.current.pause();
@@ -125,12 +115,12 @@ export default function DeezerPlaylistDetailPage() {
             return;
         }
 
-        // Stop current preview
         if (audioRef.current) {
             audioRef.current.pause();
+            audioRef.current.src = "";
+            audioRef.current.load();
         }
 
-        // Play new preview
         const audio = new Audio(track.previewUrl);
         audio.volume = isMuted ? 0 : previewVolume;
         audioRef.current = audio;
@@ -154,17 +144,17 @@ export default function DeezerPlaylistDetailPage() {
         setIsPreviewPlaying(true);
     };
 
-    // Stop preview
     const stopPreview = () => {
         if (audioRef.current) {
             audioRef.current.pause();
+            audioRef.current.src = "";
+            audioRef.current.load();
             audioRef.current = null;
         }
         setPlayingTrackId(null);
         setIsPreviewPlaying(false);
     };
 
-    // Toggle mute
     const toggleMute = () => {
         if (audioRef.current) {
             audioRef.current.volume = isMuted ? previewVolume : 0;
@@ -172,34 +162,23 @@ export default function DeezerPlaylistDetailPage() {
         setIsMuted(!isMuted);
     };
 
-    // Handle import/download
     const handleImport = () => {
         if (!playlist) return;
-        // Navigate to import page with the Deezer URL
-        router.push(
-            `/import/spotify?url=${encodeURIComponent(playlist.url)}`
-        );
+        router.push(`/import/spotify?url=${encodeURIComponent(playlist.url)}`);
     };
 
-
-    // Calculate total duration
-    const totalDuration = playlist?.tracks.reduce(
-        (sum, track) => sum + track.durationMs,
-        0
-    ) || 0;
+    const totalDuration = playlist?.tracks.reduce((sum, track) => sum + track.durationMs, 0) || 0;
 
     const formatTotalDuration = (ms: number) => {
         const hours = Math.floor(ms / 3600000);
         const mins = Math.floor((ms % 3600000) / 60000);
-        if (hours > 0) {
-            return `about ${hours} hr ${mins} min`;
-        }
+        if (hours > 0) return `${hours} hr ${mins} min`;
         return `${mins} min`;
     };
 
     if (isLoading) {
         return (
-            <div className="flex items-center justify-center min-h-screen">
+            <div className="flex items-center justify-center min-h-screen bg-[#0a0a0a]">
                 <GradientSpinner size="md" />
             </div>
         );
@@ -207,37 +186,31 @@ export default function DeezerPlaylistDetailPage() {
 
     if (error || !playlist) {
         return (
-            <div className="min-h-screen relative">
-                <div className="absolute inset-0 pointer-events-none">
-                    <div
-                        className="absolute inset-0 bg-gradient-to-b from-[#AD47FF]/15 via-purple-900/10 to-transparent"
-                        style={{ height: "35vh" }}
-                    />
-                </div>
-                <div className="relative px-4 md:px-8 py-6">
-                    <button
-                        onClick={() => router.back()}
-                        className="flex items-center gap-2 text-gray-400 hover:text-white transition-colors mb-8"
-                    >
-                        <ArrowLeft className="w-5 h-5" />
-                        Back
-                    </button>
-                    <div className="flex flex-col items-center justify-center py-20 text-center">
-                        <div className="w-16 h-16 rounded-full bg-white/5 flex items-center justify-center mb-4">
-                            <Music2 className="w-8 h-8 text-gray-500" />
-                        </div>
-                        <h3 className="text-lg font-medium text-white mb-2">
-                            Playlist not found
-                        </h3>
-                        <p className="text-sm text-gray-400 mb-6 max-w-sm">
-                            {error || "This playlist may be private or no longer available."}
-                        </p>
+            <div className="min-h-screen bg-gradient-to-b from-[#0a0a0a] to-black">
+                <div className="relative px-4 md:px-8 pt-8">
+                    <div className="max-w-[1800px] mx-auto">
                         <button
                             onClick={() => router.push("/browse/playlists")}
-                            className="px-6 py-2.5 rounded-full bg-white text-black text-sm font-medium hover:scale-105 transition-transform"
+                            className="flex items-center gap-2 text-xs font-mono text-white/40 hover:text-white transition-colors mb-8 uppercase tracking-wider"
                         >
-                            Browse playlists
+                            <ArrowLeft className="w-3.5 h-3.5" />
+                            Browse
                         </button>
+                        <div className="flex flex-col items-center justify-center py-20 text-center">
+                            <Music2 className="w-12 h-12 text-white/10 mb-4" />
+                            <h3 className="text-lg font-black text-white mb-2 tracking-tight">
+                                Playlist not found
+                            </h3>
+                            <p className="text-xs font-mono text-white/40 mb-6 max-w-sm uppercase tracking-wider">
+                                {error || "This playlist may be private or no longer available."}
+                            </p>
+                            <button
+                                onClick={() => router.push("/browse/playlists")}
+                                className="px-6 py-2.5 rounded-lg bg-[#a855f7] hover:bg-[#9333ea] text-white text-xs font-black uppercase tracking-wider transition-all"
+                            >
+                                Browse playlists
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -245,248 +218,276 @@ export default function DeezerPlaylistDetailPage() {
     }
 
     return (
-        <div className="min-h-screen">
+        <div className="min-h-screen bg-gradient-to-b from-[#0a0a0a] to-black">
             {/* Hero Section */}
-            <div className="relative bg-gradient-to-b from-[#AD47FF]/20 via-[#1a1a1a] to-transparent pt-16 pb-10 px-4 md:px-8">
-                <div className="flex items-end gap-6">
-                    {/* Cover Art */}
-                    <div className="relative w-[140px] h-[140px] md:w-[192px] md:h-[192px] bg-[#282828] rounded shadow-2xl shrink-0 overflow-hidden">
-                        {playlist.imageUrl ? (
+            <div className="relative">
+                {/* Background */}
+                {playlist.imageUrl && (
+                    <div className="absolute inset-0 overflow-hidden">
+                        <div className="absolute inset-0 scale-110 blur-md opacity-30">
                             <Image
                                 src={playlist.imageUrl}
                                 alt={playlist.title}
                                 fill
-                                sizes="(max-width: 768px) 140px, 192px"
+                                sizes="100vw"
                                 className="object-cover"
                                 unoptimized
                             />
-                        ) : (
-                            <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-[#AD47FF]/30 to-[#AD47FF]/10">
-                                <Music2 className="w-16 h-16 text-gray-600" />
-                            </div>
-                        )}
-                    </div>
-
-                    {/* Playlist Info */}
-                    <div className="flex-1 min-w-0 pb-1">
-                        <div className="flex items-center gap-2 mb-1">
-                            <DeezerIcon className="w-4 h-4 text-[#AD47FF]" />
-                            <p className="text-xs font-medium text-white/90">
-                                Deezer Playlist
-                            </p>
                         </div>
-                        <h1 className="text-2xl md:text-4xl lg:text-5xl font-bold text-white leading-tight line-clamp-2 mb-2">
-                            {playlist.title}
-                        </h1>
-                        {playlist.description && (
-                            <p className="text-sm text-gray-400 line-clamp-2 mb-2">
-                                {playlist.description}
-                            </p>
-                        )}
-                        <div className="flex items-center gap-1 text-sm text-white/70">
-                            <span className="font-medium text-white">
-                                {playlist.creator}
+                        <div className="absolute inset-0 bg-gradient-to-b from-[#a855f7]/10 via-[#0a0a0a]/90 to-[#0a0a0a]" />
+                    </div>
+                )}
+
+                <div className="relative px-4 md:px-8 pt-8 pb-6">
+                    <div className="max-w-[1800px] mx-auto">
+                        {/* Back navigation */}
+                        <button
+                            onClick={() => router.push("/browse/playlists")}
+                            className="flex items-center gap-2 text-xs font-mono text-white/40 hover:text-white transition-colors mb-6 uppercase tracking-wider"
+                        >
+                            <ArrowLeft className="w-3.5 h-3.5" />
+                            Browse
+                        </button>
+
+                        {/* System status */}
+                        <div className="flex items-center gap-2 mb-4">
+                            <DeezerIcon className="w-3.5 h-3.5 text-[#a855f7]" />
+                            <span className="text-xs font-mono text-white/50 uppercase tracking-wider">
+                                Deezer Playlist
                             </span>
-                            <span className="mx-1">•</span>
-                            <span>{playlist.trackCount} songs</span>
-                            {totalDuration > 0 && (
-                                <>
-                                    <span>, {formatTotalDuration(totalDuration)}</span>
-                                </>
-                            )}
+                        </div>
+
+                        <div className="flex items-end gap-6">
+                            {/* Cover Art */}
+                            <div className="w-[140px] h-[140px] md:w-[192px] md:h-[192px] bg-[#0a0a0a] rounded-lg shadow-2xl shrink-0 overflow-hidden relative border-2 border-white/10">
+                                {playlist.imageUrl ? (
+                                    <Image
+                                        src={playlist.imageUrl}
+                                        alt={playlist.title}
+                                        fill
+                                        sizes="(max-width: 768px) 140px, 192px"
+                                        className="object-cover"
+                                        unoptimized
+                                    />
+                                ) : (
+                                    <div className="w-full h-full flex items-center justify-center">
+                                        <Music2 className="w-16 h-16 text-white/10" />
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Info */}
+                            <div className="flex-1 min-w-0 pb-1">
+                                <h1 className="text-2xl md:text-4xl lg:text-5xl font-black text-white leading-tight line-clamp-2 mb-2 tracking-tighter">
+                                    {playlist.title}
+                                </h1>
+                                {playlist.description && (
+                                    <p className="text-sm text-white/40 line-clamp-2 mb-3 hidden md:block">
+                                        {playlist.description}
+                                    </p>
+                                )}
+                                <div className="flex flex-wrap items-center gap-3 text-xs font-mono text-white/50 uppercase tracking-wider">
+                                    <span className="font-black text-white normal-case tracking-tight text-sm">
+                                        {playlist.creator}
+                                    </span>
+                                    <span className="text-white/20">|</span>
+                                    <span>{playlist.trackCount} songs</span>
+                                    {totalDuration > 0 && (
+                                        <>
+                                            <span className="text-white/20">|</span>
+                                            <span>{formatTotalDuration(totalDuration)}</span>
+                                        </>
+                                    )}
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
-            </div>
 
-            {/* Action Bar */}
-            <div className="bg-gradient-to-b from-[#1a1a1a]/60 to-transparent px-4 md:px-8 py-4">
-                <div className="flex items-center gap-4">
-                    {/* Download/Import Button */}
-                    <button
-                        onClick={handleImport}
-                        disabled={isImporting}
-                        className="h-12 px-6 rounded-full bg-[#ecb200] hover:bg-[#d4a000] hover:scale-105 flex items-center justify-center gap-2 shadow-lg transition-all disabled:opacity-50 disabled:hover:scale-100"
-                    >
-                        {isImporting ? (
-                            <Loader2 className="w-5 h-5 text-black animate-spin" />
-                        ) : (
-                            <Download className="w-5 h-5 text-black" />
-                        )}
-                        <span className="text-black font-medium">
-                            {isImporting ? "Importing..." : "Download & Create Playlist"}
-                        </span>
-                    </button>
-
-                    {/* Volume Control (when playing preview) */}
-                    {playingTrackId && (
-                        <div className="flex items-center gap-2">
+                {/* Action Bar */}
+                <div className="relative px-4 md:px-8 pb-4">
+                    <div className="max-w-[1800px] mx-auto">
+                        <div className="flex items-center gap-3">
+                            {/* Download/Import Button */}
                             <button
-                                onClick={toggleMute}
-                                className="p-2 rounded-full hover:bg-white/10 text-white/60 hover:text-white transition-all"
+                                onClick={handleImport}
+                                disabled={isImporting}
+                                className="h-10 px-5 rounded-lg bg-[#a855f7] hover:bg-[#9333ea] transition-all flex items-center gap-2 font-black text-sm text-white uppercase tracking-wider disabled:opacity-50 hover:scale-[1.02] active:scale-[0.98]"
                             >
-                                {isMuted ? (
-                                    <VolumeX className="w-5 h-5" />
+                                {isImporting ? (
+                                    <Loader2 className="w-4 h-4 animate-spin" />
                                 ) : (
-                                    <Volume2 className="w-5 h-5" />
+                                    <Download className="w-4 h-4" />
                                 )}
+                                <span>{isImporting ? "Importing" : "Import Playlist"}</span>
                             </button>
-                            <button
-                                onClick={stopPreview}
-                                className="px-3 py-1.5 rounded-full bg-white/10 text-sm text-white hover:bg-white/20 transition-colors"
+
+                            {/* Volume Control */}
+                            {playingTrackId && (
+                                <div className="flex items-center gap-2">
+                                    <button
+                                        onClick={toggleMute}
+                                        className="p-2 rounded-lg text-white/40 hover:text-white hover:bg-white/5 border border-transparent hover:border-white/10 transition-all"
+                                    >
+                                        {isMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
+                                    </button>
+                                    <button
+                                        onClick={stopPreview}
+                                        className="px-3 py-1.5 rounded-lg text-xs font-mono uppercase tracking-wider bg-white/5 text-white/50 hover:bg-white/10 hover:text-white border border-white/10 transition-all"
+                                    >
+                                        Stop Preview
+                                    </button>
+                                </div>
+                            )}
+
+                            <div className="flex-1" />
+
+                            {/* Open in Deezer */}
+                            <a
+                                href={playlist.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="p-2.5 rounded-lg text-white/40 hover:text-white hover:bg-white/5 border border-transparent hover:border-white/10 transition-all"
+                                title="Open in Deezer"
                             >
-                                Stop Preview
-                            </button>
+                                <ExternalLink className="w-4 h-4" />
+                            </a>
                         </div>
-                    )}
-
-                    {/* Spacer */}
-                    <div className="flex-1" />
-
-                    {/* Open in Deezer */}
-                    <a
-                        href={playlist.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 hover:bg-white/20 text-white text-sm font-medium transition-colors"
-                    >
-                        <ExternalLink className="w-4 h-4" />
-                        <span className="hidden sm:inline">Open in Deezer</span>
-                    </a>
+                    </div>
                 </div>
             </div>
 
             {/* Track Listing */}
-            <div className="px-4 md:px-8 pb-32">
-                {playlist.tracks.length > 0 ? (
-                    <div className="w-full">
-                        {/* Table Header */}
-                        <div className="hidden md:grid grid-cols-[40px_minmax(200px,4fr)_minmax(100px,1fr)_80px] gap-4 px-4 py-2 text-xs text-gray-400 uppercase tracking-wider border-b border-white/10 mb-2">
-                            <span className="text-center">#</span>
-                            <span>Title</span>
-                            <span>Album</span>
-                            <span className="text-right">Duration</span>
-                        </div>
+            <div className="relative px-4 md:px-8 pb-32">
+                <div className="max-w-[1800px] mx-auto">
+                    {playlist.tracks.length > 0 ? (
+                        <div className="animate-slide-up" style={{ animationDelay: "0s" }}>
+                            <div className="flex items-center gap-3 mb-6">
+                                <span className="w-1 h-8 bg-gradient-to-b from-[#a855f7] to-[#c026d3] rounded-full shrink-0" />
+                                <h2 className="text-2xl font-black tracking-tighter uppercase">Tracks</h2>
+                                <span className="text-xs font-mono text-[#a855f7]">
+                                    {playlist.trackCount}
+                                </span>
+                                <span className="flex-1 border-t border-white/10" />
+                            </div>
 
-                        {/* Track Rows */}
-                        <div>
-                            {playlist.tracks.map((track, index) => {
-                                const isCurrentlyPlaying =
-                                    playingTrackId === track.deezerId;
-                                const hasPreview = !!track.previewUrl;
+                            {/* Table Header */}
+                            <div className="hidden md:grid grid-cols-[40px_minmax(200px,4fr)_minmax(100px,1fr)_80px] gap-4 px-3 py-2 text-[10px] font-mono text-white/30 uppercase tracking-wider border-b border-white/10 mb-1">
+                                <span className="text-center">#</span>
+                                <span>Title</span>
+                                <span>Album</span>
+                                <span className="text-right">Duration</span>
+                            </div>
 
-                                return (
-                                    <div
-                                        key={track.deezerId}
-                                        onClick={() =>
-                                            hasPreview && handlePlayPreview(track)
-                                        }
-                                        className={cn(
-                                            "grid grid-cols-[40px_1fr_auto] md:grid-cols-[40px_minmax(200px,4fr)_minmax(100px,1fr)_80px] gap-4 px-4 py-2 rounded-md transition-colors group",
-                                            hasPreview
-                                                ? "hover:bg-white/5 cursor-pointer"
-                                                : "opacity-60 cursor-not-allowed",
-                                            isCurrentlyPlaying && "bg-white/10"
-                                        )}
-                                    >
-                                        {/* Track Number / Play Icon */}
-                                        <div className="flex items-center justify-center">
-                                            {hasPreview ? (
-                                                <>
-                                                    <span
-                                                        className={cn(
-                                                            "text-sm group-hover:hidden",
-                                                            isCurrentlyPlaying
-                                                                ? "text-[#AD47FF]"
-                                                                : "text-gray-400"
-                                                        )}
-                                                    >
-                                                        {isCurrentlyPlaying &&
-                                                        isPreviewPlaying ? (
-                                                            <Pause className="w-4 h-4 text-[#AD47FF]" />
-                                                        ) : (
-                                                            index + 1
-                                                        )}
-                                                    </span>
-                                                    <Play className="w-4 h-4 text-white hidden group-hover:block" />
-                                                </>
-                                            ) : (
-                                                <span className="text-sm text-gray-600">
-                                                    {index + 1}
-                                                </span>
+                            <div className="space-y-0.5">
+                                {playlist.tracks.map((track, index) => {
+                                    const isCurrentlyPlaying = playingTrackId === track.deezerId;
+                                    const hasPreview = !!track.previewUrl;
+
+                                    return (
+                                        <div
+                                            key={track.deezerId}
+                                            onClick={() => hasPreview && handlePlayPreview(track)}
+                                            className={cn(
+                                                "grid grid-cols-[40px_1fr_auto] md:grid-cols-[40px_minmax(200px,4fr)_minmax(100px,1fr)_80px] gap-4 px-3 py-2 rounded-lg transition-all group",
+                                                hasPreview
+                                                    ? "hover:bg-white/[0.03] cursor-pointer"
+                                                    : "opacity-40 cursor-not-allowed",
+                                                isCurrentlyPlaying && "bg-white/5 border border-[#a855f7]/30"
                                             )}
-                                        </div>
-
-                                        {/* Title + Artist */}
-                                        <div className="flex items-center gap-3 min-w-0">
-                                            <div className="relative w-10 h-10 bg-[#282828] rounded shrink-0 overflow-hidden">
-                                                {track.coverUrl ? (
-                                                    <Image
-                                                        src={track.coverUrl}
-                                                        alt={track.title}
-                                                        fill
-                                                        sizes="40px"
-                                                        className="object-cover"
-                                                        unoptimized
-                                                    />
+                                        >
+                                            {/* Track Number / Play */}
+                                            <div className="flex items-center justify-center">
+                                                {hasPreview ? (
+                                                    <>
+                                                        <span className={cn(
+                                                            "text-xs font-mono group-hover:hidden",
+                                                            isCurrentlyPlaying ? "hidden" : "text-white/30"
+                                                        )}>
+                                                            {isCurrentlyPlaying && isPreviewPlaying ? (
+                                                                <Pause className="w-4 h-4 text-[#a855f7]" />
+                                                            ) : (
+                                                                index + 1
+                                                            )}
+                                                        </span>
+                                                        {isCurrentlyPlaying && isPreviewPlaying ? (
+                                                            <Pause className="w-4 h-4 text-[#a855f7] hidden group-hover:block" />
+                                                        ) : (
+                                                            <Play className="w-4 h-4 text-white hidden group-hover:block" />
+                                                        )}
+                                                    </>
                                                 ) : (
-                                                    <div className="w-full h-full flex items-center justify-center">
-                                                        <Music2 className="w-5 h-5 text-gray-600" />
-                                                    </div>
+                                                    <span className="text-xs font-mono text-white/20">
+                                                        {index + 1}
+                                                    </span>
                                                 )}
                                             </div>
-                                            <div className="min-w-0">
-                                                <p
-                                                    className={cn(
-                                                        "text-sm font-medium truncate",
-                                                        isCurrentlyPlaying
-                                                            ? "text-[#AD47FF]"
-                                                            : "text-white"
+
+                                            {/* Title + Artist */}
+                                            <div className="flex items-center gap-3 min-w-0">
+                                                <div className="relative w-10 h-10 bg-[#0a0a0a] rounded border border-white/10 shrink-0 overflow-hidden">
+                                                    {track.coverUrl ? (
+                                                        <Image
+                                                            src={track.coverUrl}
+                                                            alt={track.title}
+                                                            fill
+                                                            sizes="40px"
+                                                            className="object-cover"
+                                                            unoptimized
+                                                        />
+                                                    ) : (
+                                                        <div className="w-full h-full flex items-center justify-center">
+                                                            <Music2 className="w-4 h-4 text-white/10" />
+                                                        </div>
                                                     )}
-                                                >
-                                                    {track.title}
-                                                </p>
-                                                <p className="text-xs text-gray-400 truncate">
-                                                    {track.artist}
-                                                </p>
+                                                </div>
+                                                <div className="min-w-0">
+                                                    <p className={cn(
+                                                        "text-sm font-black truncate tracking-tight",
+                                                        isCurrentlyPlaying ? "text-[#a855f7]" : "text-white"
+                                                    )}>
+                                                        {track.title}
+                                                    </p>
+                                                    <p className="text-[10px] font-mono text-white/40 truncate uppercase tracking-wider">
+                                                        {track.artist}
+                                                    </p>
+                                                </div>
+                                            </div>
+
+                                            {/* Album */}
+                                            <p className="hidden md:flex items-center text-xs font-mono text-white/30 truncate uppercase tracking-wider">
+                                                {track.album}
+                                            </p>
+
+                                            {/* Duration */}
+                                            <div className="flex items-center justify-end">
+                                                <span className="text-[10px] font-mono text-white/30 uppercase tracking-wider">
+                                                    {formatTime(Math.round(track.durationMs / 1000))}
+                                                </span>
                                             </div>
                                         </div>
-
-                                        {/* Album (hidden on mobile) */}
-                                        <p className="hidden md:flex items-center text-sm text-gray-400 truncate">
-                                            {track.album}
-                                        </p>
-
-                                        {/* Duration */}
-                                        <div className="flex items-center justify-end">
-                                            <span className="text-sm text-gray-400">
-                                                {formatTime(Math.round(track.durationMs / 1000))}
-                                            </span>
-                                        </div>
-                                    </div>
-                                );
-                            })}
+                                    );
+                                })}
+                            </div>
                         </div>
-                    </div>
-                ) : (
-                    <div className="flex flex-col items-center justify-center py-24 text-center">
-                        <div className="w-20 h-20 bg-[#282828] rounded-full flex items-center justify-center mb-4">
-                            <Music2 className="w-10 h-10 text-gray-500" />
+                    ) : (
+                        <div className="flex flex-col items-center justify-center py-24 text-center">
+                            <Music2 className="w-12 h-12 text-white/10 mb-4" />
+                            <h3 className="text-lg font-black text-white mb-2 tracking-tight">
+                                No tracks found
+                            </h3>
+                            <p className="text-xs font-mono text-white/40 uppercase tracking-wider">
+                                This playlist appears to be empty
+                            </p>
                         </div>
-                        <h3 className="text-lg font-medium text-white mb-1">
-                            No tracks found
-                        </h3>
-                        <p className="text-sm text-gray-500">
-                            This playlist appears to be empty
-                        </p>
-                    </div>
-                )}
+                    )}
+                </div>
             </div>
 
             {/* Preview indicator */}
             {playingTrackId && (
-                <div className="fixed bottom-24 left-1/2 -translate-x-1/2 px-4 py-2 bg-[#AD47FF] rounded-full text-black text-sm font-medium shadow-lg flex items-center gap-2 z-50">
-                    <div className="w-2 h-2 rounded-full bg-black animate-pulse" />
+                <div className="fixed bottom-24 left-1/2 -translate-x-1/2 px-4 py-2 bg-[#a855f7] rounded-lg text-white text-xs font-black uppercase tracking-wider shadow-lg shadow-[#a855f7]/20 flex items-center gap-2 z-50">
+                    <div className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
                     Playing 30s preview
                 </div>
             )}
