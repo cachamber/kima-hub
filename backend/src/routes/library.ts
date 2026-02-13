@@ -46,6 +46,53 @@ import { resizeImageBuffer, getResizedImagePath } from "../services/imageStorage
 
 const router = Router();
 
+/**
+ * Per-user active stream tracking.
+ * Limits concurrent audio streams to prevent resource exhaustion from
+ * zombie connections or misbehaving clients.
+ */
+const MAX_CONCURRENT_STREAMS = 2;
+interface ActiveStream { res: Response; trackId: string; startedAt: number }
+const activeStreams = new Map<string, Set<ActiveStream>>();
+
+function registerStream(userId: string, trackId: string, res: Response): void {
+    if (!activeStreams.has(userId)) {
+        activeStreams.set(userId, new Set());
+    }
+    const streams = activeStreams.get(userId)!;
+
+    // If at limit, close the oldest stream
+    if (streams.size >= MAX_CONCURRENT_STREAMS) {
+        let oldest: ActiveStream | null = null;
+        for (const s of streams) {
+            if (!oldest || s.startedAt < oldest.startedAt) {
+                oldest = s;
+            }
+        }
+        if (oldest) {
+            try {
+                if (!oldest.res.writableEnded) {
+                    oldest.res.end();
+                }
+            } catch {
+                // Stream may already be closed
+            }
+            streams.delete(oldest);
+        }
+    }
+
+    const entry: ActiveStream = { res, trackId, startedAt: Date.now() };
+    streams.add(entry);
+
+    // Auto-remove when stream closes
+    res.on("close", () => {
+        streams.delete(entry);
+        if (streams.size === 0) {
+            activeStreams.delete(userId);
+        }
+    });
+}
+
 const ARTIST_SORT_MAP: Record<string, any> = {
     "name": { name: "asc" as const },
     "name-desc": { name: "desc" as const },
@@ -2268,6 +2315,9 @@ router.get("/tracks/:id/stream", async (req, res) => {
             logger.debug("[STREAM] No userId in session - unauthorized");
             return res.status(401).json({ error: "Unauthorized" });
         }
+
+        // Register this stream for per-user concurrency limiting
+        registerStream(userId, req.params.id, res);
 
         const track = await prisma.track.findUnique({
             where: { id: req.params.id },
