@@ -16,6 +16,7 @@ import {
     useEffect,
     useLayoutEffect,
     useRef,
+    useState,
     memo,
     useCallback,
 } from "react";
@@ -141,6 +142,8 @@ export const HowlerAudioElement = memo(function HowlerAudioElement() {
     const seekCompleteTimeoutRef = useRef<NodeJS.Timeout | null>(null);
     // Loading timeout -- prevents stuck LOADING state if Howler never fires load/loaderror
     const loadingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+    // Counter to force load effect to re-run (e.g., when silent pre-load failed and user presses play)
+    const [loadRetrigger, setLoadRetrigger] = useState(0);
     // Preload management
     const preloadTimeoutRef = useRef<NodeJS.Timeout | null>(null);
     const lastPreloadedTrackIdRef = useRef<string | null>(null);
@@ -495,26 +498,31 @@ export const HowlerAudioElement = memo(function HowlerAudioElement() {
         loadIdRef.current += 1;
         const thisLoadId = loadIdRef.current;
 
-        // Transition state machine to LOADING
-        playbackStateMachine.forceTransition("LOADING");
+        // Only show LOADING spinner if user initiated playback.
+        // On page restore (not playing), load silently to avoid an unnecessary spinner.
+        const isUserInitiated = lastPlayingStateRef.current;
 
-        // Set loading timeout -- if audio never loads/errors, recover after 30s
-        if (loadingTimeoutRef.current) {
-            clearTimeout(loadingTimeoutRef.current);
-        }
-        loadingTimeoutRef.current = setTimeout(() => {
-            loadingTimeoutRef.current = null;
-            if (playbackStateMachine.isLoading) {
-                console.error("[HowlerAudioElement] Load timeout -- recovering from stuck LOADING state");
-                playbackStateMachine.forceTransition("ERROR", {
-                    error: "Audio failed to load -- request timed out",
-                    errorCode: 408,
-                });
-                setIsPlaying(false);
-                setIsBuffering(false);
-                isLoadingRef.current = false;
+        if (isUserInitiated) {
+            playbackStateMachine.forceTransition("LOADING");
+
+            // Set loading timeout -- if audio never loads/errors, recover after 30s
+            if (loadingTimeoutRef.current) {
+                clearTimeout(loadingTimeoutRef.current);
             }
-        }, 30000);
+            loadingTimeoutRef.current = setTimeout(() => {
+                loadingTimeoutRef.current = null;
+                if (playbackStateMachine.isLoading) {
+                    console.error("[HowlerAudioElement] Load timeout -- recovering from stuck LOADING state");
+                    playbackStateMachine.forceTransition("ERROR", {
+                        error: "Audio failed to load -- request timed out",
+                        errorCode: 408,
+                    });
+                    setIsPlaying(false);
+                    setIsBuffering(false);
+                    isLoadingRef.current = false;
+                }
+            }, 30000);
+        }
 
         let streamUrl: string | null = null;
         let startTime = 0;
@@ -581,13 +589,12 @@ export const HowlerAudioElement = memo(function HowlerAudioElement() {
 
                 isLoadingRef.current = false;
 
-                // Transition state machine out of LOADING.
-                // The events effect's handleLoad also does this, but it may be
-                // momentarily unregistered during effect re-runs (e.g., when
-                // savePodcastProgress changes identity due to isBuffering).
-                // This is the authoritative transition -- handleLoad is a backup.
-                if (playbackStateMachine.getState() === "LOADING") {
-                    playbackStateMachine.transition("READY");
+                // Transition state machine to READY.
+                // Uses forceTransition to handle both user-initiated loads (LOADING→READY)
+                // and silent page-restore loads (IDLE→READY, bypasses normal validation).
+                const currentState = playbackStateMachine.getState();
+                if (currentState === "LOADING" || currentState === "IDLE") {
+                    playbackStateMachine.forceTransition("READY");
                 }
 
                 if (startTime > 0) {
@@ -653,8 +660,8 @@ export const HowlerAudioElement = memo(function HowlerAudioElement() {
         } else {
             isLoadingRef.current = false;
         }
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- canSeek/isPlaying/setIsPlaying intentionally excluded: adding them would re-trigger audio loading on play/pause or seek state changes, breaking playback
-    }, [currentTrack, currentAudiobook, currentPodcast, playbackType, setDuration]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- canSeek/isPlaying/setIsPlaying intentionally excluded: adding them would re-trigger audio loading on play/pause or seek state changes, breaking playback. loadRetrigger forces re-run when user presses play after a failed silent pre-load.
+    }, [currentTrack, currentAudiobook, currentPodcast, playbackType, setDuration, loadRetrigger]);
 
     // Preload next track for gapless playback (music only)
     useEffect(() => {
@@ -788,6 +795,13 @@ export const HowlerAudioElement = memo(function HowlerAudioElement() {
         isUserInitiatedRef.current = true;
 
         if (isPlaying) {
+            if (!howlerEngine.hasAudio()) {
+                // No audio loaded (silent pre-load failed or hasn't completed).
+                // Force the load effect to re-run with user-initiated flag.
+                lastTrackIdRef.current = null;
+                setLoadRetrigger(c => c + 1);
+                return;
+            }
             howlerEngine.play();
         } else {
             howlerEngine.pause();

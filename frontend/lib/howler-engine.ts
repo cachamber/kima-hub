@@ -617,6 +617,13 @@ class HowlerEngine {
     }
 
     /**
+     * Check if audio source is loaded (Howl instance exists)
+     */
+    hasAudio(): boolean {
+        return this.howl !== null;
+    }
+
+    /**
      * Subscribe to events
      */
     on(event: HowlerEventType, callback: HowlerEventCallback): void {
