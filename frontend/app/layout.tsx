@@ -12,6 +12,7 @@ import { QueryProvider } from "@/lib/query-client";
 import { ServiceWorkerRegistration } from "@/components/ServiceWorkerRegistration";
 import { GlobalErrorBoundary } from "@/components/providers/GlobalErrorBoundary";
 import { ActivityPanelSettingsProvider } from "@/lib/activity-panel-settings-context";
+import { DisableInitialAnimations } from "@/components/DisableInitialAnimations";
 
 const montserrat = Montserrat({
     weight: ["300", "400", "500", "600", "700", "800"],
@@ -59,17 +60,7 @@ export default function RootLayout({
                 className={`${montserrat.variable} antialiased preload`}
                 style={{ fontFamily: "var(--font-montserrat)" }}
             >
-                <script
-                    dangerouslySetInnerHTML={{
-                        __html: `
-                            requestAnimationFrame(() => {
-                                requestAnimationFrame(() => {
-                                    document.body.classList.remove('preload');
-                                });
-                            });
-                        `,
-                    }}
-                />
+                <DisableInitialAnimations />
                 <GlobalErrorBoundary>
                     <ServiceWorkerRegistration />
                     <AuthProvider>
