@@ -19,6 +19,7 @@ import { simpleDownloadManager } from "./simpleDownloadManager";
 import { musicBrainzService } from "./musicbrainz";
 import { lastFmService } from "./lastfm";
 import { AcquisitionError, AcquisitionErrorType } from "./lidarr";
+import { distributedLock } from "../utils/distributedLock";
 import PQueue from "p-queue";
 
 /**
@@ -770,10 +771,11 @@ class AcquisitionService {
     /**
      * Create a DownloadJob for tracking acquisition
      * Links to Discovery batch or Spotify import job as appropriate
+     * Implements deduplication to prevent duplicate download jobs
      *
      * @param request - Album request
      * @param context - Tracking context
-     * @returns Created download job
+     * @returns Created or existing download job
      */
     private async createDownloadJob(
         request: AlbumAcquisitionRequest,
@@ -800,41 +802,85 @@ class AcquisitionService {
             throw new Error(`Invalid userId in acquisition context: ${context.userId}`);
         }
 
-        const jobData: any = {
-            userId: context.userId,
-            subject: `${request.artistName} - ${request.albumTitle}`,
-            type: "album",
-            targetMbid: request.mbid || null,
-            status: "pending",
-            metadata: {
-                artistName: request.artistName,
-                albumTitle: request.albumTitle,
-                albumMbid: request.mbid,
+        if (!request.mbid) {
+            throw new Error('Album MBID required for download job creation');
+        }
+
+        // Check for existing active download job (before acquiring lock)
+        const existingJob = await prisma.downloadJob.findFirst({
+            where: {
+                userId: context.userId,
+                targetMbid: request.mbid,
+                discoveryBatchId: context.discoveryBatchId || null,
+                status: { in: ['pending', 'downloading'] },
             },
-        };
-
-        // Add context-based tracking
-        if (context.discoveryBatchId) {
-            jobData.discoveryBatchId = context.discoveryBatchId;
-            jobData.metadata.downloadType = "discovery";
-        }
-
-        if (context.spotifyImportJobId) {
-            jobData.metadata.spotifyImportJobId = context.spotifyImportJobId;
-            jobData.metadata.downloadType = "spotify_import";
-        }
-
-        const job = await prisma.downloadJob.create({
-            data: jobData,
         });
 
-        logger.debug(
-            `[Acquisition] Created download job: ${job.id} (type: ${
-                jobData.metadata.downloadType || "library"
-            })`
-        );
+        if (existingJob) {
+            logger.info(
+                `[Acquisition] Download job already exists for album ${request.mbid}, returning existing job ${existingJob.id}`
+            );
+            return existingJob;
+        }
 
-        return job;
+        // Use distributed lock to prevent race condition
+        const lockKey = `download-job:${context.userId}:${request.mbid}:${context.discoveryBatchId || 'null'}`;
+
+        return await distributedLock.withLock(lockKey, 5000, async () => {
+            // Double-check after acquiring lock (another request might have created it)
+            const doubleCheck = await prisma.downloadJob.findFirst({
+                where: {
+                    userId: context.userId,
+                    targetMbid: request.mbid,
+                    discoveryBatchId: context.discoveryBatchId || null,
+                    status: { in: ['pending', 'downloading'] },
+                },
+            });
+
+            if (doubleCheck) {
+                logger.info(
+                    `[Acquisition] Download job created by concurrent request, returning existing job ${doubleCheck.id}`
+                );
+                return doubleCheck;
+            }
+
+            // Create new download job
+            const jobData: any = {
+                userId: context.userId,
+                subject: `${request.artistName} - ${request.albumTitle}`,
+                type: "album",
+                targetMbid: request.mbid,
+                status: "pending",
+                metadata: {
+                    artistName: request.artistName,
+                    albumTitle: request.albumTitle,
+                    albumMbid: request.mbid,
+                },
+            };
+
+            // Add context-based tracking
+            if (context.discoveryBatchId) {
+                jobData.discoveryBatchId = context.discoveryBatchId;
+                jobData.metadata.downloadType = "discovery";
+            }
+
+            if (context.spotifyImportJobId) {
+                jobData.metadata.spotifyImportJobId = context.spotifyImportJobId;
+                jobData.metadata.downloadType = "spotify_import";
+            }
+
+            const job = await prisma.downloadJob.create({
+                data: jobData,
+            });
+
+            logger.debug(
+                `[Acquisition] Created download job: ${job.id} (type: ${
+                    jobData.metadata.downloadType || "library"
+                })`
+            );
+
+            return job;
+        });
     }
 
     /**
