@@ -2612,6 +2612,76 @@ export class DiscoverWeeklyService {
     }
 
     /**
+     * Calculate tier distribution dynamically based on available candidates.
+     * If a tier has insufficient candidates, redistribute to other tiers.
+     */
+    private calculateDynamicTierDistribution(
+        targetCount: number,
+        tierCandidates: {
+            high: number;
+            medium: number;
+            explore: number;
+        }
+    ): {
+        high: number;
+        medium: number;
+        explore: number;
+        wildcard: number;
+    } {
+        // Reserve slots for wildcard (10%)
+        const wildcardCount = Math.max(1, Math.ceil(targetCount * TIER_DISTRIBUTION.wildcard));
+        const similarArtistTarget = targetCount - wildcardCount;
+
+        // Calculate ideal distribution
+        let highTarget = Math.ceil(similarArtistTarget * (TIER_DISTRIBUTION.high / 0.9));
+        let mediumTarget = Math.ceil(similarArtistTarget * (TIER_DISTRIBUTION.medium / 0.9));
+        let exploreTarget = similarArtistTarget - highTarget - mediumTarget;
+
+        // Adjust if insufficient candidates
+        const adjustments = { high: 0, medium: 0, explore: 0 };
+
+        // High tier adjustment
+        if (tierCandidates.high < highTarget) {
+            const deficit = highTarget - tierCandidates.high;
+            adjustments.high = -deficit;
+            highTarget = tierCandidates.high;
+
+            // Redistribute to medium (60%) and explore (40%)
+            adjustments.medium += Math.floor(deficit * 0.6);
+            adjustments.explore += Math.ceil(deficit * 0.4);
+        }
+
+        // Medium tier adjustment
+        const adjustedMediumTarget = mediumTarget + adjustments.medium;
+        if (tierCandidates.medium < adjustedMediumTarget) {
+            const deficit = adjustedMediumTarget - tierCandidates.medium;
+            adjustments.medium = tierCandidates.medium - mediumTarget;
+
+            // Redistribute to explore
+            adjustments.explore += deficit;
+        }
+
+        // Final values
+        mediumTarget = Math.max(0, mediumTarget + adjustments.medium);
+        exploreTarget = Math.max(0, exploreTarget + adjustments.explore);
+
+        // Cap by available
+        exploreTarget = Math.min(exploreTarget, tierCandidates.explore);
+
+        logger.debug(`[DISCOVERY] Dynamic distribution: ${highTarget} high, ${mediumTarget} medium, ${exploreTarget} explore, ${wildcardCount} wildcard`);
+        if (adjustments.high !== 0 || adjustments.medium !== 0 || adjustments.explore !== 0) {
+            logger.debug(`   Adjustments made due to insufficient candidates`);
+        }
+
+        return {
+            high: highTarget,
+            medium: mediumTarget,
+            explore: exploreTarget,
+            wildcard: wildcardCount,
+        };
+    }
+
+    /**
      * Score artists by how many seed lists they appear in
      * Artists recommended by multiple seeds = stronger signal
      */
@@ -2696,25 +2766,6 @@ export class DiscoverWeeklyService {
             `   Distribution: 30% high, 40% medium, 20% explore, 10% wildcard`
         );
 
-        // Calculate counts for each tier
-        const wildcardCount = Math.max(
-            1,
-            Math.ceil(targetCount * TIER_DISTRIBUTION.wildcard)
-        );
-        const similarArtistTarget = targetCount - wildcardCount;
-
-        const highCount = Math.ceil(
-            similarArtistTarget * (TIER_DISTRIBUTION.high / 0.9)
-        );
-        const mediumCount = Math.ceil(
-            similarArtistTarget * (TIER_DISTRIBUTION.medium / 0.9)
-        );
-        const exploreCount = similarArtistTarget - highCount - mediumCount;
-
-        logger.debug(
-            `   Targets: ${highCount} high, ${mediumCount} medium, ${exploreCount} explore, ${wildcardCount} wildcard`
-        );
-
         // Score artists by cross-seed frequency (appears in multiple seed lists = stronger signal)
         const scoredArtists = this.scoreArtistsByCrossSeedFrequency(similarCache);
 
@@ -2736,6 +2787,19 @@ export class DiscoverWeeklyService {
         logger.debug(
             `   Available: ${byTier.high.length} high, ${byTier.medium.length} medium, ${byTier.explore.length} explore`
         );
+
+        // Calculate dynamic distribution based on available candidates
+        const distribution = this.calculateDynamicTierDistribution(targetCount, {
+            high: byTier.high.length,
+            medium: byTier.medium.length,
+            explore: byTier.explore.length,
+        });
+
+        const highCount = distribution.high;
+        const mediumCount = distribution.medium;
+        const exploreCount = distribution.explore;
+        const wildcardCount = distribution.wildcard;
+        const similarArtistTarget = targetCount - wildcardCount;
 
         // Debug: Show top artists from each tier with their avgMatch scores and cross-seed counts
         if (byTier.high.length > 0) {
