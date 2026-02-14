@@ -84,14 +84,42 @@ export class SoulseekService {
     constructor() {
     }
 
-    async connect(): Promise<void> {
+    private async getSettings() {
         const settings = await getSystemSettings();
 
-        if (!settings?.soulseekUsername || !settings?.soulseekPassword) {
+        if (!settings) {
+            return {
+                enabled: process.env.SOULSEEK_ENABLED === 'true',
+                username: process.env.SOULSEEK_USERNAME,
+                password: process.env.SOULSEEK_PASSWORD,
+                downloadPath: process.env.SOULSEEK_DOWNLOAD_PATH,
+            };
+        }
+
+        if (settings.soulseekEnabled === false) {
+            throw new Error('Soulseek is disabled in settings');
+        }
+
+        return {
+            enabled: settings.soulseekEnabled ?? (process.env.SOULSEEK_ENABLED === 'true'),
+            username: settings.soulseekUsername || process.env.SOULSEEK_USERNAME,
+            password: settings.soulseekPassword || process.env.SOULSEEK_PASSWORD,
+            downloadPath: settings.soulseekDownloadPath || process.env.SOULSEEK_DOWNLOAD_PATH,
+        };
+    }
+
+    async connect(): Promise<void> {
+        const settings = await this.getSettings();
+
+        if (!settings.enabled) {
+            throw new Error('Soulseek is not enabled');
+        }
+
+        if (!settings.username || !settings.password) {
             throw new Error("Soulseek credentials not configured");
         }
 
-        sessionLog("SOULSEEK", `Connecting as ${settings.soulseekUsername}...`);
+        sessionLog("SOULSEEK", `Connecting as ${settings.username}...`);
 
         this.client = new SlskClient();
 
@@ -153,8 +181,8 @@ export class SoulseekService {
         try {
             sessionLog("SOULSEEK", "Attempting login to Soulseek server...", "DEBUG");
             await this.client.loginAndRemember(
-                settings.soulseekUsername,
-                settings.soulseekPassword,
+                settings.username,
+                settings.password,
                 this.LOGIN_TIMEOUT // 10s (slskd default, reduced from 15s)
             );
             sessionLog("SOULSEEK", "Login successful", "DEBUG");
@@ -332,8 +360,8 @@ export class SoulseekService {
 
     async isAvailable(): Promise<boolean> {
         try {
-            const settings = await getSystemSettings();
-            return !!(settings?.soulseekUsername && settings?.soulseekPassword);
+            const settings = await this.getSettings();
+            return !!(settings.username && settings.password);
         } catch {
             return false;
         }
@@ -343,11 +371,18 @@ export class SoulseekService {
         connected: boolean;
         username: string | null;
     }> {
-        const settings = await getSystemSettings();
-        return {
-            connected: this.client !== null && this.client.loggedIn,
-            username: settings?.soulseekUsername || null,
-        };
+        try {
+            const settings = await this.getSettings();
+            return {
+                connected: this.client !== null && this.client.loggedIn,
+                username: settings.username || null,
+            };
+        } catch {
+            return {
+                connected: this.client !== null && this.client.loggedIn,
+                username: null,
+            };
+        }
     }
 
     /**

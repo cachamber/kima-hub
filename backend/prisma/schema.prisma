@@ -86,6 +86,8 @@ model SystemSettings {
   audiobookshelfApiKey        String?
   soulseekUsername            String?
   soulseekPassword            String?
+  soulseekEnabled             Boolean?
+  soulseekDownloadPath        String?
   spotifyClientId             String?
   spotifyClientSecret         String?
   musicPath                   String?  @default("/music")
@@ -104,6 +106,9 @@ model SystemSettings {
   audioAnalyzerWorkers        Int      @default(2)
   clapWorkers                 Int      @default(2)
   lastfmApiKey                String?
+  lastfmApiSecret             String?
+  lastfmUserKey               String?
+  lastfmEnabled               Boolean?
   soulseekConcurrentDownloads Int      @default(4)
 }
 

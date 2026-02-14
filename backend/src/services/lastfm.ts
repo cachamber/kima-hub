@@ -8,6 +8,7 @@ import { deezerService } from "./deezer";
 import { rateLimiter } from "./rateLimiter";
 import { normalizeToArray } from "../utils/normalize";
 import { stripAlbumEdition } from "../utils/artistNormalization";
+import { CacheWrapper } from "../utils/cacheWrapper";
 
 interface SimilarArtist {
     name: string;
@@ -20,6 +21,7 @@ class LastFmService {
     private client: AxiosInstance;
     private apiKey: string;
     private initialized = false;
+    private cache: CacheWrapper;
 
     constructor() {
         // Initial value from .env (for backwards compatibility)
@@ -28,32 +30,60 @@ class LastFmService {
             baseURL: "https://ws.audioscrobbler.com/2.0/",
             timeout: 10000,
         });
+        this.cache = new CacheWrapper('lastfm');
+    }
+
+    private async getSettings() {
+        const { getSystemSettings } = await import("../utils/systemSettings");
+        const settings = await getSystemSettings();
+
+        if (!settings) {
+            return {
+                enabled: true,
+                apiKey: process.env.LASTFM_API_KEY,
+                apiSecret: process.env.LASTFM_API_SECRET,
+                userKey: null,
+            };
+        }
+
+        if (settings.lastfmEnabled === false) {
+            throw new Error('Last.fm is disabled');
+        }
+
+        return {
+            enabled: settings.lastfmEnabled ?? true,
+            apiKey: settings.lastfmApiKey || process.env.LASTFM_API_KEY,
+            apiSecret: settings.lastfmApiSecret || process.env.LASTFM_API_SECRET,
+            userKey: settings.lastfmUserKey,
+        };
     }
 
     private async ensureInitialized() {
         if (this.initialized) return;
 
-        // Priority: 1) User settings from DB, 2) env var, 3) default app key
         try {
-            const { getSystemSettings } = await import(
-                "../utils/systemSettings"
-            );
-            const settings = await getSystemSettings();
-            if (settings?.lastfmApiKey) {
-                this.apiKey = settings.lastfmApiKey;
-                logger.debug("Last.fm configured from user settings");
-            } else if (this.apiKey) {
-                logger.debug("Last.fm configured (default app key)");
+            const settings = await this.getSettings();
+
+            if (!settings.enabled) {
+                logger.warn("Last.fm is disabled in settings");
+                this.initialized = true;
+                return;
+            }
+
+            if (settings.apiKey) {
+                this.apiKey = settings.apiKey;
+                logger.debug("Last.fm configured from settings");
+            } else {
+                logger.warn("Last.fm API key not available");
             }
         } catch (err) {
-            // DB not ready yet, use default/env key
-            if (this.apiKey) {
+            if (err instanceof Error && err.message === 'Last.fm is disabled') {
+                logger.warn("Last.fm is disabled in settings");
+            } else if (this.apiKey) {
                 logger.debug("Last.fm configured (default app key)");
+            } else {
+                logger.warn("Last.fm API key not available");
             }
-        }
-
-        if (!this.apiKey) {
-            logger.warn("Last.fm API key not available");
         }
 
         this.initialized = true;
@@ -84,13 +114,9 @@ class LastFmService {
     ): Promise<SimilarArtist[]> {
         const cacheKey = `lastfm:similar:${artistMbid}`;
 
-        try {
-            const cached = await redisClient.get(cacheKey);
-            if (cached) {
-                return JSON.parse(cached);
-            }
-        } catch (err) {
-            logger.warn("Redis get error:", err);
+        const cached = await this.cache.get<SimilarArtist[]>(cacheKey);
+        if (cached) {
+            return cached;
         }
 
         try {
@@ -112,15 +138,7 @@ class LastFmService {
             }));
 
             // Cache for 7 days
-            try {
-                await redisClient.setEx(
-                    cacheKey,
-                    604800,
-                    JSON.stringify(results)
-                );
-            } catch (err) {
-                logger.warn("Redis set error:", err);
-            }
+            await this.cache.set(cacheKey, results, 604800);
 
             return results;
         } catch (error: any) {
