@@ -119,10 +119,18 @@ private activeDownloads = 0;
             );
         });
 
-        await this.client.loginAndRemember(
-            settings.soulseekUsername,
-            settings.soulseekPassword
-        );
+        try {
+            sessionLog("SOULSEEK", "Attempting login to Soulseek server...", "DEBUG");
+            await this.client.loginAndRemember(
+                settings.soulseekUsername,
+                settings.soulseekPassword,
+                15000 // Increase timeout to 15s to rule out network latency
+            );
+            sessionLog("SOULSEEK", "Login successful", "DEBUG");
+        } catch (err: any) {
+            sessionLog("SOULSEEK", `Login failed: ${err.message}`, "ERROR");
+            throw err;
+        }
 
         this.connectedAt = new Date();
         this.consecutiveEmptySearches = 0;
