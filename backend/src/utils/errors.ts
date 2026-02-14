@@ -124,6 +124,7 @@ export class UserFacingError extends Error {
   ) {
     super(message);
     this.name = 'UserFacingError';
+    Object.setPrototypeOf(this, UserFacingError.prototype);
   }
 }
 
@@ -135,6 +136,7 @@ export class IntegrationError extends Error {
   ) {
     super(message);
     this.name = 'IntegrationError';
+    Object.setPrototypeOf(this, IntegrationError.prototype);
   }
 }
 
@@ -142,6 +144,7 @@ export class ConfigurationError extends Error {
   constructor(message: string) {
     super(message);
     this.name = 'ConfigurationError';
+    Object.setPrototypeOf(this, ConfigurationError.prototype);
   }
 }
 
@@ -152,5 +155,6 @@ export class RateLimitError extends Error {
   ) {
     super(message);
     this.name = 'RateLimitError';
+    Object.setPrototypeOf(this, RateLimitError.prototype);
   }
 }

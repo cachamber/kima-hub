@@ -37,6 +37,7 @@ export interface AcquisitionContext {
     discoveryBatchId?: string;
     spotifyImportJobId?: string;
     existingJobId?: string;
+    retryCount?: number;
 }
 
 /**
@@ -350,13 +351,6 @@ class AcquisitionService {
         // Get download behavior configuration
         const behavior = await this.getDownloadBehavior();
 
-        // Validate at least one source is available
-        if (!behavior.hasPrimarySource) {
-            throw new ConfigurationError(
-                'No download sources configured. Please configure Soulseek or Lidarr in settings.'
-            );
-        }
-
         // Try primary source first
         let result: AcquisitionResult;
 
@@ -421,9 +415,21 @@ class AcquisitionService {
             }
         } catch (error) {
             if (error instanceof IntegrationError && error.retryable) {
-                // Retry logic
-                logger.info(`Retrying download for ${request.mbid} due to retryable error`);
-                return await this.acquireAlbumInternal(request, context);
+                // Initialize retry count
+                const currentRetryCount = context.retryCount || 0;
+                const maxRetries = 3;
+
+                if (currentRetryCount < maxRetries) {
+                    logger.info(`Retrying download for ${request.mbid} due to retryable error (attempt ${currentRetryCount + 1}/${maxRetries})`);
+                    return await this.acquireAlbumInternal(request, { ...context, retryCount: currentRetryCount + 1 });
+                } else {
+                    logger.error(`Max retries (${maxRetries}) exceeded for ${request.mbid}`);
+                    throw new IntegrationError(
+                        `Failed after ${maxRetries} retry attempts`,
+                        error.integration,
+                        false
+                    );
+                }
             }
             throw error;
         }
