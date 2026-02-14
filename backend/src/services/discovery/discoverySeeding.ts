@@ -90,26 +90,56 @@ export class DiscoverySeeding {
     }
 
     /**
-     * Fallback: Get artists with most albums in library when play history is insufficient.
+     * Fallback: Get artists with most engagement (albums + tracks) when play history is insufficient.
+     * More tracks = more listened to = better seed.
      */
     private async getFallbackSeedArtists(limit: number): Promise<SeedArtist[]> {
         logger.debug('[DiscoverySeeding] Insufficient play history, falling back to library');
 
-        const albums = await prisma.album.groupBy({
-            by: ['artistId'],
-            where: { location: 'LIBRARY' },
-            _count: { id: true },
-            orderBy: { _count: { id: 'desc' } },
-            take: limit,
+        // Get artists with their album and track counts
+        const artistsWithCounts = await prisma.artist.findMany({
+            where: {
+                albums: {
+                    some: { location: 'LIBRARY' },
+                },
+            },
+            include: {
+                albums: {
+                    where: { location: 'LIBRARY' },
+                    include: {
+                        _count: {
+                            select: { tracks: true },
+                        },
+                    },
+                },
+            },
         });
 
-        const artists = await prisma.artist.findMany({
-            where: { id: { in: albums.map((a) => a.artistId) } },
-        });
+        // Calculate composite score: album count + (track count / 10)
+        // More tracks = more listened to
+        const scored = artistsWithCounts
+            .map(artist => {
+                const albumCount = artist.albums.length;
+                const trackCount = artist.albums.reduce((sum, album) => sum + (album._count?.tracks || 0), 0);
+                const score = albumCount + (trackCount / 10);
 
-        return artists
-            .filter((a) => this.isValidMbid(a.mbid))
-            .map((a) => ({ name: a.name, mbid: a.mbid }));
+                return {
+                    artist,
+                    score,
+                    albumCount,
+                    trackCount,
+                };
+            })
+            .filter(a => this.isValidMbid(a.artist.mbid))
+            .sort((a, b) => b.score - a.score)
+            .slice(0, limit);
+
+        logger.debug(`[DiscoverySeeding] Selected ${scored.length} fallback artists by engagement score`);
+
+        return scored.map(s => ({
+            name: s.artist.name,
+            mbid: s.artist.mbid,
+        }));
     }
 
     /**
