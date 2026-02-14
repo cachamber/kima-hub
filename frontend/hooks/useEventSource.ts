@@ -120,6 +120,15 @@ export function useEventSource() {
                             break;
                         case "connected":
                             reconnectAttemptsRef.current = 0;
+                            // Sync batch status after reconnect to clear stale cache
+                            api.getDiscoverBatchStatus()
+                                .then(status => {
+                                    queryClient.setQueryData(["discover-batch-status"], status);
+                                })
+                                .catch(() => {
+                                    // On error, assume no active batch
+                                    queryClient.setQueryData(["discover-batch-status"], { active: false, status: null, batchId: null });
+                                });
                             break;
                     }
                 } catch {

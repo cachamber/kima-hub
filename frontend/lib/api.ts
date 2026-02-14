@@ -886,6 +886,16 @@ class ApiClient {
         }>("/discover/batch-status");
     }
 
+    async cancelDiscoverBatch() {
+        return this.request<{
+            success: boolean;
+            message: string;
+            batchId?: string;
+        }>("/discover/batch", {
+            method: "DELETE",
+        });
+    }
+
     async likeDiscoverAlbum(albumId: string) {
         return this.request<{ success: boolean }>("/discover/like", {
             method: "POST",

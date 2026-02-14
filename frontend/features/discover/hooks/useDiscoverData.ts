@@ -111,6 +111,21 @@ export function useDiscoverData() {
     }
   }, [batchStatus, loadData, pendingGeneration]);
 
+  // Stale batch detection - clear stuck "active" state after 5 minutes
+  useEffect(() => {
+    if (!batchStatus?.active) return;
+
+    const timeout = setTimeout(() => {
+      // If still active after 5 minutes, assume stale and clear
+      console.warn('[DiscoverWeekly] Batch stuck active for 5 minutes - clearing stale state');
+      queryClient.setQueryData(["discover-batch-status"], { active: false, status: null, batchId: null });
+      setPendingGeneration(false);
+      loadData();
+    }, 5 * 60 * 1000); // 5 minutes
+
+    return () => clearTimeout(timeout);
+  }, [batchStatus?.active, queryClient, loadData]);
+
   // Mark when generation starts
   const markGenerationStart = useCallback(() => {
     generationStartTimeRef.current = Date.now();

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { RefreshCw } from "lucide-react";
 import { cn } from "@/utils/cn";
 import { GradientSpinner } from "@/components/ui/GradientSpinner";
@@ -15,12 +16,14 @@ import { UnavailableAlbums } from "@/features/discover/components/UnavailableAlb
 import { HowItWorks } from "@/features/discover/components/HowItWorks";
 import { useActivityPanelSettings } from "@/lib/activity-panel-settings-context";
 import { DiscoverSettingsTab } from "@/components/activity/DiscoverSettingsTab";
+import { api } from "@/lib/api";
 
 export default function DiscoverWeeklyPage() {
     // Use split hooks to avoid re-renders from currentTime updates
     const { currentTrack } = useAudioState();
     const { isPlaying } = useAudioPlayback();
     const { setSettingsContent } = useActivityPanelSettings();
+    const queryClient = useQueryClient();
 
     // Custom hooks - single source of truth for batch status from useDiscoverData
     const { playlist, config, setConfig, loading, reloadData, batchStatus, refreshBatchStatus, setPendingGeneration, markGenerationStart, updateTrackLiked, isGenerating } = useDiscoverData();
@@ -48,11 +51,18 @@ export default function DiscoverWeeklyPage() {
             );
         };
 
+        const handlePlaylistCleared = async () => {
+            // Clear stuck generation state and refresh from backend
+            setPendingGeneration(false);
+            await refreshBatchStatus();
+            await reloadData();
+        };
+
         setSettingsContent(
             <DiscoverSettingsTab
                 config={config}
                 onUpdateConfig={setConfig}
-                onPlaylistCleared={reloadData}
+                onPlaylistCleared={handlePlaylistCleared}
                 onBack={handleBackToActivity}
             />
         );
@@ -61,7 +71,7 @@ export default function DiscoverWeeklyPage() {
         return () => {
             setSettingsContent(null);
         };
-    }, [config, setConfig, reloadData, setSettingsContent]);
+    }, [config, setConfig, reloadData, refreshBatchStatus, setPendingGeneration, setSettingsContent]);
 
     // Handle settings button click
     const handleOpenSettings = () => {
@@ -71,6 +81,30 @@ export default function DiscoverWeeklyPage() {
                 detail: { tab: "settings" },
             })
         );
+    };
+
+    // Handle cancel generation - cancels stuck backend batch and clears frontend state
+    const handleCancelGeneration = async () => {
+        console.log('[DiscoverWeekly] === CANCEL CLICKED ===');
+
+        // Immediately clear frontend state for instant UI feedback
+        setPendingGeneration(false);
+        queryClient.setQueryData(["discover-batch-status"], {
+            active: false,
+            status: null,
+            batchId: null
+        });
+        console.log('[DiscoverWeekly] Frontend state cleared');
+
+        // Cancel the backend batch (if it exists)
+        try {
+            console.log('[DiscoverWeekly] Calling backend cancel API...');
+            const result = await api.cancelDiscoverBatch();
+            console.log('[DiscoverWeekly] Backend cancel result:', result);
+        } catch (error) {
+            console.error('[DiscoverWeekly] Backend cancel failed:', error);
+            // Frontend is already cleared, so non-fatal
+        }
     };
 
     if (loading) {
@@ -101,6 +135,7 @@ export default function DiscoverWeeklyPage() {
                     isPlaying={isPlaying}
                     onPlayToggle={isPlaylistPlaying && isPlaying ? handleTogglePlay : handlePlayPlaylist}
                     isGenerating={isGenerating}
+                    onCancelGeneration={handleCancelGeneration}
                 />
 
                 {/* Track Listing */}

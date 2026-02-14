@@ -1,6 +1,6 @@
 "use client";
 
-import { Play, Pause } from "lucide-react";
+import { Play, Pause, X } from "lucide-react";
 import { cn } from "@/utils/cn";
 import type { DiscoverPlaylist } from "../types";
 
@@ -10,6 +10,7 @@ interface DiscoverActionBarProps {
     isPlaying: boolean;
     onPlayToggle: () => void;
     isGenerating: boolean;
+    onCancelGeneration?: () => void;
 }
 
 export function DiscoverActionBar({
@@ -18,6 +19,7 @@ export function DiscoverActionBar({
     isPlaying,
     onPlayToggle,
     isGenerating,
+    onCancelGeneration,
 }: DiscoverActionBarProps) {
     return (
         <div className="bg-[#0a0a0a] px-6 md:px-8 py-4 border-b border-white/10">
@@ -39,6 +41,17 @@ export function DiscoverActionBar({
                         ) : (
                             <Play className="w-5 h-5 fill-current text-black ml-0.5" />
                         )}
+                    </button>
+                )}
+
+                {/* Cancel Generation Button */}
+                {isGenerating && onCancelGeneration && (
+                    <button
+                        onClick={onCancelGeneration}
+                        className="h-12 px-4 flex items-center gap-2 border-2 border-red-500/30 hover:border-red-500 hover:bg-red-500/10 text-red-400 rounded-lg transition-all duration-300 text-sm font-black uppercase tracking-wider"
+                    >
+                        <X className="w-4 h-4" />
+                        Cancel
                     </button>
                 )}
             </div>

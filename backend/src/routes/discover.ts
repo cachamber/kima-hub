@@ -40,6 +40,7 @@ router.get("/batch-status", async (req, res) => {
         });
 
         if (!activeBatch) {
+            logger.debug(`[Batch Status] User ${userId}: No active batch`);
             return res.json({
                 active: false,
                 status: null,
@@ -59,7 +60,7 @@ router.get("/batch-status", async (req, res) => {
                 ? Math.round(((completedJobs + failedJobs) / totalJobs) * 100)
                 : 0;
 
-        res.json({
+        const response = {
             active: true,
             status: activeBatch.status,
             batchId: activeBatch.id,
@@ -67,10 +68,121 @@ router.get("/batch-status", async (req, res) => {
             completed: completedJobs,
             failed: failedJobs,
             total: totalJobs,
-        });
+        };
+
+        logger.info(`[Batch Status] User ${userId}: ACTIVE batch found - ${activeBatch.id}, status: ${activeBatch.status}, progress: ${progress}%`);
+
+        res.json(response);
     } catch (error) {
         logger.error("Get batch status error:", error);
         res.status(500).json({ error: "Failed to get batch status" });
+    }
+});
+
+// DELETE /discover/batch - Cancel/reset stuck batch
+router.delete("/batch", async (req, res) => {
+    try {
+        const userId = req.user!.id;
+
+        logger.info(`[Discover Cancel] Starting cancellation for user ${userId}`);
+
+        // Find ALL active batches for this user (in case there are multiple)
+        const activeBatches = await prisma.discoveryBatch.findMany({
+            where: {
+                userId,
+                status: { in: ["downloading", "scanning"] },
+            },
+            include: {
+                jobs: true,
+            },
+            orderBy: { createdAt: "desc" },
+        });
+
+        logger.info(`[Discover Cancel] Found ${activeBatches.length} active batches`);
+
+        if (activeBatches.length === 0) {
+            return res.json({
+                success: true,
+                message: "No active batch to cancel",
+                batchesCancelled: 0,
+            });
+        }
+
+        let batchesCancelled = 0;
+        let jobsCancelled = 0;
+        let downloadJobsCancelled = 0;
+
+        for (const batch of activeBatches) {
+            logger.info(`[Discover Cancel] Processing batch ${batch.id}, status: ${batch.status}`);
+
+            // Cancel all DownloadJobs associated with this batch
+            const downloadJobsUpdated = await prisma.downloadJob.updateMany({
+                where: {
+                    discoveryBatchId: batch.id,
+                    status: { in: ["pending", "active", "waiting"] },
+                },
+                data: {
+                    status: "failed",
+                    error: "Cancelled by user",
+                },
+            });
+            downloadJobsCancelled += downloadJobsUpdated.count;
+            logger.info(`[Discover Cancel] Cancelled ${downloadJobsUpdated.count} download jobs for batch ${batch.id}`);
+
+            // Mark batch as completed
+            await prisma.discoveryBatch.update({
+                where: { id: batch.id },
+                data: {
+                    status: "completed",
+                    completedAt: new Date(),
+                    errorMessage: "Cancelled by user",
+                },
+            });
+            batchesCancelled++;
+            logger.info(`[Discover Cancel] Marked batch ${batch.id} as completed`);
+        }
+
+        // Find and cancel any active Bull queue jobs for this user
+        const activeJobs = await discoverQueue.getActive();
+        for (const job of activeJobs) {
+            if (job.data.userId === userId) {
+                try {
+                    await job.moveToFailed({ message: "Cancelled by user" }, true);
+                    jobsCancelled++;
+                    logger.info(`[Discover Cancel] Cancelled Bull job ${job.id}`);
+                } catch (jobError) {
+                    logger.warn(`[Discover Cancel] Failed to cancel job ${job.id}:`, jobError);
+                }
+            }
+        }
+
+        // Also check waiting jobs
+        const waitingJobs = await discoverQueue.getWaiting();
+        for (const job of waitingJobs) {
+            if (job.data.userId === userId) {
+                try {
+                    await job.remove();
+                    jobsCancelled++;
+                    logger.info(`[Discover Cancel] Removed waiting job ${job.id}`);
+                } catch (jobError) {
+                    logger.warn(`[Discover Cancel] Failed to remove job ${job.id}:`, jobError);
+                }
+            }
+        }
+
+        logger.info(`[Discover Cancel] Complete: ${batchesCancelled} batches, ${jobsCancelled} Bull jobs, ${downloadJobsCancelled} download jobs`);
+
+        res.json({
+            success: true,
+            message: "Batch cancelled",
+            batchesCancelled,
+            jobsCancelled,
+            downloadJobsCancelled,
+            batchIds: activeBatches.map(b => b.id),
+        });
+    } catch (error) {
+        logger.error("[Discover Cancel] Error:", error);
+        res.status(500).json({ error: "Failed to cancel batch" });
     }
 });
 

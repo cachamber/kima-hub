@@ -28,14 +28,13 @@ export function useDiscoverActions(
         markGenerationStart?.();
 
         try {
-            toast.info("Generating your Discover Weekly playlist...");
             await api.generateDiscoverWeekly();
-            
+
             // Immediately refresh batch status to start polling
             if (refreshBatchStatus) {
                 await refreshBatchStatus();
             }
-            
+
             toast.success("Generation started! Downloading albums...");
         } catch (error: unknown) {
             console.error("Generation failed:", error);
