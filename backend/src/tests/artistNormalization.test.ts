@@ -18,6 +18,7 @@ import {
     normalizeArtistName,
     canonicalizeVariousArtists,
     areArtistNamesSimilar,
+    collapseForComparison,
 } from "../utils/artistNormalization";
 
 interface TestCase {
@@ -366,6 +367,33 @@ function runTests(): void {
             console.log(`❌ FAIL: "${test.name1}" ≈ "${test.name2}"`);
             console.log(`   Expected: ${test.expected}`);
             console.log(`   Got:      ${result}`);
+            totalFailed++;
+        }
+    }
+
+    // Run collapseForComparison tests
+    console.log("\n🔗 collapseForComparison() Tests");
+    console.log("-".repeat(70));
+
+    const collapseTests = [
+        { input: "dead mau5", expected: "deadmau5" },
+        { input: "deadmau5", expected: "deadmau5" },
+        { input: "jay z", expected: "jayz" },
+        { input: "ac dc", expected: "acdc" },
+        { input: "the beatles", expected: "thebeatles" },
+    ];
+
+    for (const test of collapseTests) {
+        const result = collapseForComparison(test.input);
+        const passed = result === test.expected;
+
+        if (passed) {
+            console.log(`✅ PASS: "${test.input}" → "${result}"`);
+            totalPassed++;
+        } else {
+            console.log(`❌ FAIL: "${test.input}"`);
+            console.log(`   Expected: "${test.expected}"`);
+            console.log(`   Got:      "${result}"`);
             totalFailed++;
         }
     }

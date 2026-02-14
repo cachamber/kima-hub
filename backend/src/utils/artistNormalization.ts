@@ -56,14 +56,23 @@ function stripDiacritics(str: string): string {
 export function normalizeArtistName(name: string): string {
     if (name == null) return "";
     let normalized = stripDiacritics(name.trim().toLowerCase());
-    
+
     // Normalize "&" to "and" (handles "Of Mice & Men" vs "Of Mice And Men")
     normalized = normalized.replace(/\s*&\s*/g, ' and ');
-    
+
     // Normalize multiple spaces to single space
     normalized = normalized.replace(/\s+/g, ' ');
-    
+
     return normalized.trim();
+}
+
+/**
+ * Collapse all whitespace from a normalized name for secondary comparison.
+ * Used to catch cases like "Dead Mau5" vs "Deadmau5" where the only
+ * difference is spacing. Input should already be normalized via normalizeArtistName().
+ */
+export function collapseForComparison(normalizedName: string): string {
+    return normalizedName.replace(/\s+/g, '');
 }
 
 /**

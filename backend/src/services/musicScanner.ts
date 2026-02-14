@@ -12,6 +12,7 @@ import {
     canonicalizeVariousArtists,
     extractPrimaryArtist,
     parseArtistFromPath,
+    collapseForComparison,
 } from "../utils/artistNormalization";
 import { backfillAllArtistCounts } from "./artistCountsService";
 
@@ -563,6 +564,37 @@ export class MusicScannerService {
                     where: { id: artist.id },
                     data: { name: artistName },
                 });
+            }
+        }
+
+        // Space-collapsed matching: catches "Dead Mau5" vs "Deadmau5"
+        if (!artist) {
+            const collapsedName = collapseForComparison(normalizedArtistName);
+            const collapsedCandidates = await prisma.artist.findMany({
+                where: {
+                    normalizedName: {
+                        startsWith: normalizedArtistName.substring(
+                            0,
+                            Math.min(3, normalizedArtistName.length)
+                        ),
+                    },
+                },
+                select: {
+                    id: true,
+                    name: true,
+                    normalizedName: true,
+                    mbid: true,
+                },
+            });
+
+            for (const candidate of collapsedCandidates) {
+                if (collapseForComparison(candidate.normalizedName) === collapsedName) {
+                    logger.debug(
+                        `Space-collapsed match found: "${artistName}" -> "${candidate.name}"`
+                    );
+                    artist = candidate as any;
+                    break;
+                }
             }
         }
 
