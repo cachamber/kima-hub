@@ -50,8 +50,8 @@ export function DiscoverHero({ playlist, config, onOpenSettings }: DiscoverHeroP
                 </button>
 
                 <div className="flex items-end gap-8">
-                    {/* Album Cover Grid */}
-                    <div className="w-[180px] h-[180px] md:w-[232px] md:h-[232px] shrink-0 relative">
+                    {/* Album Cover Grid - commented out */}
+                    {/* <div className="w-[180px] h-[180px] md:w-[232px] md:h-[232px] shrink-0 relative">
                         {albumCovers.length > 0 ? (
                             <div className="w-full h-full grid grid-cols-2 gap-1 border-2 border-white/20 shadow-2xl shadow-black/40 group">
                                 {albumCovers.map((cover, i) => (
@@ -68,7 +68,6 @@ export function DiscoverHero({ playlist, config, onOpenSettings }: DiscoverHeroP
                                         />
                                     </div>
                                 ))}
-                                {/* Fill empty slots */}
                                 {Array.from({ length: 4 - albumCovers.length }).map(
                                     (_, i) => (
                                         <div
@@ -79,7 +78,6 @@ export function DiscoverHero({ playlist, config, onOpenSettings }: DiscoverHeroP
                                 )}
                             </div>
                         ) : (
-                            // Empty grid
                             <div className="w-full h-full grid grid-cols-2 gap-1 border-2 border-white/20">
                                 {Array.from({ length: 4 }).map((_, i) => (
                                     <div
@@ -91,7 +89,7 @@ export function DiscoverHero({ playlist, config, onOpenSettings }: DiscoverHeroP
                                 ))}
                             </div>
                         )}
-                    </div>
+                    </div> */}
 
                     {/* Info - Bottom Aligned */}
                     <div className="flex-1 min-w-0 pb-2">
