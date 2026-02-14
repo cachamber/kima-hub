@@ -280,9 +280,8 @@ class AcquisitionService {
             setTimeout(() => {
                 resolve({
                     success: false,
-                    source: "timeout",
+                    source: undefined,
                     error: `Acquisition timed out after ${MAX_ACQUISITION_TIME / 1000}s - tried all available sources`,
-                    tracks: [],
                 });
             }, MAX_ACQUISITION_TIME);
         });

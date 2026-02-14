@@ -43,12 +43,11 @@ class SoulseekService {
     private connecting = false;
     private connectPromise: Promise<void> | null = null;
     private lastConnectAttempt = 0;
-    private lastFailedAttempt = 0;
-    private readonly RECONNECT_COOLDOWN = 30000;
-    private readonly FAILED_RECONNECT_COOLDOWN = 5000;
+    private failedConnectionAttempts = 0;
+    private readonly MAX_BACKOFF_MS = 300000; // 5 minutes (slskd practice)
     private readonly DOWNLOAD_TIMEOUT_INITIAL = 60000;
     private readonly DOWNLOAD_TIMEOUT_RETRY = 30000;
-    private readonly MAX_DOWNLOAD_RETRIES = 20; // Try all available matches before giving up
+    private readonly MAX_DOWNLOAD_RETRIES = 20;
 
     private failedUsers = new Map<
         string,
@@ -57,18 +56,24 @@ class SoulseekService {
     private readonly FAILURE_THRESHOLD = 3;
     private readonly FAILURE_WINDOW = 300000;
 
-private activeDownloads = 0;
-     private maxConcurrentDownloads = 0;
+    private activeDownloads = 0;
+    private maxConcurrentDownloads = 0;
 
-     private userConnectionCooldowns = new Map<string, number>();
-     private readonly USER_CONNECTION_COOLDOWN = 3000;
+    private userConnectionCooldowns = new Map<string, number>();
+    private readonly USER_CONNECTION_COOLDOWN = 5000; // Increased from 3s to 5s
 
-     private connectedAt: Date | null = null;
+    private connectedAt: Date | null = null;
+    private lastActivity: Date | null = null;
     private lastSuccessfulSearch: Date | null = null;
     private consecutiveEmptySearches = 0;
     private totalSearches = 0;
     private totalSuccessfulSearches = 0;
-    private readonly MAX_CONSECUTIVE_EMPTY = 10; // Avoid reconnect spam that triggers rate limits
+    private readonly MAX_CONSECUTIVE_EMPTY = 20; // Increased from 10 to reduce reconnect spam
+
+    // slskd-inspired timeout values (from slskd.example.yml)
+    private readonly CONNECT_TIMEOUT = 10000; // 10s (slskd default)
+    private readonly INACTIVITY_TIMEOUT = 15000; // 15s (slskd default)
+    private readonly LOGIN_TIMEOUT = 10000; // 10s (reduced from 15s)
 
     constructor() {
         setInterval(() => this.cleanupFailedUsers(), 5 * 60 * 1000);
@@ -125,8 +130,8 @@ private activeDownloads = 0;
         sessionLog("SOULSEEK", "Waiting for server socket connection...", "DEBUG");
         await new Promise<void>((resolve, reject) => {
             const timeout = setTimeout(() => {
-                reject(new Error("Server socket connection timed out after 30s"));
-            }, 30000);
+                reject(new Error(`Server socket connection timed out after ${this.CONNECT_TIMEOUT}ms`));
+            }, this.CONNECT_TIMEOUT); // 10s (slskd default)
 
             this.client!.server.conn.once("connect", () => {
                 clearTimeout(timeout);
@@ -145,7 +150,7 @@ private activeDownloads = 0;
             await this.client.loginAndRemember(
                 settings.soulseekUsername,
                 settings.soulseekPassword,
-                15000 // Increase timeout to 15s to rule out network latency
+                this.LOGIN_TIMEOUT // 10s (slskd default, reduced from 15s)
             );
             sessionLog("SOULSEEK", "Login successful", "DEBUG");
         } catch (err: any) {
@@ -154,8 +159,24 @@ private activeDownloads = 0;
         }
 
         this.connectedAt = new Date();
+        this.lastActivity = new Date();
         this.consecutiveEmptySearches = 0;
+        this.failedConnectionAttempts = 0; // Reset on successful connection
         sessionLog("SOULSEEK", "Connected to Soulseek network");
+    }
+
+    /**
+     * Calculate exponential backoff delay based on failed attempts
+     * Follows slskd's approach: exponential backoff capped at 5 minutes
+     * Pattern: 1s, 2s, 4s, 8s, 16s, 32s, 64s, 128s, 256s (4.26min), then capped at 300s (5min)
+     */
+    private getReconnectDelay(): number {
+        if (this.failedConnectionAttempts === 0) {
+            return 0;
+        }
+        // Exponential: 2^n * 1000ms, capped at 5 minutes
+        const exponentialDelay = Math.pow(2, this.failedConnectionAttempts - 1) * 1000;
+        return Math.min(exponentialDelay, this.MAX_BACKOFF_MS);
     }
 
     private forceDisconnect(): void {
@@ -165,7 +186,7 @@ private activeDownloads = 0;
         sessionLog(
             "SOULSEEK",
             `Force disconnecting (was connected for ${uptime}s)`,
-            "WARN"
+            "DEBUG"
         );
         if (this.client) {
             try {
@@ -176,16 +197,47 @@ private activeDownloads = 0;
         }
         this.client = null;
         this.connectedAt = null;
-        // Don't reset lastConnectAttempt - enforce cooldown between reconnects
+        this.lastActivity = null;
+    }
+
+    /**
+     * Check for stale connection and force reconnect if inactive
+     * Follows slskd's inactivity timeout (15s)
+     */
+    private checkConnectionHealth(): boolean {
+        if (!this.client || !this.client.loggedIn) {
+            return false;
+        }
+
+        if (!this.lastActivity) {
+            return true;
+        }
+
+        const inactiveMs = Date.now() - this.lastActivity.getTime();
+        if (inactiveMs > this.INACTIVITY_TIMEOUT) {
+            sessionLog(
+                "SOULSEEK",
+                `Connection inactive for ${Math.round(inactiveMs / 1000)}s (threshold: ${this.INACTIVITY_TIMEOUT / 1000}s) - forcing reconnect`,
+                "WARN"
+            );
+            this.forceDisconnect();
+            return false;
+        }
+
+        return true;
     }
 
     private async ensureConnected(force: boolean = false): Promise<void> {
-        if (force && this.client) {
-            this.forceDisconnect();
+        // Check connection health before using existing connection
+        if (!force && this.client && this.client.loggedIn) {
+            if (this.checkConnectionHealth()) {
+                return;
+            }
+            // Connection was stale, fall through to reconnect
         }
 
-        if (this.client && this.client.loggedIn) {
-            return;
+        if (force && this.client) {
+            this.forceDisconnect();
         }
 
         // If already connecting, wait for that connection
@@ -193,48 +245,48 @@ private activeDownloads = 0;
             return this.connectPromise;
         }
 
-        // Client exists but not logged in AND not connecting - clean it up and allow immediate reconnect
-        let cleanedUpStaleClient = false;
+        // Client exists but not logged in AND not connecting - clean it up
         if (this.client && !this.client.loggedIn) {
             this.forceDisconnect();
-            cleanedUpStaleClient = true;
         }
 
-        const now = Date.now();
+        // Apply exponential backoff (slskd practice)
+        const backoffDelay = force ? 0 : this.getReconnectDelay();
+        if (backoffDelay > 0) {
+            const now = Date.now();
+            const timeSinceLastAttempt = this.lastConnectAttempt > 0
+                ? now - this.lastConnectAttempt
+                : backoffDelay + 1;
 
-        // Don't enforce cooldown if we just cleaned up a stale client
-        if (
-            !force &&
-            !cleanedUpStaleClient &&
-            this.lastConnectAttempt > 0 &&
-            now - this.lastConnectAttempt < this.RECONNECT_COOLDOWN
-        ) {
-            throw new Error(
-                "Connection cooldown - please wait before retrying"
-            );
-        }
-
-        // Don't enforce failed cooldown if we just cleaned up a stale client
-        if (
-            !force &&
-            !cleanedUpStaleClient &&
-            this.lastFailedAttempt > 0 &&
-            now - this.lastFailedAttempt < this.FAILED_RECONNECT_COOLDOWN
-        ) {
-            throw new Error(
-                "Connection recently failed - please wait before retrying"
-            );
+            if (timeSinceLastAttempt < backoffDelay) {
+                const waitMs = backoffDelay - timeSinceLastAttempt;
+                sessionLog(
+                    "SOULSEEK",
+                    `Exponential backoff: waiting ${Math.round(waitMs / 1000)}s before reconnect attempt (attempt #${this.failedConnectionAttempts})`,
+                    "WARN"
+                );
+                throw new Error(
+                    `Connection backoff - wait ${Math.round(waitMs / 1000)}s before retry (attempt ${this.failedConnectionAttempts})`
+                );
+            }
         }
 
         this.connecting = true;
+        this.lastConnectAttempt = Date.now();
 
         this.connectPromise = this.connect()
             .then(() => {
-                this.lastConnectAttempt = Date.now();
-                this.lastFailedAttempt = 0;
+                // Success - reset failure counter
+                this.failedConnectionAttempts = 0;
             })
             .catch((err) => {
-                this.lastFailedAttempt = Date.now();
+                // Increment failure counter for exponential backoff
+                this.failedConnectionAttempts++;
+                sessionLog(
+                    "SOULSEEK",
+                    `Connection failed (attempt #${this.failedConnectionAttempts}). Next retry delay: ${Math.round(this.getReconnectDelay() / 1000)}s`,
+                    "ERROR"
+                );
                 throw err;
             })
             .finally(() => {
@@ -362,9 +414,10 @@ private activeDownloads = 0;
                 return { found: false, bestMatch: null, allMatches: [] };
             }
 
-            // Success - reset counters
+            // Success - reset counters and update activity timestamp
             this.consecutiveEmptySearches = 0;
             this.lastSuccessfulSearch = new Date();
+            this.lastActivity = new Date(); // Track activity for health monitoring
             this.totalSuccessfulSearches++;
 
             // Flatten responses to SearchResult format
@@ -779,6 +832,9 @@ if (!this.client) {
             `Downloading from ${match.username}: ${match.filename} -> ${destPath}`
         );
 
+        // Update activity timestamp at start of download
+        this.lastActivity = new Date();
+
         try {
             const download = await this.client.download(
                 match.username,
@@ -833,6 +889,9 @@ if (!this.client) {
                         if (resolved) return;
                         clearTimeout(timeoutId);
                         cleanup();
+
+                        // Update activity timestamp on successful download
+                        this.lastActivity = new Date();
 
                         if (fs.existsSync(destPath)) {
                             const stats = fs.statSync(destPath);
