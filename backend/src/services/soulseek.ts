@@ -217,17 +217,18 @@ export class SoulseekService {
     }
 
     /**
-     * Calculate exponential backoff delay based on failed attempts
-     * Follows slskd's approach: exponential backoff capped at 5 minutes
-     * Pattern: 1s, 2s, 4s, 8s, 16s, 32s, 64s, 128s, 256s (4.26min), then capped at 300s (5min)
+     * Calculate exponential backoff delay with jitter.
+     * Base: 2^n * 1000ms, capped at 5 minutes.
+     * Jitter: +/- 25% randomization to prevent thundering herd.
      */
     private getReconnectDelay(): number {
         if (this.failedConnectionAttempts === 0) {
             return 0;
         }
-        // Exponential: 2^n * 1000ms, capped at 5 minutes
         const exponentialDelay = Math.pow(2, this.failedConnectionAttempts - 1) * 1000;
-        return Math.min(exponentialDelay, this.MAX_BACKOFF_MS);
+        const cappedDelay = Math.min(exponentialDelay, this.MAX_BACKOFF_MS);
+        const jitter = cappedDelay * 0.25 * (Math.random() * 2 - 1);
+        return Math.round(cappedDelay + jitter);
     }
 
     private forceDisconnect(): void {
