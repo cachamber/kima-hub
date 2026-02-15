@@ -54,7 +54,7 @@ router.use(requireAuthOrToken);
  * GET /podcasts
  * Get all podcasts the user is subscribed to
  */
-router.get("/", async (req, res) => {
+router.get("/", requireAuth, async (req, res) => {
     try {
         const subscriptions = await prisma.podcastSubscription.findMany({
             where: { userId: req.user!.id },
@@ -356,7 +356,7 @@ router.get("/discover/genre/:genreId", async (req, res) => {
  * Preview a podcast by iTunes ID (for discovery, before subscribing)
  * Returns basic podcast info without requiring a subscription
  */
-router.get("/preview/:itunesId", async (req, res) => {
+router.get("/preview/:itunesId", requireAuth, async (req, res) => {
     try {
         const { itunesId } = req.params;
 
@@ -458,7 +458,7 @@ router.get("/preview/:itunesId", async (req, res) => {
  * Get a specific podcast with full details and episodes
  * Requires user to be subscribed
  */
-router.get("/:id", async (req, res) => {
+router.get("/:id", requireAuth, async (req, res) => {
     try {
         const { id } = req.params;
 
@@ -549,7 +549,7 @@ router.get("/:id", async (req, res) => {
  * POST /podcasts/subscribe
  * Subscribe to a podcast by RSS feed URL or iTunes ID
  */
-router.post("/subscribe", async (req, res) => {
+router.post("/subscribe", requireAuth, async (req, res) => {
     try {
         const { feedUrl, itunesId } = req.body;
 
@@ -720,7 +720,7 @@ router.post("/subscribe", async (req, res) => {
  * DELETE /podcasts/:id/unsubscribe
  * Unsubscribe from a podcast
  */
-router.delete("/:id/unsubscribe", async (req, res) => {
+router.delete("/:id/unsubscribe", requireAuth, async (req, res) => {
     try {
         const { id } = req.params;
 
@@ -781,7 +781,7 @@ router.delete("/:id/unsubscribe", async (req, res) => {
  * GET /podcasts/:id/refresh
  * Manually refresh podcast feed to check for new episodes
  */
-router.get("/:id/refresh", async (req, res) => {
+router.get("/:id/refresh", requireAuth, async (req, res) => {
     try {
         const { id } = req.params;
 
@@ -847,7 +847,7 @@ router.get("/:podcastId/episodes/:episodeId/cache-status", async (req, res) => {
  * Stream a podcast episode (from local cache or RSS URL)
  * Auto-caches episodes in background for better seeking support
  */
-router.get("/:podcastId/episodes/:episodeId/stream", async (req, res) => {
+router.get("/:podcastId/episodes/:episodeId/stream", requireAuthOrToken, async (req, res) => {
     try {
         const { podcastId, episodeId } = req.params;
         const userId = req.user?.id;
@@ -1235,7 +1235,7 @@ router.get("/:podcastId/episodes/:episodeId/stream", async (req, res) => {
  * POST /podcasts/:podcastId/episodes/:episodeId/progress
  * Update playback progress for a podcast episode
  */
-router.post("/:podcastId/episodes/:episodeId/progress", async (req, res) => {
+router.post("/:podcastId/episodes/:episodeId/progress", requireAuth, async (req, res) => {
     try {
         const { podcastId, episodeId } = req.params;
         const { currentTime, duration, isFinished } = req.body;
@@ -1295,7 +1295,7 @@ router.post("/:podcastId/episodes/:episodeId/progress", async (req, res) => {
  * DELETE /podcasts/:podcastId/episodes/:episodeId/progress
  * Remove/reset progress for a podcast episode
  */
-router.delete("/:podcastId/episodes/:episodeId/progress", async (req, res) => {
+router.delete("/:podcastId/episodes/:episodeId/progress", requireAuth, async (req, res) => {
     try {
         const { episodeId } = req.params;
 

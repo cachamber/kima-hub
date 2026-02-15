@@ -1229,8 +1229,8 @@ export async function getEnrichmentProgress() {
             where: { vibeAnalysisStatus: "processing" },
         }),
         getRedis().llen("audio:clap:queue"),
-        prisma.enrichmentFailure.count({
-            where: { entityType: "vibe", resolved: false, skipped: false },
+        prisma.track.count({
+            where: { vibeAnalysisStatus: "failed" },
         }),
     ]);
     const clapCompleted = Number(clapEmbeddingCount[0]?.count || 0);

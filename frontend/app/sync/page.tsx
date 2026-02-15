@@ -36,7 +36,9 @@ export default function SyncPage() {
     const [scanJobId, setScanJobId] = useState<string | null>(null);
     const handledRef = useRef(false);
 
-    // SSE-populated scan status (populated by useEventSource via queryClient.setQueryData)
+    // Scan status: SSE updates populate cache, with API polling as fallback.
+    // The scan can complete before SSE delivers the event (race condition),
+    // so we poll the status endpoint every 2s until completed/failed.
     const { data: scanStatus } = useQuery<{
         status: string;
         progress: number;
@@ -45,9 +47,30 @@ export default function SyncPage() {
         error?: string;
     } | null>({
         queryKey: ["scan-status", scanJobId],
-        queryFn: () => queryClient.getQueryData(["scan-status", scanJobId]) ?? null,
+        queryFn: async () => {
+            // Check if SSE already populated the cache
+            const cached = queryClient.getQueryData<{
+                status: string;
+                progress: number;
+                jobId: string;
+            }>(["scan-status", scanJobId]);
+            if (cached?.status === "completed" || cached?.status === "failed") {
+                return cached;
+            }
+            // Poll the API as fallback
+            try {
+                const result = await api.getScanStatus(scanJobId!);
+                return { ...result, jobId: scanJobId! };
+            } catch {
+                return cached ?? null;
+            }
+        },
         enabled: !!scanJobId,
-        staleTime: Infinity,
+        refetchInterval: (query) => {
+            const status = query.state.data?.status;
+            if (status === "completed" || status === "failed") return false;
+            return 2000;
+        },
         refetchOnWindowFocus: false,
     });
 

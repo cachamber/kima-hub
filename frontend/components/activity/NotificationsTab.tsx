@@ -13,6 +13,7 @@ import { api } from "@/lib/api";
 import { cn } from "@/utils/cn";
 import Link from "next/link";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useAuth } from "@/lib/auth-context";
 
 interface Notification {
     id: string;
@@ -26,6 +27,7 @@ interface Notification {
 
 export function NotificationsTab() {
     const queryClient = useQueryClient();
+    const { isAuthenticated } = useAuth();
 
     const {
         data: notifications = [],
@@ -37,6 +39,7 @@ export function NotificationsTab() {
             const result = await api.getNotifications();
             return result;
         },
+        enabled: isAuthenticated,
     });
 
     // Log error if any

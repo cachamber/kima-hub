@@ -72,9 +72,9 @@ export function usePodcastData() {
     if (podcast || !isAuthenticated || previewLoadState !== 'idle') return;
 
     let cancelled = false;
+    setPreviewLoadState('loading');
 
     async function loadPreviewData() {
-      setPreviewLoadState('loading');
       try {
         const preview = await api.previewPodcast(podcastId);
         if (cancelled) return;
@@ -94,7 +94,7 @@ export function usePodcastData() {
 
     loadPreviewData();
     return () => { cancelled = true; };
-  }, [isPodcastLoading, podcast, isAuthenticated, podcastId, previewLoadState, router]);
+  }, [isPodcastLoading, podcast, isAuthenticated, podcastId, router]);
 
   // Save sort order to localStorage when it changes
   useEffect(() => {

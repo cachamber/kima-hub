@@ -44,6 +44,7 @@ const EMPTY_DOWNLOADS: DownloadHistoryItem[] = [];
  */
 export function useNotifications() {
     const queryClient = useQueryClient();
+    const { isAuthenticated } = useAuth();
 
     // Single source of truth - React Query cache
     const {
@@ -54,6 +55,7 @@ export function useNotifications() {
     } = useQuery<Notification[]>({
         queryKey: ["notifications"],
         queryFn: () => api.get<Notification[]>("/notifications"),
+        enabled: isAuthenticated,
     });
 
     // Derive unread count from data (computed, not stored)

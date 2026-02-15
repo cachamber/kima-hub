@@ -172,6 +172,9 @@ router.post("/", async (req, res) => {
     if (data.spotifyClientSecret)
       encryptedData.spotifyClientSecret = encrypt(data.spotifyClientSecret);
 
+    // Fetch existing settings before save to detect credential changes
+    const existingSettings = await prisma.systemSettings.findUnique({ where: { id: "default" } });
+
     const settings = await prisma.systemSettings.upsert({
       where: { id: "default" },
       create: {
@@ -191,19 +194,26 @@ router.post("/", async (req, res) => {
       logger.warn("Failed to refresh Last.fm API key:", err);
     }
 
-    // Disconnect Soulseek if credentials changed
+    // Disconnect Soulseek only if credentials actually changed (not just present in payload)
     if (
       data.soulseekUsername !== undefined ||
       data.soulseekPassword !== undefined
     ) {
       try {
-        const { soulseekService } = await import("../services/soulseek");
-        soulseekService.disconnect();
-        logger.debug(
-          "[SYSTEM SETTINGS] Disconnected Soulseek service due to credential update",
-        );
+        const oldUsername = existingSettings?.soulseekUsername || "";
+        const oldPassword = existingSettings?.soulseekPassword ? safeDecrypt(existingSettings.soulseekPassword) : "";
+        const newUsername = data.soulseekUsername !== undefined ? data.soulseekUsername : oldUsername;
+        const newPassword = data.soulseekPassword !== undefined ? data.soulseekPassword : oldPassword;
+
+        if (newUsername !== oldUsername || newPassword !== oldPassword) {
+          const { soulseekService } = await import("../services/soulseek");
+          soulseekService.disconnect();
+          logger.debug(
+            "[SYSTEM SETTINGS] Disconnected Soulseek service due to credential change",
+          );
+        }
       } catch (err) {
-        logger.warn("Failed to disconnect Soulseek service:", err);
+        logger.warn("Failed to check/disconnect Soulseek service:", err);
       }
     }
 

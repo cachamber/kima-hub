@@ -369,11 +369,45 @@ export class SoulseekService {
             });
         } catch (error: any) {
             if (error.message.includes('Failed to acquire lock')) {
-                sessionLog("SOULSEEK", "Connection already in progress in another process", "DEBUG");
-                throw new Error('Soulseek connection already in progress');
+                // Another caller is connecting - wait for it instead of failing
+                sessionLog("SOULSEEK", "Connection already in progress - waiting for it to complete", "DEBUG");
+                await this.waitForConnection();
+                return;
             }
             throw error;
         }
+    }
+
+    /**
+     * Wait for an in-progress connection attempt to complete.
+     * Polls connection state with short intervals instead of failing immediately.
+     */
+    private async waitForConnection(maxWaitMs: number = 30000): Promise<void> {
+        const pollInterval = 500;
+        const deadline = Date.now() + maxWaitMs;
+
+        while (Date.now() < deadline) {
+            // If a connectPromise exists, wait on it directly
+            if (this.connectPromise) {
+                try {
+                    await this.connectPromise;
+                    return;
+                } catch {
+                    // Connection attempt failed - caller will retry on next use
+                    throw new Error('Soulseek connection attempt failed');
+                }
+            }
+
+            // Already connected? Done.
+            if (this.client && this.client.loggedIn) {
+                return;
+            }
+
+            // Poll - connection may be in progress in another process
+            await new Promise(resolve => setTimeout(resolve, pollInterval));
+        }
+
+        throw new Error('Timed out waiting for Soulseek connection');
     }
 
     isConnected(): boolean {

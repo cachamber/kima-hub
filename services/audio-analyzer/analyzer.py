@@ -1012,7 +1012,10 @@ def _analyze_track_in_process(args: Tuple[str, str]) -> Tuple[str, str, Dict[str
         
         if not os.path.exists(full_path):
             return (track_id, file_path, {'_error': 'File not found'})
-        
+
+        if os.path.getsize(full_path) == 0:
+            return (track_id, file_path, {'_error': 'Empty file (0 bytes) - likely incomplete download'})
+
         # Run analysis
         features = _process_analyzer.analyze(full_path)
         return (track_id, file_path, features)

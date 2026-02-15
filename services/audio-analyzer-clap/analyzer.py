@@ -426,6 +426,16 @@ class Worker:
         normalized_path = file_path.replace('\\', '/')
         full_path = os.path.join(MUSIC_PATH, normalized_path)
 
+        # Skip 0-byte / missing files (incomplete downloads, stubs)
+        try:
+            file_size = os.path.getsize(full_path)
+            if file_size == 0:
+                self._mark_failed(track_id, "Empty file (0 bytes) - likely incomplete download")
+                return
+        except OSError:
+            self._mark_failed(track_id, f"File not found: {normalized_path}")
+            return
+
         # Generate embedding (pass duration to avoid file probe)
         embedding = self.analyzer.get_audio_embedding(full_path, duration)
 

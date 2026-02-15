@@ -113,6 +113,13 @@ export class MusicScannerService {
                     const stats = await fs.promises.stat(audioFile);
                     const fileModified = stats.mtime;
 
+                    // Skip 0-byte files (incomplete downloads, stubs)
+                    if (stats.size === 0) {
+                        filesScanned++;
+                        progress.filesScanned = filesScanned;
+                        return;
+                    }
+
                     const existingTrack = tracksByPath.get(relativePath);
 
                     // Check if file needs updating

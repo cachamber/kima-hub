@@ -449,6 +449,14 @@ class ApiClient {
         });
     }
 
+    async getScanStatus(jobId: string) {
+        return this.request<{
+            status: string;
+            progress: number;
+            result?: { tracksAdded: number; tracksUpdated: number; tracksRemoved: number };
+        }>(`/library/scan/status/${jobId}`);
+    }
+
     async getArtist(id: string) {
         return this.request<ApiData>(`/library/artists/${id}`);
     }

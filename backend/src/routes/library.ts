@@ -825,7 +825,6 @@ router.get("/artists/:id", async (req, res) => {
         include: {
           tracks: {
             orderBy: { trackNo: Prisma.SortOrder.asc },
-            take: 10, // Top tracks
             include: {
               album: {
                 select: {
@@ -1110,12 +1109,33 @@ router.get("/artists/:id", async (req, res) => {
         logger.debug(`[Artist] Cached ${lastfmTopTracks.length} top tracks`);
       }
 
-      // Build lookup map for O(1) matching instead of O(n*m)
-      const tracksByTitle = new Map<string, (typeof allTracks)[0]>();
+      // Normalize track title for fuzzy matching:
+      // Strips parenthetical suffixes like (Cover), (Remix), (Deluxe), (feat. X), (Remaster)
+      // but preserves the base title for matching across album variants
+      const normalizeTitle = (title: string): string => {
+        return title
+          .toLowerCase()
+          .replace(/\s*\((?:cover|remix|remaster(?:ed)?|deluxe|bonus track|acoustic|instrumental|radio edit|clean|explicit|feat\.?\s[^)]*|ft\.?\s[^)]*|[^)]*\s(?:remix|mix|version|edit))\)/gi, '')
+          .trim();
+      };
+
+      const isLiveTrack = (title: string): boolean => {
+        return /\(live[^)]*\)/i.test(title) || /\s-\s*live\b/i.test(title);
+      };
+
+      // Build lookup maps: exact title first, then normalized fallback
+      // Excludes live versions from matching. First match wins (keeps first album version found).
+      const tracksByExactTitle = new Map<string, (typeof allTracks)[0]>();
+      const tracksByNormTitle = new Map<string, (typeof allTracks)[0]>();
       for (const track of allTracks) {
-        const key = track.title.toLowerCase();
-        if (!tracksByTitle.has(key)) {
-          tracksByTitle.set(key, track);
+        if (isLiveTrack(track.title)) continue;
+        const exact = track.title.toLowerCase();
+        const norm = normalizeTitle(track.title);
+        if (!tracksByExactTitle.has(exact)) {
+          tracksByExactTitle.set(exact, track);
+        }
+        if (!tracksByNormTitle.has(norm)) {
+          tracksByNormTitle.set(norm, track);
         }
       }
 
@@ -1123,9 +1143,13 @@ router.get("/artists/:id", async (req, res) => {
       const combinedTracks: any[] = [];
 
       for (const lfmTrack of lastfmTopTracks) {
-        // O(1) lookup instead of O(n) find
-        const key = lfmTrack.name.toLowerCase();
-        const matchedTrack = tracksByTitle.get(key);
+        // Skip live tracks from Last.fm results
+        if (isLiveTrack(lfmTrack.name)) continue;
+
+        // Try exact match first, then normalized match
+        const exactKey = lfmTrack.name.toLowerCase();
+        const normKey = normalizeTitle(lfmTrack.name);
+        const matchedTrack = tracksByExactTitle.get(exactKey) || tracksByNormTitle.get(normKey);
 
         if (matchedTrack) {
           // Track exists in library - include user play count

@@ -336,7 +336,6 @@ export default function BrowsePlaylistsPage() {
                             {searchQuery && (
                                 <button
                                     type="button"
-                                    you
                                     onClick={clearSearch}
                                     className="absolute right-4 top-1/2 -translate-y-1/2 text-white/30 hover:text-white transition-colors"
                                 >

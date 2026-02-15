@@ -605,10 +605,13 @@ export function usePodcastsQuery() {
  * @returns Query result with podcast data
  */
 export function usePodcastQuery(id: string | undefined) {
+    // Numeric IDs are iTunes IDs, not database CUIDs - skip subscription lookup
+    const isItunesId = !!id && /^\d+$/.test(id);
     return useQuery({
         queryKey: queryKeys.podcast(id || ""),
         queryFn: async () => {
             if (!id) throw new Error("Podcast ID is required");
+            if (isItunesId) return null; // iTunes ID - go straight to preview mode
 
             try {
                 return await api.getPodcast(id);
