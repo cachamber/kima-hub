@@ -15,7 +15,7 @@ import Image from "next/image";
 import { MobileSidebar } from "./MobileSidebar";
 
 const navigation = [
-    { name: "Library", href: "/library" },
+    { name: "Collection", href: "/library" },
     // { name: "Vibe", href: "/vibe" }, // Hidden until UI refinement complete
     { name: "Radio", href: "/radio" },
     { name: "Discovery", href: "/discover" },
@@ -65,7 +65,10 @@ export function Sidebar() {
             console.error("Failed to trigger library scan:", error);
             toast.error("Failed to start scan. Please try again.");
         } finally {
-            syncTimeoutRef.current = setTimeout(() => setIsSyncing(false), 2000);
+            syncTimeoutRef.current = setTimeout(
+                () => setIsSyncing(false),
+                2000,
+            );
         }
     };
 
@@ -120,15 +123,15 @@ export function Sidebar() {
                     {/* Logo and Title */}
                     <div className="flex items-center gap-4 mb-5">
                         <Image
-                            src="/assets/images/LIDIFY.webp"
-                            alt="Lidify"
+                            src="/assets/images/KIMA.webp"
+                            alt="Kima Logo"
                             width={48}
                             height={48}
                             className="flex-shrink-0"
                         />
                         <div className="flex-1 min-w-0">
                             <h2 className="text-2xl font-black text-white tracking-tight">
-                                Lidify
+                                Kima
                             </h2>
                             {(
                                 !currentTrack &&

@@ -8,7 +8,7 @@ import { cn } from "@/utils/cn";
 import type { ColorPalette } from "@/hooks/useImageColor";
 import { CachedImage } from "./CachedImage";
 
-// Lidify brand yellow for all on-page play buttons
+// Kima brand yellow for all on-page play buttons
 const LIDIFY_YELLOW = "#ecb200";
 
 export interface PlayableCardProps extends Omit<CardProps, "onPlay"> {

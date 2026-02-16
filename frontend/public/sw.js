@@ -1,4 +1,4 @@
-// Lidify Service Worker
+// Kima Service Worker
 const CACHE_NAME = 'lidify-v1';
 const IMAGE_CACHE_NAME = 'lidify-images-v3';
 const MAX_IMAGE_CACHE_ENTRIES = 2000;

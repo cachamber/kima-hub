@@ -233,14 +233,14 @@ export default function LoginPage() {
                                 <div className="absolute inset-0 bg-white/10 blur-xl rounded-full group-hover:bg-white/20 transition-all duration-300" />
                                 <Image
                                     src="/assets/images/LIDIFY.webp"
-                                    alt="Lidify"
+                                    alt="Kima"
                                     width={40}
                                     height={40}
                                     className="relative z-10 drop-shadow-2xl"
                                 />
                             </div>
                             <span className="text-3xl font-bold bg-gradient-to-r from-white via-white to-gray-200 bg-clip-text text-transparent drop-shadow-2xl">
-                                Lidify
+                                Kima
                             </span>
                         </div>
                     </div>
@@ -251,7 +251,7 @@ export default function LoginPage() {
                             Welcome back
                         </h1>
                         <p className="text-white/60 text-center mb-8">
-                            Sign in to continue to Lidify
+                            Sign in to continue to Kima
                         </p>
 
                         <form onSubmit={handleSubmit} className="space-y-4">
@@ -433,7 +433,7 @@ export default function LoginPage() {
 
                     {/* Footer */}
                     <p className="text-center text-white/40 text-sm mt-6">
-                        © 2025 Lidify. Your music, your way.
+                        © 2025 Kima. Your music, your way.
                     </p>
                 </div>
             </div>

@@ -213,8 +213,8 @@ export function TVLayout({ children }: { children: React.ReactNode }) {
             {/* Nav */}
             <header className="tv-nav">
                 <Link href="/" className="tv-logo">
-                    <Image src="/assets/images/LIDIFY.webp" alt="Lidify" width={24} height={24} />
-                    <span>Lidify</span>
+                    <Image src="/assets/images/LIDIFY.webp" alt="Kima" width={24} height={24} />
+                    <span>Kima</span>
                 </Link>
 
                 <nav ref={navRef} className="tv-nav-links">

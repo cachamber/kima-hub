@@ -31,11 +31,11 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-    title: "Lidify - Your Music",
+    title: "Kima - Your Music",
     description: "Self-hosted music streaming platform",
     manifest: "/manifest.webmanifest",
     icons: {
-        icon: "/assets/images/Lidify__favicon.ico",
+        icon: "/assets/images/Kima__favicon.ico",
         apple: [
             { url: "/assets/icons/icon-192.webp", sizes: "192x192" },
             { url: "/assets/icons/icon-512.webp", sizes: "512x512" },
@@ -44,7 +44,7 @@ export const metadata: Metadata = {
     appleWebApp: {
         capable: true,
         statusBarStyle: "black-translucent",
-        title: "Lidify",
+        title: "Kima",
     },
 };
 

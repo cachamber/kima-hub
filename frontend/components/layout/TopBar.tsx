@@ -267,7 +267,7 @@ export function TopBar() {
                         >
                             <Image
                                 src="/assets/images/LIDIFY.webp"
-                                alt="Lidify"
+                                alt="Kima"
                                 width={32}
                                 height={32}
                                 className="group-hover:scale-105 transition-transform"

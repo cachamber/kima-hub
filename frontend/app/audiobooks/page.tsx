@@ -272,7 +272,7 @@ export default function AudiobooksPage() {
                         {[
                             { num: "01", title: "Install Audiobookshelf", desc: "Set up your own Audiobookshelf instance via Docker or use an existing installation" },
                             { num: "02", title: "Get API Key", desc: "Settings > Users > Click your user > API Tokens > Generate" },
-                            { num: "03", title: "Configure", desc: "Enter your Audiobookshelf URL and API key in Lidify settings" },
+                            { num: "03", title: "Configure", desc: "Enter your Audiobookshelf URL and API key in Kima settings" },
                         ].map((step) => (
                             <div
                                 key={step.num}

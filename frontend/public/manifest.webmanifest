@@ -1,6 +1,6 @@
 {
-  "name": "Lidify",
-  "short_name": "Lidify",
+  "name": "Kima",
+  "short_name": "Kima",
   "description": "Self-hosted music streaming with Lidarr integration",
   "start_url": "/",
   "display": "standalone",

@@ -21,8 +21,9 @@ import {
     RotateCw,
     RefreshCw,
 } from "lucide-react";
-import { formatTime, clampTime, formatTimeRemaining } from "@/utils/formatTime";
+import { formatTime, formatTimeRemaining } from "@/utils/formatTime";
 import { cn } from "@/utils/cn";
+import { usePlaybackProgress } from "@/hooks/usePlaybackProgress";
 import { useIsMobile, useIsTablet } from "@/hooks/useMediaQuery";
 import { useToast } from "@/lib/toast-context";
 import { SeekSlider } from "./SeekSlider";
@@ -42,13 +43,13 @@ export function OverlayPlayer() {
     const {
         isPlaying,
         isBuffering,
-        currentTime,
         canSeek,
         downloadProgress,
         audioError,
         clearAudioError,
-        duration: playbackDuration,
     } = useAudioPlayback();
+
+    const { duration, displayTime, progress } = usePlaybackProgress();
     const {
         pause,
         resume,
@@ -75,49 +76,8 @@ export function OverlayPlayer() {
     const { vibeEmbeddings, loading: featuresLoading } = useFeatures();
     const { title, subtitle, coverUrl, artistLink, mediaLink } = useMediaInfo(500);
 
-    const duration = (() => {
-        if (playbackType === "podcast" && currentPodcast?.duration) {
-            return currentPodcast.duration;
-        }
-        if (playbackType === "audiobook" && currentAudiobook?.duration) {
-            return currentAudiobook.duration;
-        }
-        return (
-            playbackDuration ||
-            currentTrack?.duration ||
-            currentAudiobook?.duration ||
-            currentPodcast?.duration ||
-            0
-        );
-    })();
-
     if (!currentTrack && !currentAudiobook && !currentPodcast) return null;
 
-    const displayTime = (() => {
-        let time = currentTime;
-        
-        if (time <= 0) {
-            if (
-                playbackType === "audiobook" &&
-                currentAudiobook?.progress?.currentTime
-            ) {
-                time = currentAudiobook.progress.currentTime;
-            } else if (
-                playbackType === "podcast" &&
-                currentPodcast?.progress?.currentTime
-            ) {
-                time = currentPodcast.progress.currentTime;
-            }
-        }
-        
-        // CRITICAL: Clamp to duration to prevent display of invalid times
-        return clampTime(time, duration);
-    })();
-
-    const progress =
-        duration > 0
-            ? Math.min(100, Math.max(0, (displayTime / duration) * 100))
-            : 0;
     const canSkip = playbackType === "track";
     const hasMedia = !!(currentTrack || currentAudiobook || currentPodcast);
 
@@ -437,7 +397,7 @@ export function OverlayPlayer() {
                                 !canSkip
                                     ? "text-gray-700 cursor-not-allowed"
                                     : isShuffle
-                                    ? "text-brand"
+                                    ? "text-[#a855f7]"
                                     : "text-gray-500 hover:text-white"
                             )}
                             title="Shuffle"
@@ -453,7 +413,7 @@ export function OverlayPlayer() {
                                 !canSkip
                                     ? "text-gray-700 cursor-not-allowed"
                                     : repeatMode !== "off"
-                                    ? "text-brand"
+                                    ? "text-[#a855f7]"
                                     : "text-gray-500 hover:text-white"
                             )}
                             title={

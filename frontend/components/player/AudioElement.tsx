@@ -75,6 +75,7 @@ export const AudioElement = memo(function AudioElement() {
 
     const {
         isPlaying,
+        setCurrentTime,
         setCurrentTimeFromEngine,
         setDuration,
         setIsPlaying,
@@ -236,8 +237,12 @@ export const AudioElement = memo(function AudioElement() {
 
             // Seek to saved position for audiobooks/podcasts
             if (pendingStartTimeRef.current > 0) {
-                audioEngine.seek(pendingStartTimeRef.current);
+                const startPos = pendingStartTimeRef.current;
                 pendingStartTimeRef.current = 0;
+                audioEngine.seek(startPos);
+                // Mark seek timestamp to block stale timeupdate=0 events,
+                // and set optimistic UI time so progress bar shows saved position
+                setCurrentTime(startPos);
             }
         };
 
@@ -327,7 +332,7 @@ export const AudioElement = memo(function AudioElement() {
             audioEngine.off("error", handleError);
             audioEngine.off("pause", handlePause);
         };
-    }, [setCurrentTimeFromEngine, setDuration, setIsPlaying, setIsBuffering, setAudioError]);
+    }, [setCurrentTime, setCurrentTimeFromEngine, setDuration, setIsPlaying, setIsBuffering, setAudioError]);
 
     // --- Load audio when track changes ---
 

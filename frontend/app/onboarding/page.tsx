@@ -196,14 +196,14 @@ export default function OnboardingPage() {
                                     <div className="absolute inset-0 bg-white/10 blur-xl rounded-full" />
                                     <Image
                                         src="/assets/images/LIDIFY.webp"
-                                        alt="Lidify"
+                                        alt="Kima"
                                         width={48}
                                         height={48}
                                         className="relative z-10 drop-shadow-2xl"
                                     />
                                 </div>
                                 <h1 className="text-4xl font-bold bg-gradient-to-r from-white via-white to-gray-200 bg-clip-text text-transparent drop-shadow-2xl">
-                                    Lidify
+                                    Kima
                                 </h1>
                             </div>
                             <p className="text-white/60 text-lg">
@@ -682,7 +682,7 @@ export default function OnboardingPage() {
 
                         {/* Footer */}
                         <p className="text-center text-white/40 text-sm mt-6">
-                            © 2025 Lidify. Your music, your way.
+                            © 2025 Kima. Your music, your way.
                         </p>
                     </div>
                 </div>

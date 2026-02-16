@@ -4,6 +4,7 @@ import { useAudioState } from "@/lib/audio-state-context";
 import { useAudioPlayback } from "@/lib/audio-playback-context";
 import { useAudioControls } from "@/lib/audio-controls-context";
 import { useMediaInfo } from "@/hooks/useMediaInfo";
+import { usePlaybackProgress } from "@/hooks/usePlaybackProgress";
 import Image from "next/image";
 import Link from "next/link";
 import {
@@ -29,7 +30,7 @@ import { useToast } from "@/lib/toast-context";
 import { KeyboardShortcutsTooltip } from "./KeyboardShortcutsTooltip";
 import { cn } from "@/utils/cn";
 import { useFeatures } from "@/lib/features-context";
-import { formatTime, clampTime, formatTimeRemaining } from "@/utils/formatTime";
+import { formatTime, formatTimeRemaining } from "@/utils/formatTime";
 import { SeekSlider } from "./SeekSlider";
 
 
@@ -42,8 +43,6 @@ export function FullPlayer() {
     // Use split contexts to avoid re-rendering on every currentTime update
     const {
         currentTrack,
-        currentAudiobook,
-        currentPodcast,
         playbackType,
         volume,
         isMuted,
@@ -58,13 +57,13 @@ export function FullPlayer() {
     const {
         isPlaying,
         isBuffering,
-        currentTime,
-        duration: playbackDuration,
         canSeek,
         downloadProgress,
         audioError,
         clearAudioError,
     } = useAudioPlayback();
+
+    const { duration, displayTime, progress } = usePlaybackProgress();
 
     const {
         pause,
@@ -140,55 +139,6 @@ export function FullPlayer() {
             setIsVibeLoading(false);
         }
     };
-
-    const duration = (() => {
-        // Prefer canonical durations for long-form media to avoid stale/misreported playbackDuration.
-        if (playbackType === "podcast" && currentPodcast?.duration) {
-            return currentPodcast.duration;
-        }
-        if (playbackType === "audiobook" && currentAudiobook?.duration) {
-            return currentAudiobook.duration;
-        }
-        return (
-            playbackDuration ||
-            currentTrack?.duration ||
-            currentAudiobook?.duration ||
-            currentPodcast?.duration ||
-            0
-        );
-    })();
-
-
-
-    // For audiobooks/podcasts, show saved progress even before playback starts
-    // This provides immediate visual feedback of where the user left off
-    const displayTime = (() => {
-        let time = currentTime;
-
-        // If we're actively playing or have seeked, use the live currentTime
-        if (time <= 0) {
-            // Otherwise, show saved progress for audiobooks/podcasts
-            if (
-                playbackType === "audiobook" &&
-                currentAudiobook?.progress?.currentTime
-            ) {
-                time = currentAudiobook.progress.currentTime;
-            } else if (
-                playbackType === "podcast" &&
-                currentPodcast?.progress?.currentTime
-            ) {
-                time = currentPodcast.progress.currentTime;
-            }
-        }
-
-        // CRITICAL: Clamp to duration to prevent display of invalid times
-        return clampTime(time, duration);
-    })();
-
-    const progress =
-        duration > 0
-            ? Math.min(100, Math.max(0, (displayTime / duration) * 100))
-            : 0;
 
     const handleSeek = (time: number) => {
         seek(time);
@@ -306,7 +256,7 @@ export function FullPlayer() {
                                 className={cn(
                                     "transition-all duration-200 hover:scale-110 disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:scale-100",
                                     isShuffle
-                                        ? "text-brand hover:text-brand-hover"
+                                        ? "text-[#a855f7] hover:text-[#c084fc]"
                                         : "text-gray-400 hover:text-white"
                                 )}
                                 disabled={!hasMedia || playbackType !== "track"}
@@ -438,7 +388,7 @@ export function FullPlayer() {
                                 className={cn(
                                     "transition-all duration-200 hover:scale-110 disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:scale-100",
                                     repeatMode !== "off"
-                                        ? "text-brand hover:text-brand-hover"
+                                        ? "text-[#a855f7] hover:text-[#c084fc]"
                                         : "text-gray-400 hover:text-white"
                                 )}
                                 disabled={!hasMedia || playbackType !== "track"}
@@ -576,7 +526,7 @@ export function FullPlayer() {
                                         ? "rgba(255,255,255,0.15)"
                                         : `linear-gradient(to right, #fca200 ${volume * 100}%, rgba(255,255,255,0.15) ${volume * 100}%)`
                                 }}
-                                className="w-full h-1 rounded-full appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:bg-brand [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:cursor-pointer [&::-webkit-slider-thumb]:shadow-lg [&::-webkit-slider-thumb]:shadow-brand/30 [&::-webkit-slider-thumb]:transition-all [&::-webkit-slider-thumb]:hover:scale-110"
+                                className="w-full h-1 rounded-full appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:bg-[#eab308] [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:cursor-pointer [&::-webkit-slider-thumb]:shadow-lg [&::-webkit-slider-thumb]:shadow-[#eab308]/30 [&::-webkit-slider-thumb]:transition-all [&::-webkit-slider-thumb]:hover:scale-110"
                             />
                         </div>
 

@@ -1,5 +1,12 @@
 @import "tailwindcss";
 
+@theme {
+    --color-brand: #fca200;
+    --color-brand-hover: #e69200;
+    --color-brand-light: #fcb84d;
+    --color-brand-dark: #d48c00;
+}
+
 :root {
     /* Lidify Design System - Dark Theme Only */
 

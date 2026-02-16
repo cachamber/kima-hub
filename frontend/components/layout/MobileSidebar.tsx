@@ -96,13 +96,13 @@ export function MobileSidebar({ isOpen, onClose }: MobileSidebarProps) {
                     >
                         <Image
                             src="/assets/images/LIDIFY.webp"
-                            alt="Lidify"
+                            alt="Kima"
                             width={32}
                             height={32}
                             className="flex-shrink-0"
                         />
                         <span className="text-lg font-bold text-white tracking-tight">
-                            Lidify
+                            Kima
                         </span>
                     </Link>
                     <button

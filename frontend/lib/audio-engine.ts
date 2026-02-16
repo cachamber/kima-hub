@@ -247,7 +247,12 @@ class AudioEngine {
         } else {
             time = Math.max(0, time);
         }
-        this.audio.currentTime = time;
+        try {
+            this.audio.currentTime = time;
+        } catch (err) {
+            // InvalidStateError if audio not ready (readyState < HAVE_METADATA)
+            console.warn("[AudioEngine] Seek failed:", err);
+        }
     }
 
     /**

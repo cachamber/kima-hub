@@ -28,11 +28,11 @@ import {
 } from "lucide-react";
 import { useToast } from "@/lib/toast-context";
 import { cn } from "@/utils/cn";
-import { clampTime } from "@/utils/formatTime";
 import { useState, useRef, useEffect, lazy, Suspense } from "react";
 import { KeyboardShortcutsTooltip } from "./KeyboardShortcutsTooltip";
 import { SeekSlider } from "./SeekSlider";
 import { useFeatures } from "@/lib/features-context";
+import { usePlaybackProgress } from "@/hooks/usePlaybackProgress";
 
 const EnhancedVibeOverlay = lazy(() => import("./VibeOverlayEnhanced").then(mod => ({ default: mod.EnhancedVibeOverlay })));
 
@@ -52,13 +52,12 @@ export function MiniPlayer() {
     const {
         isPlaying,
         isBuffering,
-        currentTime,
-        duration: playbackDuration,
         canSeek,
         downloadProgress,
         audioError,
         clearAudioError,
     } = useAudioPlayback();
+    const { duration, progress } = usePlaybackProgress();
     const {
         pause,
         resume,
@@ -141,31 +140,6 @@ export function MiniPlayer() {
     // Check if controls should be enabled (only for tracks)
     const canSkip = playbackType === "track";
 
-    // Calculate progress percentage
-    const duration = (() => {
-        if (playbackType === "podcast" && currentPodcast?.duration) {
-            return currentPodcast.duration;
-        }
-        if (playbackType === "audiobook" && currentAudiobook?.duration) {
-            return currentAudiobook.duration;
-        }
-        return (
-            playbackDuration ||
-            currentTrack?.duration ||
-            currentAudiobook?.duration ||
-            currentPodcast?.duration ||
-            0
-        );
-    })();
-
-    // CRITICAL: Clamp currentTime to prevent invalid progress display
-    const clampedCurrentTime = clampTime(currentTime, duration);
-
-    const progress =
-        duration > 0
-            ? Math.min(100, Math.max(0, (clampedCurrentTime / duration) * 100))
-            : 0;
-
     // Handle progress bar seek
     const handleSeek = (time: number) => {
         seek(time);
@@ -243,7 +217,7 @@ export function MiniPlayer() {
                                 {/* Progress bar at top */}
                                 <div className="relative h-[2px] bg-white/20 w-full">
                                     <div
-                                        className="h-full bg-brand transition-all duration-150"
+                                        className="h-full bg-[#eab308] transition-all duration-150"
                                         style={{ width: `${progress}%` }}
                                     />
                                 </div>
@@ -310,7 +284,7 @@ export function MiniPlayer() {
                             {/* Progress bar at top - inside the clipped container */}
                             <div className="relative h-[2px] bg-white/20 w-full">
                                 <div
-                                    className="h-full bg-brand transition-all duration-150"
+                                    className="h-full bg-[#eab308] transition-all duration-150"
                                     style={{ width: `${progress}%` }}
                                 />
                             </div>
@@ -620,7 +594,7 @@ export function MiniPlayer() {
                                 "rounded p-1.5 transition-colors",
                                 hasMedia && canSkip
                                     ? isShuffle
-                                        ? "text-brand hover:text-brand-hover"
+                                        ? "text-[#a855f7] hover:text-[#c084fc]"
                                         : "text-gray-400 hover:text-white"
                                     : "text-gray-600 cursor-not-allowed"
                             )}
@@ -747,7 +721,7 @@ export function MiniPlayer() {
                                 "rounded p-1.5 transition-colors",
                                 hasMedia && canSkip
                                     ? repeatMode !== "off"
-                                        ? "text-brand hover:text-brand-hover"
+                                        ? "text-[#a855f7] hover:text-[#c084fc]"
                                         : "text-gray-400 hover:text-white"
                                     : "text-gray-600 cursor-not-allowed"
                             )}
