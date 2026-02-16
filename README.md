@@ -1,14 +1,14 @@
-# Lidify
+# kima-hub
 
-[![Docker Image](https://img.shields.io/docker/v/chevron7locked/lidify?label=Docker&sort=semver)](https://hub.docker.com/r/chevron7locked/lidify)
-[![GitHub Release](https://img.shields.io/github/v/release/Chevron7Locked/lidify?label=Release)](https://github.com/Chevron7Locked/lidify/releases)
+[![Docker Image](https://img.shields.io/docker/v/chevron7locked/kima?label=Docker&sort=semver)](https://hub.docker.com/r/chevron7locked/kima)
+[![GitHub Release](https://img.shields.io/github/v/release/Chevron7Locked/kima-hub?label=Release)](https://github.com/Chevron7Locked/kima-hub/releases)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 
 A self-hosted, on-demand audio streaming platform that brings the Spotify experience to your personal music library.
 
-Lidify is built for music lovers who want the convenience of streaming services without sacrificing ownership of their library. Point it at your music collection, and Lidify handles the rest: artist discovery, personalized playlists, podcast subscriptions, and seamless integration with tools you already use like Lidarr and Audiobookshelf.
+Kima is built for music lovers who want the convenience of streaming services without sacrificing ownership of their library. Point it at your music collection, and Kima handles the rest: artist discovery, personalized playlists, podcast subscriptions, and seamless integration with tools you already use like Lidarr and Audiobookshelf.
 
-![Lidify Home Screen](assets/screenshots/desktop-home.png)
+![Kima Home Screen](assets/screenshots/desktop-home.png)
 
 ---
 
@@ -31,7 +31,7 @@ Thanks for your patience while I work through this.
 -   [CLAP Audio Analysis](#clap-audio-analysis)
 -   [GPU Acceleration](#gpu-acceleration)
 -   [Integrations](#integrations)
--   [Using Lidify](#using-lidify)
+-   [Using Kima](#using-lidify)
 -   [Administration](#administration)
 -   [Architecture](#architecture)
 -   [Roadmap](#roadmap)
@@ -45,7 +45,7 @@ Thanks for your patience while I work through this.
 ### Your Music, Your Way
 
 -   **Stream your library** - FLAC, MP3, AAC, OGG, and other common formats work out of the box
--   **Automatic cataloging** - Lidify scans your library and enriches it with metadata from MusicBrainz and Last.fm
+-   **Automatic cataloging** - Kima scans your library and enriches it with metadata from MusicBrainz and Last.fm
 -   **Audio transcoding** - Stream at original quality or transcode on-the-fly (320kbps, 192kbps, or 128kbps)
 -   **Ultra-wide support** - Library grid scales up to 8 columns on large displays
 
@@ -98,7 +98,7 @@ Thanks for your patience while I work through this.
 
 ### The Vibe System
 
-Lidify's standout feature for music discovery. While playing any track, activate vibe mode to find similar music in your library.
+Kima's standout feature for music discovery. While playing any track, activate vibe mode to find similar music in your library.
 
 -   **Vibe Button** - Tap while playing any track to activate vibe mode
 -   **Audio Analysis** - Real-time radar chart showing Energy, Mood, Groove, and Tempo
@@ -145,7 +145,7 @@ Import playlists from Spotify and Deezer, or browse and discover new music direc
 
 ### Mobile and TV
 
--   **Progressive Web App (PWA)** - Install Lidify on your phone or tablet for a native-like experience
+-   **Progressive Web App (PWA)** - Install Kima on your phone or tablet for a native-like experience
 -   **Android TV** - Fully optimized 10-foot interface with D-pad/remote navigation
 -   **Responsive Web** - Works on any device with a modern browser
 
@@ -161,17 +161,17 @@ Import playlists from Spotify and Deezer, or browse and discover new music direc
 
 ### Progressive Web App (PWA)
 
-Lidify works as a PWA on mobile devices, giving you a native app-like experience without needing to download from an app store.
+Kima works as a PWA on mobile devices, giving you a native app-like experience without needing to download from an app store.
 
 **To install on Android:**
 
-1. Open your Lidify server in Chrome
+1. Open your Kima server in Chrome
 2. Tap the menu (⋮)
 3. Select "Add to Home Screen" or "Install app"
 
 **To install on iOS:**
 
-1. Open your Lidify server in Safari
+1. Open your Kima server in Safari
 2. Tap the Share button
 3. Select "Add to Home Screen"
 
@@ -185,14 +185,14 @@ Lidify works as a PWA on mobile devices, giving you a native app-like experience
 
 ### Android TV
 
-Lidify includes a dedicated interface optimized for television displays:
+Kima includes a dedicated interface optimized for television displays:
 
 -   Large artwork and readable text from across the room
 -   Full D-pad and remote navigation support
 -   Persistent Now Playing bar for quick access to playback controls
 -   Simplified navigation focused on browsing and playback
 
-The TV interface is automatically enabled when accessing Lidify from an Android TV device's browser.
+The TV interface is automatically enabled when accessing Kima from an Android TV device's browser.
 
 ---
 
@@ -206,7 +206,7 @@ docker run -d \
   -p 3030:3030 \
   -v /path/to/your/music:/music \
   -v lidify_data:/data \
-  chevron7locked/lidify:latest
+  chevron7locked/kima:latest
 ```
 
 That's it! Open http://localhost:3030 and create your account.
@@ -220,12 +220,12 @@ docker run -d \
   -p 3030:3030 \
   -v /path/to/your/music:/music \
   -v lidify_data:/data \
-  chevron7locked/lidify:latest
+  chevron7locked/kima:latest
 ```
 
 ### What's Included
 
-The Lidify container includes everything you need:
+The Kima container includes everything you need:
 
 -   **Web Interface** (port 3030)
 -   **API Server** (internal)
@@ -243,7 +243,7 @@ docker run -d \
   -e SESSION_SECRET=your-secret-key \
   -e TZ=America/New_York \
   --add-host=host.docker.internal:host-gateway \
-  chevron7locked/lidify:latest
+  chevron7locked/kima:latest
 ```
 
 | Variable         | Description            | Default        |
@@ -258,7 +258,7 @@ Create a `docker-compose.yml` file:
 ```yaml
 services:
     lidify:
-        image: chevron7locked/lidify:latest
+        image: chevron7locked/kima:latest
         container_name: lidify
         ports:
             - "3030:3030"
@@ -301,22 +301,22 @@ If startup logs report a permission error, `chown` the host path to the UID/GID 
 
 ---
 
-Lidify will begin scanning your music library automatically. Depending on the size of your collection, this may take a few minutes to several hours.
+Kima will begin scanning your music library automatically. Depending on the size of your collection, this may take a few minutes to several hours.
 
 ---
 
 ## Release Channels
 
-Lidify offers two release channels to match your stability preferences:
+Kima offers two release channels to match your stability preferences:
 
 ### 🟢 Stable (Recommended)
 
 Production-ready releases. Updated when new stable versions are released.
 
 ```bash
-docker pull chevron7locked/lidify:latest
+docker pull chevron7locked/kima:latest
 # or specific version
-docker pull chevron7locked/lidify:v1.2.0
+docker pull chevron7locked/kima:v1.2.0
 ```
 
 ### 🔴 Nightly (Development)
@@ -326,10 +326,10 @@ Latest development build. Built on every push to main.
 ⚠️ **Not recommended for production** - may be unstable or broken.
 
 ```bash
-docker pull chevron7locked/lidify:nightly
+docker pull chevron7locked/kima:nightly
 ```
 
-**For contributors:** See [`CONTRIBUTING.md`](CONTRIBUTING.md) for information on submitting pull requests and contributing to Lidify.
+**For contributors:** See [`CONTRIBUTING.md`](CONTRIBUTING.md) for information on submitting pull requests and contributing to Kima.
 
 ---
 
@@ -337,14 +337,14 @@ docker pull chevron7locked/lidify:nightly
 
 ### Environment Variables
 
-The unified Lidify container handles most configuration automatically. Here are the available options:
+The unified Kima container handles most configuration automatically. Here are the available options:
 
 | Variable                            | Default                            | Description                                                                 |
 | ----------------------------------- | ---------------------------------- | --------------------------------------------------------------------------- |
 | `SESSION_SECRET`                    | Auto-generated                     | Session encryption key (recommended to set for persistence across restarts) |
 | `SETTINGS_ENCRYPTION_KEY`           | Required                           | Encryption key for stored credentials (generate with `openssl rand -base64 32`) |
 | `TZ`                                | `UTC`                              | Timezone for the container                                                  |
-| `PORT`                              | `3030`                             | Port to access Lidify                                                       |
+| `PORT`                              | `3030`                             | Port to access Kima                                                       |
 | `LIDIFY_CALLBACK_URL`               | `http://host.docker.internal:3030` | URL for Lidarr webhook callbacks (see [Lidarr integration](#lidarr))        |
 | `AUDIO_ANALYSIS_WORKERS`            | `2`                                | Number of parallel workers for audio analysis (1-8)                         |
 | `AUDIO_ANALYSIS_THREADS_PER_WORKER` | `1`                                | Threads per worker for TensorFlow/FFT operations (1-4)                      |
@@ -358,7 +358,7 @@ The music library path is configured via Docker volume mount (`-v /path/to/music
 
 #### External Access
 
-If you're accessing Lidify from outside your local network (via reverse proxy, for example), set the API URL:
+If you're accessing Kima from outside your local network (via reverse proxy, for example), set the API URL:
 
 ```env
 NEXT_PUBLIC_API_URL=https://lidify-api.yourdomain.com
@@ -376,7 +376,7 @@ ALLOWED_ORIGINS=http://localhost:3030,https://lidify.yourdomain.com
 
 ### Environment Variables
 
-Lidify uses several sensitive environment variables. Never commit your `.env` file.
+Kima uses several sensitive environment variables. Never commit your `.env` file.
 
 | Variable                  | Purpose                        | Required          |
 | ------------------------- | ------------------------------ | ----------------- |
@@ -427,7 +427,7 @@ openssl rand -base64 32
 
 ### Network Security
 
--   Lidify is designed for self-hosted LAN use
+-   Kima is designed for self-hosted LAN use
 -   For external access, use a reverse proxy with HTTPS
 -   Configure `ALLOWED_ORIGINS` for your domain
 
@@ -505,7 +505,7 @@ nvidia-container-runtime --version
 
 **All-in-One container:**
 ```bash
-docker run -d --gpus all -p 3030:3030 -v /path/to/music:/music -v lidify_data:/data chevron7locked/lidify:latest
+docker run -d --gpus all -p 3030:3030 -v /path/to/music:/music -v lidify_data:/data chevron7locked/kima:latest
 ```
 
 **Docker Compose:**
@@ -541,11 +541,11 @@ If you see `TensorFlow running on CPU`, GPU passthrough is not active.
 
 ## Integrations
 
-Lidify works beautifully on its own, but it becomes even more powerful when connected to other services.
+Kima works beautifully on its own, but it becomes even more powerful when connected to other services.
 
 ### Lidarr
 
-Connect Lidify to your Lidarr instance to request and download new music directly from the app.
+Connect Kima to your Lidarr instance to request and download new music directly from the app.
 
 **What you get:**
 
@@ -556,40 +556,40 @@ Connect Lidify to your Lidarr instance to request and download new music directl
 
 **Setup:**
 
-1. Go to Settings in Lidify
+1. Go to Settings in Kima
 2. Navigate to the Lidarr section
 3. Enter your Lidarr URL (e.g., `http://localhost:8686`)
 4. Enter your Lidarr API key (found in Lidarr under Settings > General)
 5. Test the connection and save
 
-Lidify will automatically configure a webhook in Lidarr to receive notifications when new music is imported.
+Kima will automatically configure a webhook in Lidarr to receive notifications when new music is imported.
 
 **Networking Note:**
 
-The webhook requires Lidarr to be able to reach Lidify. By default, Lidify uses `host.docker.internal:3030` which works automatically when using the provided docker-compose files (they include `extra_hosts` to enable this on Linux).
+The webhook requires Lidarr to be able to reach Kima. By default, Kima uses `host.docker.internal:3030` which works automatically when using the provided docker-compose files (they include `extra_hosts` to enable this on Linux).
 
-If you're using **custom Docker networks** with static IPs, set the callback URL so Lidarr knows how to reach Lidify:
+If you're using **custom Docker networks** with static IPs, set the callback URL so Lidarr knows how to reach Kima:
 
 ```yaml
 environment:
     - LIDIFY_CALLBACK_URL=http://YOUR_LIDIFY_IP:3030
 ```
 
-Use the IP address that Lidarr can reach. If both containers are on the same Docker network, use Lidify's container IP.
+Use the IP address that Lidarr can reach. If both containers are on the same Docker network, use Kima's container IP.
 
 ### Audiobookshelf
 
-Connect to your Audiobookshelf instance to browse and listen to audiobooks within Lidify.
+Connect to your Audiobookshelf instance to browse and listen to audiobooks within Kima.
 
 **What you get:**
 
 -   Browse your audiobook library
--   Stream audiobooks directly in Lidify
--   Progress syncs between Lidify and Audiobookshelf
+-   Stream audiobooks directly in Kima
+-   Progress syncs between Kima and Audiobookshelf
 
 **Setup:**
 
-1. Go to Settings in Lidify
+1. Go to Settings in Kima
 2. Navigate to the Audiobookshelf section
 3. Enter your Audiobookshelf URL (e.g., `http://localhost:13378`)
 4. Enter your API key (found in Audiobookshelf under Settings > Users > your user > API Token)
@@ -597,25 +597,25 @@ Connect to your Audiobookshelf instance to browse and listen to audiobooks withi
 
 ### Soulseek
 
-Lidify includes built-in Soulseek support for finding rare tracks and one-offs that aren't available through traditional download sources like Lidarr.
+Kima includes built-in Soulseek support for finding rare tracks and one-offs that aren't available through traditional download sources like Lidarr.
 
-[Soulseek](https://www.slsknet.org/) is a peer-to-peer file sharing network focused on music. Users share their music libraries and can browse/download from each other. Lidify connects directly to the Soulseek network -- no additional software (like slskd) is required.
+[Soulseek](https://www.slsknet.org/) is a peer-to-peer file sharing network focused on music. Users share their music libraries and can browse/download from each other. Kima connects directly to the Soulseek network -- no additional software (like slskd) is required.
 
 **Setup:**
 
-1. Go to Settings in Lidify
+1. Go to Settings in Kima
 2. Navigate to the Soulseek section
 3. Enter your Soulseek username and password (create an account at [slsknet.org](https://www.slsknet.org/) if you don't have one)
 4. Save your settings
 
 **How Search Works:**
 
-When you search for music in Lidify's Discovery tab, Soulseek results appear alongside Last.fm and Deezer results. Each result shows the filename, file size, bitrate, and format (FLAC/MP3). Metadata like artist and album is parsed from the file path structure (typically `Artist/Album/01 - Track.flac`).
+When you search for music in Kima's Discovery tab, Soulseek results appear alongside Last.fm and Deezer results. Each result shows the filename, file size, bitrate, and format (FLAC/MP3). Metadata like artist and album is parsed from the file path structure (typically `Artist/Album/01 - Track.flac`).
 
 **How Download Works:**
 
 1. Click the download button on a Soulseek search result
-2. Lidify searches the Soulseek network for the best match (preferring FLAC, high bitrate)
+2. Kima searches the Soulseek network for the best match (preferring FLAC, high bitrate)
 3. The file is downloaded directly to your music library path
 4. A library scan is triggered to import the new file
 5. Metadata enrichment runs automatically (artist info, mood tags, audio analysis)
@@ -629,19 +629,19 @@ You can also configure Soulseek as a download source for playlist imports. In Se
 - Download speed depends on the sharing user's connection and availability
 - Not all tracks will have results -- Soulseek coverage varies by genre and popularity
 - Some users may have slow connections or go offline during transfers
-- Lidify retries with alternative users if a download fails or times out
+- Kima retries with alternative users if a download fails or times out
 
 ---
 
-## Using Lidify
+## Using Kima
 
 ### First-Time Setup
 
-When you first access Lidify, you'll be guided through a setup wizard:
+When you first access Kima, you'll be guided through a setup wizard:
 
 1. **Create your account** - The first user becomes the administrator
 2. **Configure integrations** - Optionally connect Lidarr, Audiobookshelf, and other services
-3. **Wait for library scan** - Lidify will scan and catalog your music collection
+3. **Wait for library scan** - Kima will scan and catalog your music collection
 
 ### The Home Screen
 
@@ -657,7 +657,7 @@ After setup, your home screen displays:
 
 ### Searching
 
-Lidify offers two search modes:
+Kima offers two search modes:
 
 **Library Search** - Find artists, albums, and tracks in your collection. Results are instant and searchable by name.
 
@@ -695,7 +695,7 @@ Your listening progress is saved automatically, so you can pause on one device a
 
 1. Start playing any track from your library
 2. Click the **vibe button** (waveform icon) in the player controls
-3. Lidify analyzes the track and finds matching songs based on energy, mood, and tempo
+3. Kima analyzes the track and finds matching songs based on energy, mood, and tempo
 4. Matching tracks are automatically queued - just keep listening
 5. The vibe overlay shows a radar chart comparing your current track to the source
 
@@ -704,7 +704,7 @@ Your listening progress is saved automatically, so you can pause on one device a
 1. Open the Mood Mixer from the home screen or player
 2. Choose a quick mood preset (Happy, Energetic, Chill, Focus, Workout) or create a custom mix
 3. Adjust sliders for happiness, energy, danceability, and tempo
-4. Lidify generates a playlist of matching tracks from your library
+4. Kima generates a playlist of matching tracks from your library
 
 ### Importing Playlists
 
@@ -754,14 +754,14 @@ When using the web interface, these keyboard shortcuts are available during play
 
 ### Android TV
 
-Lidify includes a dedicated interface optimized for television displays:
+Kima includes a dedicated interface optimized for television displays:
 
 -   Large artwork and readable text from across the room
 -   Full D-pad and remote navigation support
 -   Persistent Now Playing bar for quick access to playback controls
 -   Simplified navigation focused on browsing and playback
 
-The TV interface is automatically enabled when accessing Lidify from an Android TV device. Access it through your TV's web browser.
+The TV interface is automatically enabled when accessing Kima from an Android TV device. Access it through your TV's web browser.
 
 ---
 
@@ -787,7 +787,7 @@ Administrators have access to additional settings:
 
 ### Download Settings
 
-Configure how Lidify acquires new music in Settings → Downloads:
+Configure how Kima acquires new music in Settings → Downloads:
 
 -   **Primary Source** - Choose between Soulseek or Lidarr as your main download source
 -   **Fallback Behavior** - Optionally fall back to the other source if the primary fails
@@ -813,7 +813,7 @@ Access the Activity Panel by clicking the bell icon in the top bar (desktop) or 
 
 ### API Keys
 
-For programmatic access to Lidify:
+For programmatic access to Kima:
 
 1. Go to Settings > API Keys
 2. Generate a new key with a descriptive name
@@ -834,7 +834,7 @@ Monitor background job queues at `/admin/queues`:
 
 ## Architecture
 
-Lidify consists of several components working together:
+Kima consists of several components working together:
 
 ```
                                     ┌─────────────────┐
@@ -877,7 +877,7 @@ Lidify consists of several components working together:
 
 ## Roadmap
 
-Lidify is under active development. Here's what's planned:
+Kima is under active development. Here's what's planned:
 
 -   **Native Mobile App** - React Native application for iOS and Android
 -   **Offline Mode** - Download tracks for offline playback
@@ -889,7 +889,7 @@ Contributions and suggestions are welcome.
 
 ## License
 
-Lidify is released under the [GNU General Public License v3.0](LICENSE).
+Kima is released under the [GNU General Public License v3.0](LICENSE).
 
 You are free to use, modify, and distribute this software under the terms of the GPL-3.0 license.
 
@@ -897,7 +897,7 @@ You are free to use, modify, and distribute this software under the terms of the
 
 ## Acknowledgments
 
-Lidify wouldn't be possible without these services and projects:
+Kima wouldn't be possible without these services and projects:
 
 -   [Last.fm](https://www.last.fm/) - Artist recommendations and music metadata
 -   [MusicBrainz](https://musicbrainz.org/) - Comprehensive music database
@@ -913,7 +913,7 @@ Lidify wouldn't be possible without these services and projects:
 
 If you encounter issues or have questions:
 
-1. Check the [Issues](https://github.com/chevron7locked/lidify/issues) page for known problems
+1. Check the [Issues](https://github.com/chevron7locked/kima/issues) page for known problems
 2. Open a new issue with details about your setup and the problem you're experiencing
 3. Include logs from `docker compose logs` if relevant
 
