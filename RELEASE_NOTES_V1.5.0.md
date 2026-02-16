@@ -1,4 +1,4 @@
-# Lidify v1.5.0 - Integration Stability & Reliability
+# Kima v1.5.0 - Integration Stability & Reliability
 
 **Release Date:** 2026-02-14
 **Type:** Major Feature Release
@@ -303,7 +303,7 @@ Before deploying to production:
 
 - [ ] **Backup database**
   ```bash
-  docker compose exec postgres pg_dump -U lidify lidify > backup_$(date +%Y%m%d).sql
+  docker compose exec postgres pg_dump -U kimakima> backup_$(date +%Y%m%d).sql
   ```
 
 - [ ] **Verify Redis is running**
@@ -321,7 +321,7 @@ Before deploying to production:
 - [ ] **Monitor first 24 hours**
   - Watch logs: `docker compose logs -f backend | grep MIGRATE`
   - Check Redis: `docker compose exec redis redis-cli INFO memory`
-  - Verify webhooks: `docker compose exec postgres psql -U lidify -d lidify -c "SELECT COUNT(*) FROM \"WebhookEvent\";"`
+  - Verify webhooks: `docker compose exec postgres psql -U kima-d kima-c "SELECT COUNT(*) FROM \"WebhookEvent\";"`
 
 ---
 
@@ -346,7 +346,7 @@ If database changes cause issues:
 
 ```bash
 # Restore backup
-docker compose exec postgres psql -U lidify -d lidify < backup_YYYYMMDD.sql
+docker compose exec postgres psql -U kima-d kima< backup_YYYYMMDD.sql
 
 # Revert code
 git checkout v1.4.x
@@ -392,11 +392,11 @@ GPL-3.0 (unchanged)
 
 ## 🔗 Links
 
-- **Repository:** https://github.com/[your-org]/lidify
-- **Issues:** https://github.com/[your-org]/lidify/issues
-- **Discussions:** https://github.com/[your-org]/lidify/discussions
+- **Repository:** https://github.com/[your-org]/kima-hub
+- **Issues:** https://github.com/[your-org]/kima-hub/issues
+- **Discussions:** https://github.com/[your-org]/kima-hub/discussions
 - **Discord:** [Your Discord Link]
 
 ---
 
-**Full Changelog:** https://github.com/[your-org]/lidify/compare/v1.4.x...v1.5.0
+**Full Changelog:** https://github.com/[your-org]/kima-hub/compare/v1.4.x...v1.5.0

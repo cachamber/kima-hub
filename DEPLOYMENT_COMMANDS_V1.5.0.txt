@@ -1,4 +1,4 @@
-# Lidify v1.5.0 Deployment Commands
+# Kima v1.5.0 Deployment Commands
 # Copy and paste when ready to deploy
 
 # ============================================
@@ -41,11 +41,11 @@ git push origin v1.5.0
 
 # Step 4: Build Docker image
 cd backend
-docker build -t your-registry/lidify:1.5.0 -t your-registry/lidify:latest .
+docker build -t your-registry/kima:1.5.0 -t your-registry/kima:latest .
 
 # Step 5: Push Docker image
-docker push your-registry/lidify:1.5.0
-docker push your-registry/lidify:latest
+docker push your-registry/kima:1.5.0
+docker push your-registry/kima:latest
 
 # ============================================
 # FOR USERS TO UPGRADE (simple!)
@@ -69,16 +69,16 @@ docker compose logs backend | grep "\[MIGRATE\]"
 docker compose logs backend | grep "Redis"
 
 # Verify webhook events
-docker compose exec postgres psql -U lidify -d lidify -c "SELECT COUNT(*) FROM \"WebhookEvent\";"
+docker compose exec postgres psql -U kima -d kima -c "SELECT COUNT(*) FROM \"WebhookEvent\";"
 
 # Check migration count (should be 30)
-docker compose exec postgres psql -U lidify -d lidify -c "SELECT COUNT(*) FROM \"_prisma_migrations\";"
+docker compose exec postgres psql -U kima -d kima -c "SELECT COUNT(*) FROM \"_prisma_migrations\";"
 
 # Monitor Redis memory
 docker compose exec redis redis-cli INFO memory | grep used_memory_human
 
 # Test metrics endpoint
-curl http://localhost:3006/metrics | grep lidify_
+curl http://localhost:3006/metrics | grep kima_
 
 # ============================================
 # IF ISSUES - QUICK ROLLBACK
@@ -90,7 +90,7 @@ docker compose build backend
 docker compose up -d backend
 
 # Full rollback (restore database backup):
-docker compose exec postgres psql -U lidify -d lidify < backup_YYYYMMDD.sql
+docker compose exec postgres psql -U kima -d kima < backup_YYYYMMDD.sql
 git checkout v1.4.x
 docker compose up -d
 
@@ -98,7 +98,7 @@ docker compose up -d
 # GITHUB RELEASE (optional)
 # ============================================
 
-# Go to: https://github.com/[your-org]/lidify/releases/new
+# Go to: https://github.com/[your-org]/kima/releases/new
 # - Tag: v1.5.0
 # - Title: v1.5.0 - Integration Stability & Reliability
 # - Description: Copy from RELEASE_NOTES_V1.5.0.md
@@ -111,7 +111,7 @@ docker compose up -d
 # Discord/Forum/Email:
 
 """
-🎉 Lidify v1.5.0 Released - Integration Stability & Reliability
+🎉 Kima v1.5.0 Released - Integration Stability & Reliability
 
 Major stability improvements for Lidarr and Soulseek integrations!
 
@@ -126,7 +126,7 @@ Major stability improvements for Lidarr and Soulseek integrations!
 docker compose pull && docker compose up -d
 
 ⏱️ First startup: 30-60 seconds (one-time migration)
-📖 Full details: https://github.com/[your-org]/lidify/releases/tag/v1.5.0
+📖 Full details: https://github.com/[your-org]/kima/releases/tag/v1.5.0
 
 ⚠️ New requirement: Redis (likely already in your docker-compose.yml)
 

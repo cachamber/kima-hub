@@ -1,12 +1,12 @@
 #!/bin/bash
-# Lidify v1.5.0 Release Commands
+# Kima v1.5.0 Release Commands
 # Save this file and run when ready to release
 # DO NOT RUN until you've tested on staging
 
 set -e
 
 echo "========================================="
-echo "Lidify v1.5.0 Release Process"
+echo "Kima v1.5.0 Release Process"
 echo "========================================="
 echo ""
 echo "⚠️  BEFORE RUNNING THIS SCRIPT:"
@@ -153,7 +153,7 @@ See: git log v1.4.x..v1.5.0
 
 ---
 
-**Full Changelog**: https://github.com/[your-org]/lidify/compare/v1.4.x...v1.5.0"
+**Full Changelog**: https://github.com/[your-org]/kima-hub/compare/v1.4.x...v1.5.0"
 
 echo "✓ Git tag v1.5.0 created"
 
@@ -187,12 +187,12 @@ echo "   git merge feature/soulseek-sse-upgrade"
 echo "   git push origin main"
 echo ""
 echo "4. Build and push Docker image:"
-echo "   docker build -t your-registry/lidify:1.5.0 -t your-registry/lidify:latest backend/"
-echo "   docker push your-registry/lidify:1.5.0"
-echo "   docker push your-registry/lidify:latest"
+echo "   docker build -t your-registry/kima:1.5.0 -t your-registry/kima:latest backend/"
+echo "   docker push your-registry/kima:1.5.0"
+echo "   docker push your-registry/kima:latest"
 echo ""
 echo "5. Create GitHub Release:"
-echo "   - Go to: https://github.com/[your-org]/lidify/releases/new"
+echo "   - Go to: https://github.com/[your-org]/kima-hub/releases/new"
 echo "   - Tag: v1.5.0"
 echo "   - Title: v1.5.0 - Integration Stability & Reliability"
 echo "   - Copy release notes from git tag message"
