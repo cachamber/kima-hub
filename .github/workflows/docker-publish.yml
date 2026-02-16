@@ -12,7 +12,7 @@ on:
                 type: string
 
 env:
-    IMAGE_NAME: ${{ secrets.DOCKERHUB_USERNAME }}/lidify
+    IMAGE_NAME: ${{ secrets.DOCKERHUB_USERNAME }}/kima
 
 jobs:
     build:
@@ -86,17 +86,17 @@ jobs:
               uses: softprops/action-gh-release@v1
               with:
                   tag_name: ${{ steps.version.outputs.version }}
-                  name: Lidify ${{ steps.version.outputs.version }}
+                  name: Kima ${{ steps.version.outputs.version }}
                   body: |
                       ## Quick Start
 
                       ```bash
                       docker run -d \
-                        --name lidify \
+                        --name kima \
                         -p 3030:3030 \
                         -v /path/to/your/music:/music \
-                        -v lidify_data:/data \
-                        ${{ secrets.DOCKERHUB_USERNAME }}/lidify:${{ steps.version.outputs.version }}
+                        -v kima_data:/data \
+                        ${{ secrets.DOCKERHUB_USERNAME }}/kima:${{ steps.version.outputs.version }}
                       ```
 
                       Then open http://localhost:3030 and create your account!
