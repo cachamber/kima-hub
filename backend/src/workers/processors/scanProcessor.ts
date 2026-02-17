@@ -490,8 +490,12 @@ export async function processScan(
 
         // Reconcile pending tracks from Spotify playlist imports
         // This checks if any previously unmatched tracks now have matches
-        // Run on: new tracks added OR manual sync (no source = manual scan button)
-        const shouldReconcile = result.tracksAdded > 0 || !source;
+        // Run on: new/updated tracks, manual sync, or retry downloads
+        const shouldReconcile =
+            result.tracksAdded > 0 ||
+            result.tracksUpdated > 0 ||
+            !source ||
+            source.startsWith("retry-");
         if (shouldReconcile) {
             try {
                 logger.debug(

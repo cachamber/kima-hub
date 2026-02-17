@@ -223,6 +223,35 @@ router.post("/", async (req, res) => {
       }
     }
 
+    // Reinitialize services that cache credentials from DB
+    try {
+      const { lidarrService } = await import("../services/lidarr");
+      lidarrService.reinitialize();
+    } catch (err) {
+      logger.warn("[SYSTEM SETTINGS] Could not reinitialize Lidarr service:", err);
+    }
+
+    try {
+      const { audiobookshelfService } = await import("../services/audiobookshelf");
+      audiobookshelfService.reinitialize();
+    } catch (err) {
+      logger.warn("[SYSTEM SETTINGS] Could not reinitialize Audiobookshelf service:", err);
+    }
+
+    try {
+      const { fanartService } = await import("../services/fanart");
+      fanartService.reinitialize();
+    } catch (err) {
+      logger.warn("[SYSTEM SETTINGS] Could not reinitialize Fanart service:", err);
+    }
+
+    try {
+      const { resetPodcastIndexCache } = await import("../services/podcastindex");
+      resetPodcastIndexCache();
+    } catch (err) {
+      logger.warn("[SYSTEM SETTINGS] Could not reset PodcastIndex cache:", err);
+    }
+
     // If Audiobookshelf was disabled, clear all audiobook-related data
     if (data.audiobookshelfEnabled === false) {
       logger.debug(

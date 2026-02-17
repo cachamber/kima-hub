@@ -3,7 +3,7 @@ import { logger } from "../utils/logger";
 import { prisma } from "../utils/db";
 import { redisClient } from "../utils/redis";
 import { requireAuth, requireAdmin } from "../middleware/auth";
-import { getSystemSettings } from "../utils/systemSettings";
+import { getSystemSettings, invalidateSystemSettingsCache } from "../utils/systemSettings";
 import { enrichmentFailureService } from "../services/enrichmentFailureService";
 import os from "os";
 
@@ -357,7 +357,8 @@ router.put("/workers", requireAuth, requireAdmin, async (req, res) => {
             where: { id: "default" },
             data: { audioAnalyzerWorkers: workers },
         });
-        
+        invalidateSystemSettingsCache();
+
         // Publish control signal to Redis for Python worker to pick up
         await redisClient.publish(
             "audio:analysis:control",
@@ -424,6 +425,7 @@ router.put("/clap-workers", requireAuth, requireAdmin, async (req, res) => {
             where: { id: "default" },
             data: { clapWorkers: workers },
         });
+        invalidateSystemSettingsCache();
 
         // Publish control signal to Redis for CLAP analyzer to pick up
         await redisClient.publish(

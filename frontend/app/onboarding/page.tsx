@@ -11,7 +11,11 @@ import { useAuth } from "@/lib/auth-context";
 export default function OnboardingPage() {
     const router = useRouter();
     const { user, isLoading: authLoading } = useAuth();
-    const { musicCNN, vibeEmbeddings, loading: featuresLoading } = useFeatures();
+    const {
+        musicCNN,
+        vibeEmbeddings,
+        loading: featuresLoading,
+    } = useFeatures();
     const [step, setStep] = useState(1);
     const [loading, setLoading] = useState(false);
     const [initialLoading, setInitialLoading] = useState(true);
@@ -60,7 +64,6 @@ export default function OnboardingPage() {
         enabled: false,
     });
 
-
     const handleRegister = async (e: React.FormEvent) => {
         e.preventDefault();
         setError("");
@@ -78,10 +81,10 @@ export default function OnboardingPage() {
 
         setLoading(true);
         try {
-            const response = await api.post<{ token: string; user: { id: string; username: string } }>(
-                "/onboarding/register",
-                { username, password }
-            );
+            const response = await api.post<{
+                token: string;
+                user: { id: string; username: string };
+            }>("/onboarding/register", { username, password });
             // Store the JWT token for subsequent API calls
             if (response.token) {
                 api.setToken(response.token);
@@ -92,7 +95,7 @@ export default function OnboardingPage() {
             // Check if user already exists
             if (message?.includes("already taken")) {
                 setError(
-                    "Username already taken. If this is you, please refresh and continue where you left off."
+                    "Username already taken. If this is you, please refresh and continue where you left off.",
                 );
             } else {
                 setError(message || "Failed to create account");
@@ -103,7 +106,7 @@ export default function OnboardingPage() {
     };
 
     const testConnection = async (
-        type: "lidarr" | "audiobookshelf" | "soulseek"
+        type: "lidarr" | "audiobookshelf" | "soulseek",
     ) => {
         setError("");
         setSuccess("");
@@ -137,7 +140,10 @@ export default function OnboardingPage() {
             }
             setSuccess(`${type} connected successfully!`);
         } catch (err: unknown) {
-            const errorMessage = err instanceof Error ? err.message : `Failed to connect to ${type}`;
+            const errorMessage =
+                err instanceof Error ?
+                    err.message
+                :   `Failed to connect to ${type}`;
             setError(errorMessage);
         } finally {
             setLoading(false);
@@ -164,7 +170,9 @@ export default function OnboardingPage() {
             }
         } catch (err: unknown) {
             setError(
-                err instanceof Error ? err.message : "Failed to save configuration"
+                err instanceof Error ?
+                    err.message
+                :   "Failed to save configuration",
             );
         } finally {
             setLoading(false);
@@ -179,15 +187,14 @@ export default function OnboardingPage() {
             </div>
 
             {/* Show loading spinner while checking session */}
-            {initialLoading ? (
+            {initialLoading ?
                 <div className="relative z-10 min-h-screen flex items-center justify-center">
                     <div className="text-center">
                         <GradientSpinner size="lg" />
                         <p className="text-white/60 mt-4">Loading...</p>
                     </div>
                 </div>
-            ) : (
-                <div className="relative z-10 min-h-screen flex items-center justify-center p-6">
+            :   <div className="relative z-10 min-h-screen flex items-center justify-center p-6">
                     <div className="w-full max-w-4xl">
                         {/* Logo/Brand */}
                         <div className="text-center mb-8">
@@ -203,7 +210,7 @@ export default function OnboardingPage() {
                                     />
                                 </div>
                                 <h1 className="text-4xl font-bold bg-gradient-to-r from-white via-white to-gray-200 bg-clip-text text-transparent drop-shadow-2xl">
-                                    Kima
+                                    Kima Hub
                                 </h1>
                             </div>
                             <p className="text-white/60 text-lg">
@@ -223,20 +230,20 @@ export default function OnboardingPage() {
                                     <div className="flex flex-col items-center">
                                         <div
                                             className={`w-9 h-9 rounded-lg flex items-center justify-center font-bold text-sm transition-all ${
-                                                s.num === step
-                                                    ? "bg-[#fca200] text-black shadow-lg shadow-[#fca200]/20 scale-110"
-                                                    : s.num < step
-                                                    ? "bg-white/5 text-white/80 border border-white/10"
-                                                    : "bg-white/5 text-white/40 border border-white/10"
+                                                s.num === step ?
+                                                    "bg-[#fca200] text-black shadow-lg shadow-[#fca200]/20 scale-110"
+                                                : s.num < step ?
+                                                    "bg-white/5 text-white/80 border border-white/10"
+                                                :   "bg-white/5 text-white/40 border border-white/10"
                                             }`}
                                         >
                                             {s.num}
                                         </div>
                                         <span
                                             className={`text-xs mt-2 transition-all ${
-                                                s.num === step
-                                                    ? "text-brand font-medium"
-                                                    : "text-white/40"
+                                                s.num === step ?
+                                                    "text-brand font-medium"
+                                                :   "text-white/40"
                                             }`}
                                         >
                                             {s.label}
@@ -245,9 +252,9 @@ export default function OnboardingPage() {
                                     {idx < 2 && (
                                         <div
                                             className={`w-16 h-0.5 mx-4 mb-6 transition-all ${
-                                                s.num < step
-                                                    ? "bg-[#fca200]/25"
-                                                    : "bg-white/10"
+                                                s.num < step ?
+                                                    "bg-[#fca200]/25"
+                                                :   "bg-white/10"
                                             }`}
                                         />
                                     )}
@@ -265,8 +272,8 @@ export default function OnboardingPage() {
                                                 Create Your Account
                                             </h2>
                                             <p className="text-white/60">
-                                                Let&apos;s get you set up with your
-                                                personal music library
+                                                Let&apos;s get you set up with
+                                                your personal music library
                                             </p>
                                         </div>
 
@@ -283,7 +290,7 @@ export default function OnboardingPage() {
                                                     value={username}
                                                     onChange={(e) =>
                                                         setUsername(
-                                                            e.target.value
+                                                            e.target.value,
                                                         )
                                                     }
                                                     className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white placeholder:text-white/30 focus:outline-none focus:ring-2 focus:ring-brand/30 focus:border-transparent transition-all "
@@ -302,13 +309,13 @@ export default function OnboardingPage() {
                                                     value={password}
                                                     onChange={(e) =>
                                                         setPassword(
-                                                            e.target.value
+                                                            e.target.value,
                                                         )
                                                     }
                                                     className={`w-full px-4 py-3 bg-white/5 border rounded-lg text-white placeholder:text-white/30 focus:outline-none focus:ring-2 focus:ring-brand/30 focus:border-transparent transition-all  ${
-                                                        showPasswordTooShort
-                                                            ? "border-red-500/50"
-                                                            : "border-white/10"
+                                                        showPasswordTooShort ?
+                                                            "border-red-500/50"
+                                                        :   "border-white/10"
                                                     }`}
                                                     placeholder="At least 6 characters"
                                                     required
@@ -325,13 +332,13 @@ export default function OnboardingPage() {
                                                     value={confirmPassword}
                                                     onChange={(e) =>
                                                         setConfirmPassword(
-                                                            e.target.value
+                                                            e.target.value,
                                                         )
                                                     }
                                                     className={`w-full px-4 py-3 bg-white/5 border rounded-lg text-white placeholder:text-white/30 focus:outline-none focus:ring-2 focus:ring-brand/30 focus:border-transparent transition-all  ${
-                                                        showPasswordMismatch
-                                                            ? "border-red-500/50"
-                                                            : "border-white/10"
+                                                        showPasswordMismatch ?
+                                                            "border-red-500/50"
+                                                        :   "border-white/10"
                                                     }`}
                                                     placeholder="Confirm your password"
                                                     required
@@ -350,14 +357,12 @@ export default function OnboardingPage() {
                                                 className="w-full py-3.5 bg-[#fca200] text-black font-bold rounded-lg hover:bg-[#e69200] transition-all disabled:opacity-50 disabled:cursor-not-allowed relative group overflow-hidden mt-8 focus:outline-none focus:ring-2 focus:ring-brand/30"
                                             >
                                                 <span className="relative z-10 flex items-center justify-center gap-2">
-                                                    {loading ? (
+                                                    {loading ?
                                                         <>
                                                             <GradientSpinner size="sm" />
                                                             Creating Account...
                                                         </>
-                                                    ) : (
-                                                        "Continue"
-                                                    )}
+                                                    :   "Continue"}
                                                 </span>
                                             </button>
                                         </form>
@@ -469,7 +474,7 @@ export default function OnboardingPage() {
                                                 }
                                                 onTest={() =>
                                                     testConnection(
-                                                        "audiobookshelf"
+                                                        "audiobookshelf",
                                                     )
                                                 }
                                                 loading={loading}
@@ -508,20 +513,27 @@ export default function OnboardingPage() {
 
                                         {success && (
                                             <div className="flex items-center gap-2 p-4 rounded-lg bg-green-500/10 border border-green-500/20">
-                                                <p className="text-sm text-green-500">{success}</p>
+                                                <p className="text-sm text-green-500">
+                                                    {success}
+                                                </p>
                                             </div>
                                         )}
 
                                         {error && (
                                             <div className="flex items-center gap-2 p-4 rounded-lg bg-red-500/10 border border-red-500/20">
-                                                <p className="text-sm text-red-500">{error}</p>
+                                                <p className="text-sm text-red-500">
+                                                    {error}
+                                                </p>
                                             </div>
                                         )}
 
                                         <div className="flex gap-3 mt-8">
                                             <button
                                                 onClick={() => setStep(3)}
-                                                onKeyDown={(e) => e.key === 'Enter' && setStep(3)}
+                                                onKeyDown={(e) =>
+                                                    e.key === "Enter" &&
+                                                    setStep(3)
+                                                }
                                                 tabIndex={0}
                                                 className="flex-1 bg-white/5 border border-white/10 text-white/70 font-medium py-3.5 rounded-lg hover:bg-white/10 transition-all focus:outline-none focus:ring-2 focus:ring-brand/30"
                                             >
@@ -529,14 +541,18 @@ export default function OnboardingPage() {
                                             </button>
                                             <button
                                                 onClick={handleNextStep}
-                                                onKeyDown={(e) => e.key === 'Enter' && !loading && handleNextStep()}
+                                                onKeyDown={(e) =>
+                                                    e.key === "Enter" &&
+                                                    !loading &&
+                                                    handleNextStep()
+                                                }
                                                 disabled={loading}
                                                 tabIndex={0}
                                                 className="flex-1 py-3.5 bg-[#fca200] text-black font-bold rounded-lg hover:bg-[#e69200] transition-all disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-brand/30"
                                             >
-                                                {loading
-                                                    ? "Saving..."
-                                                    : "Continue"}
+                                                {loading ?
+                                                    "Saving..."
+                                                :   "Continue"}
                                             </button>
                                         </div>
                                     </div>
@@ -549,7 +565,8 @@ export default function OnboardingPage() {
                                                 Analysis Features
                                             </h2>
                                             <p className="text-white/60">
-                                                Advanced audio analysis capabilities detected
+                                                Advanced audio analysis
+                                                capabilities detected
                                             </p>
                                         </div>
 
@@ -558,61 +575,125 @@ export default function OnboardingPage() {
                                                 Detected Analysis Features
                                             </h3>
 
-                                            {featuresLoading ? (
+                                            {featuresLoading ?
                                                 <div className="flex items-center gap-3 text-gray-400">
                                                     <GradientSpinner size="sm" />
-                                                    <span>Detecting available features...</span>
+                                                    <span>
+                                                        Detecting available
+                                                        features...
+                                                    </span>
                                                 </div>
-                                            ) : (
-                                                <div className="space-y-4">
-                                                    <div className={`p-4 rounded-lg border ${musicCNN ? "bg-green-500/5 border-green-500/20" : "bg-white/5 border-white/10"}`}>
+                                            :   <div className="space-y-4">
+                                                    <div
+                                                        className={`p-4 rounded-lg border ${musicCNN ? "bg-green-500/5 border-green-500/20" : "bg-white/5 border-white/10"}`}
+                                                    >
                                                         <div className="flex items-center gap-3 mb-2">
-                                                            <span className={musicCNN ? "text-green-400" : "text-gray-500"}>
-                                                                {musicCNN ? "\u2713" : "\u2014"}
+                                                            <span
+                                                                className={
+                                                                    musicCNN ?
+                                                                        "text-green-400"
+                                                                    :   "text-gray-500"
+                                                                }
+                                                            >
+                                                                {musicCNN ?
+                                                                    "\u2713"
+                                                                :   "\u2014"}
                                                             </span>
-                                                            <span className={`font-medium ${musicCNN ? "text-white" : "text-gray-500"}`}>
-                                                                MusicCNN Audio Analysis
+                                                            <span
+                                                                className={`font-medium ${musicCNN ? "text-white" : "text-gray-500"}`}
+                                                            >
+                                                                MusicCNN Audio
+                                                                Analysis
                                                             </span>
                                                         </div>
                                                         <p className="text-sm text-white/50 ml-7">
-                                                            Extracts BPM, musical key, mood, energy, danceability, and other audio features using neural networks trained on music.
+                                                            Extracts BPM,
+                                                            musical key, mood,
+                                                            energy,
+                                                            danceability, and
+                                                            other audio features
+                                                            using neural
+                                                            networks trained on
+                                                            music.
                                                         </p>
                                                     </div>
-                                                    <div className={`p-4 rounded-lg border ${vibeEmbeddings ? "bg-green-500/5 border-green-500/20" : "bg-white/5 border-white/10"}`}>
+                                                    <div
+                                                        className={`p-4 rounded-lg border ${vibeEmbeddings ? "bg-green-500/5 border-green-500/20" : "bg-white/5 border-white/10"}`}
+                                                    >
                                                         <div className="flex items-center gap-3 mb-2">
-                                                            <span className={vibeEmbeddings ? "text-green-400" : "text-gray-500"}>
-                                                                {vibeEmbeddings ? "\u2713" : "\u2014"}
+                                                            <span
+                                                                className={
+                                                                    (
+                                                                        vibeEmbeddings
+                                                                    ) ?
+                                                                        "text-green-400"
+                                                                    :   "text-gray-500"
+                                                                }
+                                                            >
+                                                                {(
+                                                                    vibeEmbeddings
+                                                                ) ?
+                                                                    "\u2713"
+                                                                :   "\u2014"}
                                                             </span>
-                                                            <span className={`font-medium ${vibeEmbeddings ? "text-white" : "text-gray-500"}`}>
-                                                                CLAP Vibe Embeddings
+                                                            <span
+                                                                className={`font-medium ${vibeEmbeddings ? "text-white" : "text-gray-500"}`}
+                                                            >
+                                                                CLAP Vibe
+                                                                Embeddings
                                                             </span>
                                                         </div>
                                                         <p className="text-sm text-white/50 ml-7">
-                                                            Creates audio fingerprints that capture the overall &quot;vibe&quot; of each track, enabling &quot;find similar tracks&quot; functionality.
+                                                            Creates audio
+                                                            fingerprints that
+                                                            capture the overall
+                                                            &quot;vibe&quot; of
+                                                            each track, enabling
+                                                            &quot;find similar
+                                                            tracks&quot;
+                                                            functionality.
                                                         </p>
                                                     </div>
                                                 </div>
-                                            )}
+                                            }
 
                                             <div className="mt-6 pt-4 border-t border-white/10">
                                                 <p className="text-sm text-gray-400">
-                                                    {(musicCNN || vibeEmbeddings) ? (
+                                                    {(
+                                                        musicCNN ||
+                                                        vibeEmbeddings
+                                                    ) ?
                                                         <>
-                                                            These analyzers run in the background and use ~3-4GB RAM combined.
-                                                            To disable them and save resources, copy{" "}
-                                                            <code className="bg-gray-700 px-1.5 py-0.5 rounded text-xs">docker-compose.override.yml.lite</code>{" "}
+                                                            These analyzers run
+                                                            in the background
+                                                            and use ~3-4GB RAM
+                                                            combined. To disable
+                                                            them and save
+                                                            resources, copy{" "}
+                                                            <code className="bg-gray-700 px-1.5 py-0.5 rounded text-xs">
+                                                                docker-compose.override.yml.lite
+                                                            </code>{" "}
                                                             to{" "}
-                                                            <code className="bg-gray-700 px-1.5 py-0.5 rounded text-xs">docker-compose.override.yml</code>{" "}
+                                                            <code className="bg-gray-700 px-1.5 py-0.5 rounded text-xs">
+                                                                docker-compose.override.yml
+                                                            </code>{" "}
                                                             and restart.
                                                         </>
-                                                    ) : (
-                                                        <>
-                                                            Running in lite mode. To enable analyzers, remove{" "}
-                                                            <code className="bg-gray-700 px-1.5 py-0.5 rounded text-xs">docker-compose.override.yml</code>{" "}
+                                                    :   <>
+                                                            Running in lite
+                                                            mode. To enable
+                                                            analyzers, remove{" "}
+                                                            <code className="bg-gray-700 px-1.5 py-0.5 rounded text-xs">
+                                                                docker-compose.override.yml
+                                                            </code>{" "}
                                                             and restart with{" "}
-                                                            <code className="bg-gray-700 px-1.5 py-0.5 rounded text-xs">docker compose up -d</code>.
+                                                            <code className="bg-gray-700 px-1.5 py-0.5 rounded text-xs">
+                                                                docker compose
+                                                                up -d
+                                                            </code>
+                                                            .
                                                         </>
-                                                    )}
+                                                    }
                                                 </p>
                                             </div>
                                         </div>
@@ -639,10 +720,16 @@ export default function OnboardingPage() {
                                                         Artist Enrichment
                                                     </h3>
                                                     <p className="text-white/60 text-sm leading-relaxed">
-                                                        Enrichment automatically fetches additional metadata like
-                                                        artist bios, high-quality images, genres, and relationships
-                                                        from external sources. This powers smart features and provides
-                                                        a richer listening experience.
+                                                        Enrichment automatically
+                                                        fetches additional
+                                                        metadata like artist
+                                                        bios, high-quality
+                                                        images, genres, and
+                                                        relationships from
+                                                        external sources. This
+                                                        powers smart features
+                                                        and provides a richer
+                                                        listening experience.
                                                     </p>
                                                 </div>
                                             </div>
@@ -659,19 +746,21 @@ export default function OnboardingPage() {
                                         <div className="flex gap-3 mt-8">
                                             <button
                                                 onClick={handleNextStep}
-                                                onKeyDown={(e) => e.key === 'Enter' && !loading && handleNextStep()}
+                                                onKeyDown={(e) =>
+                                                    e.key === "Enter" &&
+                                                    !loading &&
+                                                    handleNextStep()
+                                                }
                                                 disabled={loading}
                                                 className="w-full py-3.5 bg-[#fca200] text-black font-bold rounded-lg hover:bg-[#e69200] transition-all duration-200 disabled:opacity-50 disabled:hover:scale-100 relative group overflow-hidden focus:outline-none focus:ring-2 focus:ring-brand/30"
                                             >
                                                 <span className="relative z-10 flex items-center justify-center gap-2">
-                                                    {loading ? (
+                                                    {loading ?
                                                         <>
                                                             <GradientSpinner size="sm" />
                                                             Finishing Setup...
                                                         </>
-                                                    ) : (
-                                                        "Complete Setup"
-                                                    )}
+                                                    :   "Complete Setup"}
                                                 </span>
                                             </button>
                                         </div>
@@ -686,7 +775,7 @@ export default function OnboardingPage() {
                         </p>
                     </div>
                 </div>
-            )}
+            }
         </div>
     );
 }
@@ -733,9 +822,9 @@ function IntegrationCard({
     return (
         <div
             className={`border rounded-lg transition-all ${
-                enabled
-                    ? "bg-[#0f0f0f] border-brand/25"
-                    : "bg-white/5 border-white/10"
+                enabled ?
+                    "bg-[#0f0f0f] border-brand/25"
+                :   "bg-white/5 border-white/10"
             }`}
         >
             <div className="p-4">
@@ -743,9 +832,9 @@ function IntegrationCard({
                     <div className="flex items-center gap-4">
                         <div
                             className={`w-9 h-9 rounded-lg flex items-center justify-center ${
-                                enabled
-                                    ? "bg-[#fca200]/10 border border-[#fca200]/20 text-[#fca200]"
-                                    : "bg-white/5 border border-white/10 text-white/40"
+                                enabled ?
+                                    "bg-[#fca200]/10 border border-[#fca200]/20 text-[#fca200]"
+                                :   "bg-white/5 border border-white/10 text-white/40"
                             }`}
                         >
                             {icon}
@@ -759,7 +848,7 @@ function IntegrationCard({
                     </div>
                     <button
                         onClick={onToggle}
-                        onKeyDown={(e) => e.key === 'Enter' && onToggle()}
+                        onKeyDown={(e) => e.key === "Enter" && onToggle()}
                         tabIndex={0}
                         className={`relative w-11 h-6 rounded-lg transition-all ${
                             enabled ? "bg-[#fca200]" : "bg-white/20"
@@ -784,7 +873,7 @@ function IntegrationCard({
                             })`}
                             className="w-full px-4 py-2.5 bg-white/5 border border-white/10 rounded-lg text-white text-sm placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-brand/30 focus:border-transparent transition-all "
                         />
-                        {useSoulseekCreds ? (
+                        {useSoulseekCreds ?
                             <>
                                 <input
                                     type="text"
@@ -809,8 +898,7 @@ function IntegrationCard({
                                     not your Slskd login
                                 </p>
                             </>
-                        ) : (
-                            <input
+                        :   <input
                                 type="password"
                                 value={apiKey || ""}
                                 onChange={(e) =>
@@ -819,16 +907,21 @@ function IntegrationCard({
                                 placeholder="API Key"
                                 className="w-full px-4 py-2.5 bg-white/5 border border-white/10 rounded-lg text-white text-sm placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-brand/30 focus:border-transparent transition-all "
                             />
-                        )}
+                        }
                         <button
                             onClick={onTest}
-                            onKeyDown={(e) => e.key === 'Enter' && !loading && !e.defaultPrevented && onTest()}
+                            onKeyDown={(e) =>
+                                e.key === "Enter" &&
+                                !loading &&
+                                !e.defaultPrevented &&
+                                onTest()
+                            }
                             disabled={
                                 loading ||
                                 !url ||
-                                (!useSoulseekCreds
-                                    ? !apiKey
-                                    : !username || !password)
+                                (!useSoulseekCreds ? !apiKey : (
+                                    !username || !password
+                                ))
                             }
                             tabIndex={0}
                             className="w-full bg-white/10 text-white px-4 py-2.5 rounded-lg text-sm font-medium hover:bg-white/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-brand/30"
@@ -866,9 +959,9 @@ function SoulseekCard({
     return (
         <div
             className={`border rounded-lg transition-all ${
-                enabled
-                    ? "bg-[#0f0f0f] border-brand/25"
-                    : "bg-white/5 border-white/10"
+                enabled ?
+                    "bg-[#0f0f0f] border-brand/25"
+                :   "bg-white/5 border-white/10"
             }`}
         >
             <div className="p-4">
@@ -876,9 +969,9 @@ function SoulseekCard({
                     <div className="flex items-center gap-4">
                         <div
                             className={`w-9 h-9 rounded-lg flex items-center justify-center ${
-                                enabled
-                                    ? "bg-[#fca200]/10 border border-[#fca200]/20 text-[#fca200]"
-                                    : "bg-white/5 border border-white/10 text-white/40"
+                                enabled ?
+                                    "bg-[#fca200]/10 border border-[#fca200]/20 text-[#fca200]"
+                                :   "bg-white/5 border border-white/10 text-white/40"
                             }`}
                         >
                             <svg
@@ -904,7 +997,7 @@ function SoulseekCard({
                     </div>
                     <button
                         onClick={onToggle}
-                        onKeyDown={(e) => e.key === 'Enter' && onToggle()}
+                        onKeyDown={(e) => e.key === "Enter" && onToggle()}
                         tabIndex={0}
                         className={`relative w-11 h-6 rounded-lg transition-all ${
                             enabled ? "bg-[#fca200]" : "bg-white/20"
@@ -947,7 +1040,13 @@ function SoulseekCard({
                         </p>
                         <button
                             onClick={onTest}
-                            onKeyDown={(e) => e.key === 'Enter' && !loading && username && password && onTest()}
+                            onKeyDown={(e) =>
+                                e.key === "Enter" &&
+                                !loading &&
+                                username &&
+                                password &&
+                                onTest()
+                            }
                             disabled={loading || !username || !password}
                             tabIndex={0}
                             className="w-full bg-white/10 text-white px-4 py-2.5 rounded-lg text-sm font-medium hover:bg-white/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-brand/30"

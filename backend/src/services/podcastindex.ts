@@ -34,6 +34,11 @@ async function initPodcastindexClient() {
     return cachedClient;
 }
 
+export function resetPodcastIndexCache(): void {
+    cachedClient = null;
+    cachedCredentialsHash = null;
+}
+
 /**
  * Search podcasts by term
  */

@@ -52,11 +52,26 @@ function PlaylistMosaic({
         );
         if (tracksWithCovers.length === 0) return [];
 
-        const uniqueCovers = Array.from(
-            new Set(tracksWithCovers.map((item) => item.track.album!.coverArt))
-        ).slice(0, size);
+        // Count tracks per cover art, sort by frequency (most tracks first)
+        const coverCounts = new Map<string, number>();
+        for (const item of tracksWithCovers) {
+            const cover = item.track.album!.coverArt!;
+            coverCounts.set(cover, (coverCounts.get(cover) || 0) + 1);
+        }
+        const uniqueCovers = Array.from(coverCounts.entries())
+            .sort((a, b) => b[1] - a[1])
+            .map(([cover]) => cover);
 
-        return uniqueCovers.map((cover) => api.getCoverArtUrl(cover!, 200));
+        const urls = uniqueCovers.map((cover) => api.getCoverArtUrl(cover, 200));
+
+        if (urls.length >= size) return urls.slice(0, size);
+        if (urls.length <= 1) return urls;
+
+        // Fill all 4 slots, duplicate the most-represented album at its diagonal
+        // Grid: [0][1] / [2][3] — adjacent pairs: 0-1, 0-2, 1-3, 2-3
+        if (urls.length === 2) return [urls[0], urls[1], urls[1], urls[0]];
+        // 3 unique: urls[0] has the most tracks, place duplicate at diagonal
+        return [urls[0], urls[1], urls[2], urls[0]];
     }, [items, size]);
 
     if (coverUrls.length === 0) {
@@ -104,16 +119,6 @@ function PlaylistMosaic({
                     />
                 </div>
             ))}
-            {Array.from({ length: Math.max(0, 4 - coverUrls.length) }).map(
-                (_, index) => (
-                    <div
-                        key={`empty-${index}`}
-                        className="relative bg-[#0a0a0a] flex items-center justify-center"
-                    >
-                        <Music className="w-5 h-5 text-white/10" />
-                    </div>
-                )
-            )}
         </div>
     );
 }

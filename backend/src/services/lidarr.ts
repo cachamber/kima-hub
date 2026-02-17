@@ -148,6 +148,12 @@ class LidarrService {
         return this.enabled;
     }
 
+    reinitialize(): void {
+        this.initialized = false;
+        this.client = null;
+        this.enabled = false;
+    }
+
     /**
      * Wrapper for API calls with metrics tracking
      */

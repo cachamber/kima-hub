@@ -168,26 +168,67 @@ export class MusicScannerService {
         const scannedPaths = new Set(
             audioFiles.map((f) => path.relative(musicPath, f))
         );
-        const tracksToRemove = existingTracks.filter(
+        let tracksToRemove = existingTracks.filter(
             (t) => !scannedPaths.has(t.filePath)
         );
 
         if (tracksToRemove.length > 0) {
-            await prisma.track.deleteMany({
-                where: {
-                    id: { in: tracksToRemove.map((t) => t.id) },
-                },
-            });
-            result.tracksRemoved = tracksToRemove.length;
-            logger.debug(`Removed ${tracksToRemove.length} missing tracks`);
+            // Safety: verify files are truly missing (guard against path normalization issues)
+            const beforeCount = tracksToRemove.length;
+            const existChecks = await Promise.all(
+                tracksToRemove.map(async (t) => {
+                    const fullPath = path.join(musicPath, t.filePath);
+                    try {
+                        await fs.promises.access(fullPath);
+                        return { track: t, exists: true };
+                    } catch {
+                        return { track: t, exists: false };
+                    }
+                })
+            );
+            tracksToRemove = existChecks.filter((c) => !c.exists).map((c) => c.track);
+            const pathMismatches = beforeCount - tracksToRemove.length;
+            if (pathMismatches > 0) {
+                logger.debug(
+                    `${pathMismatches} track(s) had path mismatches but files exist on disk (skipped removal)`
+                );
+            }
+
+            if (tracksToRemove.length > 0) {
+                // Safety: don't delete tracks referenced by playlists
+                const playlistProtected = await prisma.playlistItem.findMany({
+                    where: { trackId: { in: tracksToRemove.map((t) => t.id) } },
+                    select: { trackId: true },
+                });
+                const protectedIds = new Set(playlistProtected.map((p) => p.trackId));
+
+                const safeToRemove = tracksToRemove.filter((t) => !protectedIds.has(t.id));
+                const skipped = tracksToRemove.length - safeToRemove.length;
+
+                if (skipped > 0) {
+                    logger.debug(
+                        `Skipped ${skipped} track(s) from removal (referenced by playlists)`
+                    );
+                }
+
+                if (safeToRemove.length > 0) {
+                    await prisma.track.deleteMany({
+                        where: { id: { in: safeToRemove.map((t) => t.id) } },
+                    });
+                    result.tracksRemoved = safeToRemove.length;
+                    logger.debug(`Removed ${safeToRemove.length} missing tracks`);
+                }
+            }
         }
 
         // Step 5: Clean up orphaned albums (albums with no tracks)
+        // Note: playlist-referenced tracks are protected in Step 4 above,
+        // so albums here should genuinely have no content
         const orphanedAlbums = await prisma.album.findMany({
             where: {
                 tracks: { none: {} },
             },
-            select: { id: true, title: true },
+            select: { id: true, title: true, artistId: true },
         });
 
         if (orphanedAlbums.length > 0) {

@@ -143,9 +143,10 @@ function SpotifyImportPageContent() {
                     setPreview(result);
                     setPlaylistName(result.playlist.name);
 
-                    // Auto-select all albums (Soulseek can search for any track, even without MBID)
+                    // Auto-select all albums using index-based keys to avoid
+                    // deduplication when multiple editions share the same MBID
                     const downloadableAlbumIds = result.albumsToDownload.map(
-                        (a) => a.albumMbid || a.spotifyAlbumId
+                        (_a, i) => String(i)
                     );
                     setSelectedAlbums(new Set(downloadableAlbumIds));
 
@@ -214,9 +215,10 @@ function SpotifyImportPageContent() {
             setPreview(result);
             setPlaylistName(result.playlist.name);
 
-            // Auto-select all albums (Soulseek can search for any track, even without MBID)
+            // Auto-select all albums using index-based keys to avoid
+            // deduplication when multiple editions share the same MBID
             const downloadableAlbumIds = result.albumsToDownload.map(
-                (a) => a.albumMbid || a.spotifyAlbumId
+                (_a, i) => String(i)
             );
             setSelectedAlbums(new Set(downloadableAlbumIds));
 
@@ -237,13 +239,21 @@ function SpotifyImportPageContent() {
         setIsLoading(true);
         setRefreshStatusMessage(null);
         try {
+            // Convert index-based selection keys back to album identifiers
+            // Deduplicate MBIDs since the backend merges groups with the same MBID
+            const selectedMbids = new Set(
+                Array.from(selectedAlbums).map((idx) => {
+                    const album = preview.albumsToDownload[Number(idx)];
+                    return album?.albumMbid || album?.spotifyAlbumId || idx;
+                })
+            );
             const response = await api.post<{ jobId: string; status: string }>(
                 "/spotify/import",
                 {
                     spotifyPlaylistId: preview.playlist.id,
                     url,
                     playlistName: playlistName || preview.playlist.name,
-                    albumMbidsToDownload: Array.from(selectedAlbums),
+                    albumMbidsToDownload: Array.from(selectedMbids),
                 }
             );
 
@@ -286,9 +296,8 @@ function SpotifyImportPageContent() {
     const toggleAllAlbums = () => {
         if (!preview) return;
 
-        // All albums are downloadable via Soulseek (even without MBID)
-        const allAlbumIds = preview.albumsToDownload.map(
-            (a) => a.albumMbid || a.spotifyAlbumId
+        const allAlbumIds = preview.albumsToDownload.map((_a, i) =>
+            String(i)
         );
 
         if (selectedAlbums.size === allAlbumIds.length) {
@@ -496,11 +505,7 @@ function SpotifyImportPageContent() {
                             </div>
                             <div className="text-center py-3 bg-[#1DB954]/10 rounded-lg">
                                 <div className="text-xl font-bold text-[#1DB954]">
-                                    {
-                                        preview.albumsToDownload.filter(
-                                            (a) => a.albumMbid
-                                        ).length
-                                    }
+                                    {preview.summary.downloadable}
                                 </div>
                                 <div className="text-xs text-gray-500">
                                     To Download
@@ -651,14 +656,10 @@ function SpotifyImportPageContent() {
                                             {preview.albumsToDownload.map(
                                                 (album, index) => {
                                                     const albumKey =
-                                                        album.albumMbid ||
-                                                        album.spotifyAlbumId;
+                                                        String(index);
                                                     return (
                                                         <label
-                                                            key={
-                                                                albumKey ||
-                                                                `album-${index}`
-                                                            }
+                                                            key={albumKey}
                                                             className="flex items-center gap-3 px-4 py-2.5 hover:bg-white/5 cursor-pointer border-b border-white/5 last:border-0"
                                                         >
                                                             <input

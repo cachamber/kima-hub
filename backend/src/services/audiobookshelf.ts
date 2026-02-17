@@ -75,6 +75,13 @@ class AudiobookshelfService {
         }
     }
 
+    reinitialize(): void {
+        this.initialized = false;
+        this.client = null;
+        this.baseUrl = null;
+        this.apiKey = null;
+    }
+
     /**
      * Test connection to Audiobookshelf
      */

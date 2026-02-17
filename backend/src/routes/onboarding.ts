@@ -5,7 +5,7 @@ import bcrypt from "bcrypt";
 import { z } from "zod";
 import axios from "axios";
 import crypto from "crypto";
-import { encryptField } from "../utils/systemSettings";
+import { encryptField, invalidateSystemSettingsCache } from "../utils/systemSettings";
 import { writeEnvFile } from "../utils/envWriter";
 import { generateToken, requireAuth, requireAdmin } from "../middleware/auth";
 
@@ -176,6 +176,7 @@ router.post("/lidarr", requireAuth, requireAdmin, async (req, res) => {
                     where: { id: settings.id },
                     data: { lidarrEnabled: false },
                 });
+                invalidateSystemSettingsCache();
             }
             return res.json({ success: true, tested: false });
         }
@@ -220,6 +221,7 @@ router.post("/lidarr", requireAuth, requireAdmin, async (req, res) => {
                 lidarrApiKey: encryptField(config.apiKey),
             },
         });
+        invalidateSystemSettingsCache();
 
         res.json({
             success: true,
@@ -255,6 +257,7 @@ router.post("/audiobookshelf", requireAuth, requireAdmin, async (req, res) => {
                     where: { id: settings.id },
                     data: { audiobookshelfEnabled: false },
                 });
+                invalidateSystemSettingsCache();
             }
             return res.json({ success: true, tested: false });
         }
@@ -296,6 +299,7 @@ router.post("/audiobookshelf", requireAuth, requireAdmin, async (req, res) => {
                 audiobookshelfApiKey: encryptField(config.apiKey),
             },
         });
+        invalidateSystemSettingsCache();
 
         res.json({
             success: true,
@@ -337,6 +341,7 @@ router.post("/soulseek", requireAuth, requireAdmin, async (req, res) => {
                     soulseekPassword: null,
                 },
             });
+            invalidateSystemSettingsCache();
             return res.json({ success: true, tested: false });
         }
 
@@ -360,6 +365,7 @@ router.post("/soulseek", requireAuth, requireAdmin, async (req, res) => {
                 soulseekPassword: encryptField(config.password),
             },
         });
+        invalidateSystemSettingsCache();
 
         // Test connection by resetting and reconnecting
         let connectionTested = false;
@@ -437,6 +443,39 @@ router.post("/complete", requireAuth, async (req, res) => {
         });
 
         logger.debug("[ONBOARDING] User completed onboarding:", req.user!.id);
+
+        // Ensure services pick up credentials saved during onboarding
+        invalidateSystemSettingsCache();
+
+        try {
+            const { lidarrService } = await import("../services/lidarr");
+            lidarrService.reinitialize();
+        } catch (err) {
+            logger.warn("[ONBOARDING] Could not reinitialize Lidarr service:", err);
+        }
+
+        try {
+            const { audiobookshelfService } = await import("../services/audiobookshelf");
+            audiobookshelfService.reinitialize();
+        } catch (err) {
+            logger.warn("[ONBOARDING] Could not reinitialize Audiobookshelf service:", err);
+        }
+
+        // Fire-and-forget audiobook sync if Audiobookshelf was enabled
+        (async () => {
+            try {
+                const { getSystemSettings } = await import("../utils/systemSettings");
+                const settings = await getSystemSettings();
+                if (settings?.audiobookshelfEnabled) {
+                    const { audiobookCacheService } = await import("../services/audiobookCache");
+                    const result = await audiobookCacheService.syncAll();
+                    logger.info(`[ONBOARDING] Audiobook sync complete: ${result.synced} synced`);
+                }
+            } catch (err) {
+                logger.warn("[ONBOARDING] Post-onboarding audiobook sync failed:", err);
+            }
+        })();
+
         res.json({ success: true });
     } catch (err: any) {
         logger.error("Onboarding complete error:", err);

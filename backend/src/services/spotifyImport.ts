@@ -1273,7 +1273,9 @@ class SpotifyImportService {
 
     // Calculate tracks that will come from downloads
     const tracksFromDownloads = preview.albumsToDownload
-      .filter((a) => albumMbidsToDownload.includes(a.albumMbid!))
+      .filter((a) =>
+        albumMbidsToDownload.includes(a.albumMbid || a.spotifyAlbumId),
+      )
       .reduce((sum, a) => sum + a.tracksNeeded.length, 0);
 
     // Extract the track info we need to match after downloads
@@ -1434,13 +1436,37 @@ class SpotifyImportService {
 
         const albumPromises = albumMbidsToDownload.map((albumIdentifier) =>
           albumQueue.add(async () => {
-            // albumIdentifier can be either albumMbid or spotifyAlbumId (for Unknown Album)
-            const album = preview.albumsToDownload.find(
+            // Find ALL matching album groups - multiple Spotify album editions
+            // may resolve to the same MusicBrainz MBID (e.g., "The Fall of Math"
+            // and "The Fall of Math (Deluxe Edition)"). Merge their tracksNeeded.
+            const matchingAlbums = preview.albumsToDownload.filter(
               (a) =>
                 a.albumMbid === albumIdentifier ||
                 a.spotifyAlbumId === albumIdentifier,
             );
-            if (!album) return;
+            if (matchingAlbums.length === 0) return;
+
+            let album: AlbumToDownload;
+            if (matchingAlbums.length === 1) {
+              album = matchingAlbums[0];
+            } else {
+              // Merge tracksNeeded, deduplicate by title
+              const seen = new Set<string>();
+              const mergedTracks = matchingAlbums.flatMap((a) => a.tracksNeeded).filter((t) => {
+                const key = t.title.toLowerCase();
+                if (seen.has(key)) return false;
+                seen.add(key);
+                return true;
+              });
+              album = {
+                ...matchingAlbums[0],
+                tracksNeeded: mergedTracks,
+                trackCount: mergedTracks.length,
+              };
+              logger?.debug(
+                `[Spotify Import] Merged ${matchingAlbums.length} album editions for "${album.albumName}" (${mergedTracks.length} unique tracks)`,
+              );
+            }
 
             try {
               const isUnknownAlbum =
@@ -2295,6 +2321,12 @@ class SpotifyImportService {
         })),
         skipDuplicates: true,
       });
+
+      // Auto-retry: attempt per-track Soulseek download for unmatched tracks
+      // This runs in the background - tracks will be reconciled on next scan
+      this.autoRetryPendingTracks(job, pendingTracksToSave).catch((err) => {
+        logger?.debug(`Auto-retry error: ${err.message}`);
+      });
     }
 
     job.createdPlaylistId = playlist.id;
@@ -2336,6 +2368,105 @@ class SpotifyImportService {
 
     // Clean up job logger to prevent memory leak
     jobLoggers.delete(job.id);
+  }
+
+  /**
+   * Auto-retry unmatched tracks via per-track Soulseek search.
+   * Runs in the background after playlist creation. Downloaded tracks
+   * will be added to the playlist via reconcilePendingTracks on next scan.
+   */
+  private async autoRetryPendingTracks(
+    job: ImportJob,
+    pendingTracks: Array<{
+      artist: string;
+      title: string;
+      album: string;
+      albumMbid: string | null;
+      artistMbid: string | null;
+    }>,
+  ): Promise<void> {
+    const logger = jobLoggers.get(job.id);
+
+    const { soulseekService } = await import("./soulseek");
+    if (!soulseekService.isConnected()) {
+      logger?.debug(`Auto-retry: Soulseek not connected, skipping`);
+      return;
+    }
+
+    const settings = await getSystemSettings();
+    if (!settings?.musicPath) {
+      logger?.debug(`Auto-retry: No music path configured, skipping`);
+      return;
+    }
+
+    logger?.info(
+      `Auto-retrying ${pendingTracks.length} unmatched track(s) via per-track search...`,
+    );
+
+    let downloadedCount = 0;
+
+    for (const track of pendingTracks) {
+      try {
+        const searchResult = await soulseekService.searchTrack(
+          track.artist,
+          track.title,
+          track.album !== "Unknown Album" ? track.album : undefined,
+        );
+
+        if (!searchResult.found || searchResult.allMatches.length === 0) {
+          logger?.debug(
+            `Auto-retry: No results for "${track.title}" by ${track.artist}`,
+          );
+          continue;
+        }
+
+        const albumName =
+          track.album !== "Unknown Album" ? track.album : track.artist;
+        const result = await soulseekService.downloadBestMatch(
+          track.artist,
+          track.title,
+          albumName,
+          searchResult.allMatches,
+          settings.musicPath,
+        );
+
+        if (result.success) {
+          downloadedCount++;
+          logger?.info(
+            `Auto-retry: Downloaded "${track.title}" by ${track.artist}`,
+          );
+        } else {
+          logger?.debug(
+            `Auto-retry: Download failed for "${track.title}": ${result.error}`,
+          );
+        }
+      } catch (err: any) {
+        logger?.debug(
+          `Auto-retry: Error for "${track.title}": ${err.message}`,
+        );
+      }
+    }
+
+    if (downloadedCount > 0) {
+      // Trigger library scan - reconcilePendingTracks will add them to the playlist
+      const { scanQueue } = await import("../workers/queues");
+      await scanQueue.add(
+        "scan",
+        {
+          userId: job.userId,
+          source: "retry-pending-track",
+        },
+        {
+          priority: 1,
+          removeOnComplete: true,
+        },
+      );
+      logger?.info(
+        `Auto-retry: ${downloadedCount}/${pendingTracks.length} track(s) downloaded, scan queued`,
+      );
+    } else {
+      logger?.debug(`Auto-retry: No tracks downloaded`);
+    }
   }
 
   /**

@@ -92,6 +92,19 @@ export async function runDataIntegrityCheck(): Promise<IntegrityReport> {
         });
 
         if (!hasActiveRecord && !hasOwnedRecord) {
+            // Safety: don't delete albums whose tracks are referenced by playlists
+            const hasPlaylistRef = await prisma.playlistItem.findFirst({
+                where: { track: { albumId: album.id } },
+                select: { id: true },
+            });
+
+            if (hasPlaylistRef) {
+                logger.debug(
+                    `     Skipping orphaned album (referenced by playlist): ${album.artist.name} - ${album.title}`
+                );
+                continue;
+            }
+
             await prisma.$transaction([
                 prisma.track.deleteMany({
                     where: { albumId: album.id },
@@ -193,8 +206,21 @@ export async function runDataIntegrityCheck(): Promise<IntegrityReport> {
             // User liked albums from this artist - don't touch
             continue;
         }
-        
-        const reason = albumMatches 
+
+        // Safety: don't relocate albums whose tracks are referenced by playlists
+        const hasPlaylistReference = await prisma.playlistItem.findFirst({
+            where: { track: { albumId: album.id } },
+            select: { id: true },
+        });
+
+        if (hasPlaylistReference) {
+            logger.debug(
+                `     Skipping mislocated album (referenced by playlist): ${album.artist.name} - ${album.title}`
+            );
+            continue;
+        }
+
+        const reason = albumMatches
             ? `album title "${album.title}" matches discovery` 
             : artistNameMatches
                 ? `artist "${album.artist.name}" matches discovery`

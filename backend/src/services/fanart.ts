@@ -56,6 +56,11 @@ class FanartService {
         this.initialized = true;
     }
 
+    reinitialize(): void {
+        this.initialized = false;
+        this.apiKey = null;
+    }
+
     /**
      * Get artist images (background, thumbnail, logo)
      * Returns the highest quality artist image available

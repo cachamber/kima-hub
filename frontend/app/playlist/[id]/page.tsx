@@ -210,11 +210,23 @@ export default function PlaylistDetailPage() {
         );
         if (tracksWithCovers.length === 0) return [];
 
-        const uniqueCovers = Array.from(
-            new Set(tracksWithCovers.map((item) => item.track.album.coverArt))
-        ).slice(0, 4);
+        // Count tracks per cover art, sort by frequency (most tracks first)
+        const coverCounts = new Map<string, number>();
+        for (const item of tracksWithCovers) {
+            const cover = item.track.album.coverArt!;
+            coverCounts.set(cover, (coverCounts.get(cover) || 0) + 1);
+        }
+        const uniqueCovers = Array.from(coverCounts.entries())
+            .sort((a, b) => b[1] - a[1])
+            .map(([cover]) => cover);
 
-        return uniqueCovers;
+        if (uniqueCovers.length >= 4) return uniqueCovers.slice(0, 4);
+        if (uniqueCovers.length <= 1) return uniqueCovers;
+
+        // Fill all 4 slots, duplicate the most-represented album at its diagonal
+        if (uniqueCovers.length === 2)
+            return [uniqueCovers[0], uniqueCovers[1], uniqueCovers[1], uniqueCovers[0]];
+        return [uniqueCovers[0], uniqueCovers[1], uniqueCovers[2], uniqueCovers[0]];
     }, [playlist]);
 
     const handleRemoveTrack = async (trackId: string) => {
@@ -417,11 +429,6 @@ export default function PlaylistDetailPage() {
                                                 </div>
                                             );
                                         })}
-                                        {Array.from({
-                                            length: Math.max(0, 4 - (coverUrls?.length || 0)),
-                                        }).map((_, index) => (
-                                            <div key={`empty-${index}`} className="relative bg-[#0a0a0a]" />
-                                        ))}
                                     </div>
                                 ) : (
                                     <div className="w-full h-full flex items-center justify-center">
