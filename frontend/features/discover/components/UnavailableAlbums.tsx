@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Play, Pause, Music, ChevronDown, ChevronUp } from "lucide-react";
+import { Play, Pause, Music, ChevronDown, ChevronUp, RefreshCw } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { cn } from "@/utils/cn";
 import { UnavailableAlbum } from "../types";
@@ -9,12 +9,16 @@ interface UnavailableAlbumsProps {
     unavailable: UnavailableAlbum[];
     currentPreview: string | null;
     onTogglePreview: (albumId: string, previewUrl: string) => void;
+    onRetryAll?: () => void;
+    isRetrying?: boolean;
 }
 
 export function UnavailableAlbums({
     unavailable,
     currentPreview,
     onTogglePreview,
+    onRetryAll,
+    isRetrying,
 }: UnavailableAlbumsProps) {
     const [isExpanded, setIsExpanded] = useState(false);
 
@@ -24,22 +28,32 @@ export function UnavailableAlbums({
 
     return (
         <Card>
-            <button
-                onClick={() => setIsExpanded(!isExpanded)}
-                className="w-full p-4 flex items-center justify-between hover:bg-[#1a1a1a] transition-colors rounded-lg"
-            >
-                <div className="flex items-center gap-2">
+            <div className="p-4 flex items-center justify-between">
+                <button
+                    onClick={() => setIsExpanded(!isExpanded)}
+                    className="flex items-center gap-2 hover:bg-[#1a1a1a] transition-colors rounded-lg flex-1"
+                >
                     <Music className="w-5 h-5 text-orange-400" />
                     <span className="text-sm font-medium text-gray-400">
                         {unavailable.length} album{unavailable.length !== 1 ? "s" : ""} unavailable
                     </span>
-                </div>
-                {isExpanded ? (
-                    <ChevronUp className="w-4 h-4 text-gray-500" />
-                ) : (
-                    <ChevronDown className="w-4 h-4 text-gray-500" />
+                    {isExpanded ? (
+                        <ChevronUp className="w-4 h-4 text-gray-500" />
+                    ) : (
+                        <ChevronDown className="w-4 h-4 text-gray-500" />
+                    )}
+                </button>
+                {onRetryAll && (
+                    <button
+                        onClick={(e) => { e.stopPropagation(); onRetryAll(); }}
+                        disabled={isRetrying}
+                        className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-mono uppercase tracking-wider text-orange-400 hover:text-orange-300 hover:bg-orange-500/10 rounded transition-colors disabled:opacity-50"
+                    >
+                        <RefreshCw className={cn("w-3 h-3", isRetrying && "animate-spin")} />
+                        Retry All
+                    </button>
                 )}
-            </button>
+            </div>
             {isExpanded && (
                 <>
                     <div className="px-6 pb-4">

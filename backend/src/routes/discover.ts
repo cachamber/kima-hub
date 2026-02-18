@@ -794,6 +794,199 @@ router.delete("/unlike", async (req, res) => {
     }
 });
 
+// POST /discover/retry-unavailable - Retry all unavailable albums from this week
+router.post("/retry-unavailable", async (req, res) => {
+    try {
+        const userId = req.user!.id;
+
+        const weekStart = startOfWeek(new Date(), { weekStartsOn: 1 });
+
+        // Check for an active batch already in progress
+        const activeBatch = await prisma.discoveryBatch.findFirst({
+            where: {
+                userId,
+                status: { in: ["downloading", "scanning"] },
+            },
+        });
+
+        if (activeBatch) {
+            return res.status(409).json({
+                error: "A discovery batch is already in progress",
+                batchId: activeBatch.id,
+            });
+        }
+
+        const unavailableAlbums = await prisma.unavailableAlbum.findMany({
+            where: {
+                userId,
+                weekStartDate: weekStart,
+            },
+        });
+
+        if (unavailableAlbums.length === 0) {
+            return res.json({ success: true, queued: 0, message: "No unavailable albums to retry" });
+        }
+
+        const settings = await getSystemSettings();
+        if (!settings?.musicPath) {
+            return res.status(400).json({ error: "Music path not configured" });
+        }
+
+        // Create a new batch for retry tracking
+        const batch = await prisma.$transaction(async (tx) => {
+            const newBatch = await tx.discoveryBatch.create({
+                data: {
+                    userId,
+                    weekStart,
+                    targetSongCount: unavailableAlbums.length,
+                    status: "downloading",
+                    totalAlbums: unavailableAlbums.length,
+                    completedAlbums: 0,
+                    failedAlbums: 0,
+                    logs: [
+                        {
+                            timestamp: new Date().toISOString(),
+                            level: "info",
+                            message: `Retry: ${unavailableAlbums.length} unavailable albums`,
+                        },
+                    ] as any,
+                },
+            });
+
+            for (const album of unavailableAlbums) {
+                await tx.downloadJob.create({
+                    data: {
+                        userId,
+                        subject: `${album.artistName} - ${album.albumTitle}`,
+                        type: "album",
+                        targetMbid: album.albumMbid,
+                        status: "pending",
+                        discoveryBatchId: newBatch.id,
+                        metadata: {
+                            downloadType: "discovery",
+                            rootFolderPath: settings.musicPath,
+                            artistName: album.artistName,
+                            artistMbid: album.artistMbid,
+                            albumTitle: album.albumTitle,
+                            albumMbid: album.albumMbid,
+                            similarity: album.similarity,
+                            tier: album.tier,
+                            retryOfUnavailable: true,
+                        },
+                    },
+                });
+            }
+
+            // Delete unavailable records so they don't block re-evaluation
+            await tx.unavailableAlbum.deleteMany({
+                where: {
+                    userId,
+                    weekStartDate: weekStart,
+                },
+            });
+
+            return newBatch;
+        });
+
+        logger.info(`[Discover Retry] Created batch ${batch.id} with ${unavailableAlbums.length} albums`);
+
+        res.json({
+            success: true,
+            queued: unavailableAlbums.length,
+            batchId: batch.id,
+            message: `Retrying ${unavailableAlbums.length} unavailable albums`,
+        });
+
+        // Process downloads in background using acquisition service
+        const { acquisitionService } = await import("../services/acquisitionService");
+        const jobs = await prisma.downloadJob.findMany({
+            where: { discoveryBatchId: batch.id },
+        });
+
+        (async () => {
+            let completed = 0;
+            let failed = 0;
+
+            for (const job of jobs) {
+                const metadata = job.metadata as any;
+                try {
+                    const result = await acquisitionService.acquireAlbum(
+                        {
+                            albumTitle: metadata.albumTitle,
+                            artistName: metadata.artistName,
+                            mbid: metadata.albumMbid,
+                        },
+                        {
+                            userId,
+                            discoveryBatchId: batch.id,
+                            existingJobId: job.id,
+                        }
+                    );
+
+                    if (result.success) {
+                        completed++;
+                    } else {
+                        failed++;
+                    }
+                } catch (error) {
+                    logger.error(`[Discover Retry] Error acquiring ${metadata.albumTitle}:`, error);
+                    failed++;
+                    await prisma.downloadJob.update({
+                        where: { id: job.id },
+                        data: {
+                            status: "failed",
+                            error: (error as any)?.message || "Acquisition failed",
+                            completedAt: new Date(),
+                        },
+                    }).catch(() => {});
+                }
+
+                await prisma.discoveryBatch.update({
+                    where: { id: batch.id },
+                    data: {
+                        completedAlbums: completed,
+                        failedAlbums: failed,
+                    },
+                }).catch(() => {});
+            }
+
+            // Mark batch as scanning, then trigger library scan
+            await prisma.discoveryBatch.update({
+                where: { id: batch.id },
+                data: {
+                    status: "scanning",
+                    completedAlbums: completed,
+                    failedAlbums: failed,
+                },
+            });
+
+            try {
+                await scanQueue.add("scan", {
+                    userId,
+                    type: "full",
+                    source: "discover-retry-unavailable",
+                    discoveryBatchId: batch.id,
+                });
+            } catch (scanError) {
+                logger.error("[Discover Retry] Failed to queue scan:", scanError);
+            }
+
+            await prisma.discoveryBatch.update({
+                where: { id: batch.id },
+                data: {
+                    status: "completed",
+                    completedAt: new Date(),
+                },
+            });
+
+            logger.info(`[Discover Retry] Batch ${batch.id} complete: ${completed} succeeded, ${failed} failed`);
+        })();
+    } catch (error) {
+        logger.error("Retry unavailable albums error:", error);
+        res.status(500).json({ error: "Failed to retry unavailable albums" });
+    }
+});
+
 // GET /discover/config - Get user's Discover Weekly configuration
 router.get("/config", async (req, res) => {
     try {

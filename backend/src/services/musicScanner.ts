@@ -559,6 +559,22 @@ export class MusicScannerService {
             }
         }
 
+        // Singles directory override: If metadata says "Various Artists" but the file
+        // is in the Singles/ directory (Soulseek downloads), prefer the folder-derived
+        // artist name. Soulseek files often have compilation metadata tags.
+        if (
+            canonicalizeVariousArtists(rawArtistName) === "Various Artists" &&
+            relativePath.startsWith("Singles/")
+        ) {
+            const folderArtist = extractArtistFromRelativePath(relativePath);
+            if (folderArtist && canonicalizeVariousArtists(folderArtist) !== "Various Artists") {
+                logger.debug(
+                    `[Scanner] Singles override: "${rawArtistName}" -> "${folderArtist}" for ${relativePath}`
+                );
+                rawArtistName = folderArtist;
+            }
+        }
+
         const albumTitle = metadata.common.album
             || extractAlbumFromRelativePath(relativePath)
             || "Unknown Album";

@@ -704,6 +704,16 @@ class ApiClient {
         });
     }
 
+    async retryAllPendingTracks(playlistId: string) {
+        return this.request<{
+            success: boolean;
+            queued: number;
+            message: string;
+        }>(`/playlists/${playlistId}/pending/retry-all`, {
+            method: "POST",
+        });
+    }
+
     async removePendingTrack(playlistId: string, pendingTrackId: string) {
         return this.request<{ message: string }>(
             `/playlists/${playlistId}/pending/${pendingTrackId}`,
@@ -901,6 +911,17 @@ class ApiClient {
             batchId?: string;
         }>("/discover/batch", {
             method: "DELETE",
+        });
+    }
+
+    async retryUnavailableAlbums() {
+        return this.request<{
+            success: boolean;
+            queued: number;
+            batchId?: string;
+            message: string;
+        }>("/discover/retry-unavailable", {
+            method: "POST",
         });
     }
 

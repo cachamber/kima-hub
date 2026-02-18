@@ -17,6 +17,17 @@ class MusicBrainzService {
         });
     }
 
+    /**
+     * Rate-limited HTTP GET - each call individually goes through the rate limiter.
+     * This prevents methods that make multiple HTTP calls (searchRecording, searchAlbum)
+     * from exceeding MusicBrainz's 1 req/s limit.
+     */
+    private async rateLimitedGet(url: string, config?: any): Promise<any> {
+        return rateLimiter.execute("musicbrainz", () =>
+            this.client.get(url, config)
+        );
+    }
+
     private async cachedRequest(
         cacheKey: string,
         requestFn: () => Promise<any>,
@@ -31,8 +42,8 @@ class MusicBrainzService {
             logger.warn("Redis get error:", err);
         }
 
-        // Use global rate limiter instead of local rate limiting
-        const data = await rateLimiter.execute("musicbrainz", requestFn);
+        // requestFn uses rateLimitedGet internally for each HTTP call
+        const data = await requestFn();
 
         try {
             // Use shorter TTL for null results (1 hour) vs successful results (30 days)
@@ -50,7 +61,7 @@ class MusicBrainzService {
         const cacheKey = `mb:search:artist:${query}:${limit}`;
 
         return this.cachedRequest(cacheKey, async () => {
-            const response = await this.client.get("/artist", {
+            const response = await this.rateLimitedGet("/artist", {
                 params: {
                     query,
                     limit,
@@ -65,7 +76,7 @@ class MusicBrainzService {
         const cacheKey = `mb:artist:${mbid}:${includes.join(",")}`;
 
         return this.cachedRequest(cacheKey, async () => {
-            const response = await this.client.get(`/artist/${mbid}`, {
+            const response = await this.rateLimitedGet(`/artist/${mbid}`, {
                 params: {
                     inc: includes.join("+"),
                     fmt: "json",
@@ -83,7 +94,7 @@ class MusicBrainzService {
         const cacheKey = `mb:rg:${artistMbid}:${types.join(",")}:${limit}`;
 
         return this.cachedRequest(cacheKey, async () => {
-            const response = await this.client.get("/release-group", {
+            const response = await this.rateLimitedGet("/release-group", {
                 params: {
                     artist: artistMbid,
                     type: types.join("|"),
@@ -99,7 +110,7 @@ class MusicBrainzService {
         const cacheKey = `mb:rg:${rgMbid}`;
 
         return this.cachedRequest(cacheKey, async () => {
-            const response = await this.client.get(`/release-group/${rgMbid}`, {
+            const response = await this.rateLimitedGet(`/release-group/${rgMbid}`, {
                 params: {
                     inc: "artist-credits+releases",
                     fmt: "json",
@@ -113,7 +124,7 @@ class MusicBrainzService {
         const cacheKey = `mb:rg:details:${rgMbid}`;
 
         return this.cachedRequest(cacheKey, async () => {
-            const response = await this.client.get(`/release-group/${rgMbid}`, {
+            const response = await this.rateLimitedGet(`/release-group/${rgMbid}`, {
                 params: {
                     inc: "artist-credits+releases+labels",
                     fmt: "json",
@@ -140,7 +151,7 @@ class MusicBrainzService {
         return this.cachedRequest(cacheKey, async () => {
             try {
                 // Get release group info
-                const rgResponse = await this.client.get(`/release-group/${rgMbid}`, {
+                const rgResponse = await this.rateLimitedGet(`/release-group/${rgMbid}`, {
                     params: {
                         inc: "releases",
                         fmt: "json",
@@ -153,7 +164,7 @@ class MusicBrainzService {
                 let trackCount = 0;
                 if (rg.releases && rg.releases.length > 0) {
                     const releaseId = rg.releases[0].id;
-                    const releaseResponse = await this.client.get(`/release/${releaseId}`, {
+                    const releaseResponse = await this.rateLimitedGet(`/release/${releaseId}`, {
                         params: {
                             inc: "recordings",
                             fmt: "json",
@@ -183,7 +194,7 @@ class MusicBrainzService {
         const cacheKey = `mb:release:${releaseMbid}`;
 
         return this.cachedRequest(cacheKey, async () => {
-            const response = await this.client.get(`/release/${releaseMbid}`, {
+            const response = await this.rateLimitedGet(`/release/${releaseMbid}`, {
                 params: {
                     inc: "recordings+artist-credits+labels",
                     fmt: "json",
@@ -261,7 +272,7 @@ class MusicBrainzService {
 
             try {
                 const query1 = `releasegroup:"${escapedTitle}" AND artist:"${escapedArtist}"`;
-                const response1 = await this.client.get("/release-group", {
+                const response1 = await this.rateLimitedGet("/release-group", {
                     params: {
                         query: query1,
                         limit: 5,
@@ -293,7 +304,7 @@ class MusicBrainzService {
                     const escapedNormArtist =
                         this.escapeLucene(normalizedArtist);
                     const query2 = `releasegroup:"${escapedNormTitle}" AND artist:"${escapedNormArtist}"`;
-                    const response2 = await this.client.get("/release-group", {
+                    const response2 = await this.rateLimitedGet("/release-group", {
                         params: {
                             query: query2,
                             limit: 5,
@@ -326,7 +337,7 @@ class MusicBrainzService {
                     simpleTitle
                 )} AND artist:${this.escapeLucene(simpleArtist)}`;
 
-                const response3 = await this.client.get("/release-group", {
+                const response3 = await this.rateLimitedGet("/release-group", {
                     params: {
                         query: query3,
                         limit: 10,
@@ -389,7 +400,7 @@ class MusicBrainzService {
 
                 const query = `recording:"${escapedTitle}" AND artist:"${escapedArtist}"`;
 
-                const response = await this.client.get("/recording", {
+                const response = await this.rateLimitedGet("/recording", {
                     params: {
                         query,
                         limit: 50, // Need high limit because bootleg recordings often rank first
@@ -448,7 +459,7 @@ class MusicBrainzService {
                         normalizedTitle
                     )} AND artist:${this.escapeLucene(normalizedArtist)}`;
 
-                    const fuzzyResponse = await this.client.get("/recording", {
+                    const fuzzyResponse = await this.rateLimitedGet("/recording", {
                         params: {
                             query: fuzzyQuery,
                             limit: 10,
@@ -487,7 +498,7 @@ class MusicBrainzService {
                         );
 
                         const strippedQuery = `${strippedTitle} AND artist:${strippedArtist}`;
-                        const strippedResponse = await this.client.get(
+                        const strippedResponse = await this.rateLimitedGet(
                             "/recording",
                             {
                                 params: {
@@ -766,7 +777,7 @@ class MusicBrainzService {
         return this.cachedRequest(cacheKey, async () => {
             try {
                 // Step 1: Get releases from the release group
-                const rgResponse = await this.client.get(
+                const rgResponse = await this.rateLimitedGet(
                     `/release-group/${rgMbid}`,
                     {
                         params: {
@@ -790,7 +801,7 @@ class MusicBrainzService {
                     releases[0];
 
                 // Step 2: Get full release details with recordings
-                const releaseResponse = await this.client.get(
+                const releaseResponse = await this.rateLimitedGet(
                     `/release/${release.id}`,
                     {
                         params: {

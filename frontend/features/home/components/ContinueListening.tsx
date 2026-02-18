@@ -92,8 +92,8 @@ const ContinueListeningCard = memo(function ContinueListeningCard({
                 className="group block"
             >
                 <div className={`relative bg-[#0a0a0a] border border-white/10 rounded-lg overflow-hidden ${colors.border} transition-all duration-300 hover:shadow-lg ${colors.gradient} mx-1`}>
-                    <div className="relative aspect-square">
-                        <div className="w-full h-full bg-[#181818] flex items-center justify-center overflow-hidden">
+                    <div className="relative aspect-square overflow-hidden">
+                        <div className="w-full h-full bg-[#181818] flex items-center justify-center">
                             {imageSrc ? (
                                 <Image
                                     src={imageSrc}

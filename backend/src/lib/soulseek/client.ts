@@ -490,9 +490,11 @@ export class SlskClient extends (EventEmitter as new () => TypedEventEmitter<Sls
     {
       timeout = DEFAULT_SEARCH_TIMEOUT,
       onResult,
+      maxResponses = 50,
     }: {
       timeout?: number
       onResult?: (result: FileSearchResponse) => void
+      maxResponses?: number
     } = {}
   ) {
     const token = getRandomToken()
@@ -500,17 +502,34 @@ export class SlskClient extends (EventEmitter as new () => TypedEventEmitter<Sls
     this.server.send('fileSearch', { token, query })
 
     const results: FileSearchResponse[] = []
+    let settled = false
+
+    const cleanup = () => {
+      if (!settled) {
+        settled = true
+        this.peerMessages.off('message', listener)
+      }
+    }
+
     const listener = (msg: FromPeerMessage) => {
+      if (settled) return
       if (msg.kind === 'fileSearchResponse' && msg.token === token) {
         onResult?.(msg)
         results.push(msg)
+        // Stop accumulating after enough responses to prevent memory exhaustion
+        if (results.length >= maxResponses) {
+          cleanup()
+          resolvePromise?.(results)
+        }
       }
     }
     this.peerMessages.on('message', listener)
 
+    let resolvePromise: ((value: FileSearchResponse[]) => void) | null = null
     return new Promise<FileSearchResponse[]>((resolve) => {
+      resolvePromise = resolve
       setTimeout(() => {
-        this.peerMessages.off('message', listener)
+        cleanup()
         resolve(results)
       }, timeout)
     })

@@ -81,6 +81,7 @@ export default function PlaylistDetailPage() {
     const [playingPreviewId, setPlayingPreviewId] = useState<string | null>(null);
     const [retryingTrackId, setRetryingTrackId] = useState<string | null>(null);
     const [removingTrackId, setRemovingTrackId] = useState<string | null>(null);
+    const [retryingAll, setRetryingAll] = useState(false);
     const previewAudioRef = useRef<HTMLAudioElement | null>(null);
 
     useEffect(() => {
@@ -152,6 +153,35 @@ export default function PlaylistDetailPage() {
             toast.error("Failed to retry download");
         } finally {
             setRetryingTrackId(null);
+        }
+    };
+
+    const handleRetryAllPending = async () => {
+        setRetryingAll(true);
+        try {
+            const result = await api.retryAllPendingTracks(playlistId);
+            if (result.success && result.queued > 0) {
+                window.dispatchEvent(
+                    new CustomEvent("set-activity-panel-tab", {
+                        detail: { tab: "active" },
+                    })
+                );
+                window.dispatchEvent(new CustomEvent("open-activity-panel"));
+                queryClient.invalidateQueries({ queryKey: ["notifications"] });
+                toast.success(`Retrying ${result.queued} tracks`);
+                setTimeout(() => {
+                    queryClient.invalidateQueries({
+                        queryKey: ["playlist", playlistId],
+                    });
+                }, 15000);
+            } else {
+                toast.info(result.message || "No tracks to retry");
+            }
+        } catch (error) {
+            console.error("Failed to retry all downloads:", error);
+            toast.error("Failed to retry downloads");
+        } finally {
+            setRetryingAll(false);
         }
     };
 
@@ -554,13 +584,23 @@ export default function PlaylistDetailPage() {
                 <div className="max-w-[1800px] mx-auto">
                     {/* Pending tracks notice */}
                     {playlist.pendingCount > 0 && (
-                        <div className="mb-4 px-4 py-2 bg-red-500/10 border border-red-500/20 rounded-lg flex items-center gap-2">
-                            <AlertCircle className="w-4 h-4 text-red-400" />
-                            <span className="text-xs font-mono text-red-300 uppercase tracking-wider">
-                                {playlist.pendingCount} track
-                                {playlist.pendingCount !== 1 ? "s" : ""} failed to
-                                download
-                            </span>
+                        <div className="mb-4 px-4 py-2 bg-red-500/10 border border-red-500/20 rounded-lg flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                                <AlertCircle className="w-4 h-4 text-red-400" />
+                                <span className="text-xs font-mono text-red-300 uppercase tracking-wider">
+                                    {playlist.pendingCount} track
+                                    {playlist.pendingCount !== 1 ? "s" : ""} failed to
+                                    download
+                                </span>
+                            </div>
+                            <button
+                                onClick={handleRetryAllPending}
+                                disabled={retryingAll}
+                                className="flex items-center gap-1.5 px-3 py-1 text-xs font-mono uppercase tracking-wider text-red-300 hover:text-red-200 hover:bg-red-500/20 rounded transition-colors disabled:opacity-50"
+                            >
+                                <RefreshCw className={cn("w-3 h-3", retryingAll && "animate-spin")} />
+                                Retry All
+                            </button>
                         </div>
                     )}
 

@@ -149,6 +149,13 @@ issues/
 plans/
 systems/
 
+# Release/Deployment Artifacts
+RELEASE_NOTES_*.md
+RELEASE_*_COMMANDS.sh
+DEPLOYMENT_COMMANDS_*.txt
+*_RELEASE_SUMMARY.md
+CODE_REVIEW_*.md
+
 # Development
 .worktrees/
 reset-and-setup.sh

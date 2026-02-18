@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { RefreshCw } from "lucide-react";
+import { useToast } from "@/lib/toast-context";
 import { cn } from "@/utils/cn";
 import { GradientSpinner } from "@/components/ui/GradientSpinner";
 import { useAudioState, useAudioPlayback } from "@/lib/audio-context";
@@ -35,6 +36,37 @@ export default function DiscoverWeeklyPage() {
         handleTogglePlay,
     } = useDiscoverActions(playlist, reloadData, isGenerating, refreshBatchStatus, setPendingGeneration, markGenerationStart, updateTrackLiked);
     const { currentPreview, handleTogglePreview } = usePreviewPlayer();
+    const [retryingUnavailable, setRetryingUnavailable] = useState(false);
+    const { toast } = useToast();
+
+    const handleRetryUnavailable = async () => {
+        setRetryingUnavailable(true);
+        try {
+            const result = await api.retryUnavailableAlbums();
+            if (result.success && result.queued > 0) {
+                window.dispatchEvent(
+                    new CustomEvent("set-activity-panel-tab", {
+                        detail: { tab: "active" },
+                    })
+                );
+                window.dispatchEvent(new CustomEvent("open-activity-panel"));
+                toast.success(`Retrying ${result.queued} albums`);
+                refreshBatchStatus();
+                setTimeout(() => reloadData(), 15000);
+            } else {
+                toast.info(result.message || "No albums to retry");
+            }
+        } catch (error) {
+            console.error("Failed to retry unavailable albums:", error);
+            if ((error as { status?: number })?.status === 409) {
+                toast.error("A discovery batch is already in progress");
+            } else {
+                toast.error("Failed to retry unavailable albums");
+            }
+        } finally {
+            setRetryingUnavailable(false);
+        }
+    };
 
     // Check if we're playing from this playlist
     const isPlaylistPlaying = playlist?.tracks.some(
@@ -167,6 +199,8 @@ export default function DiscoverWeeklyPage() {
                                         unavailable={playlist.unavailable}
                                         currentPreview={currentPreview}
                                         onTogglePreview={handleTogglePreview}
+                                        onRetryAll={handleRetryUnavailable}
+                                        isRetrying={retryingUnavailable}
                                     />
                                 </section>
 

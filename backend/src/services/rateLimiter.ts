@@ -171,8 +171,10 @@ class GlobalRateLimiter {
                 lastError = error;
 
                 // Check if it's a rate limit error
+                // MusicBrainz returns 503 (not 429) for rate limiting
                 const isRateLimit =
                     error.response?.status === 429 ||
+                    (service === "musicbrainz" && error.response?.status === 503) ||
                     error.message?.includes("429") ||
                     error.message?.toLowerCase().includes("rate limit");
 

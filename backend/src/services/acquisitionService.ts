@@ -278,24 +278,32 @@ class AcquisitionService {
         // Update queue concurrency from user settings
         await this.updateQueueConcurrency();
 
-        // Wrap acquisition with timeout
+        // Timeout is applied INSIDE the queue callback so it only counts
+        // actual processing time, not time spent waiting for a queue slot.
         const MAX_ACQUISITION_TIME = 5 * 60 * 1000; // 5 minutes
-        const acquisitionPromise = this.albumQueue.add(() =>
-            this.acquireAlbumInternal(request, context)
-        );
+        const result = await this.albumQueue.add(async () => {
+            let timeoutId: NodeJS.Timeout;
+            const timeoutPromise = new Promise<AcquisitionResult>((resolve) => {
+                timeoutId = setTimeout(() => {
+                    resolve({
+                        success: false,
+                        source: undefined,
+                        error: `Acquisition timed out after ${Math.round(MAX_ACQUISITION_TIME / 1000)}s - tried all available sources`,
+                    });
+                }, MAX_ACQUISITION_TIME);
+            });
 
-        const timeoutPromise = new Promise<AcquisitionResult>((resolve) => {
-            setTimeout(() => {
-                resolve({
-                    success: false,
-                    source: undefined,
-                    error: `Acquisition timed out after ${Math.round(MAX_ACQUISITION_TIME / 1000)}s - tried all available sources`,
-                });
-            }, MAX_ACQUISITION_TIME);
+            try {
+                return await Promise.race([
+                    this.acquireAlbumInternal(request, context),
+                    timeoutPromise,
+                ]);
+            } finally {
+                clearTimeout(timeoutId!);
+            }
         });
 
-        // Race between acquisition and timeout
-        return Promise.race([acquisitionPromise, timeoutPromise]);
+        return result as AcquisitionResult;
     }
 
     /**
