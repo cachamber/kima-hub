@@ -371,7 +371,23 @@ fi
 # Start PostgreSQL temporarily to create database and user
 gosu postgres $PG_BIN/pg_ctl -D /data/postgres -w start
 
-# Create user and database if they don't exist
+# Migrate from Lidify -> Kima: rename old database and user if they exist
+if gosu postgres psql -tc "SELECT 1 FROM pg_database WHERE datname = 'lidify'" | grep -q 1; then
+    echo "Found legacy 'lidify' database, migrating to 'kima'..."
+    # Terminate any connections to the old database
+    gosu postgres psql -c "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = 'lidify' AND pid <> pg_backend_pid();" 2>/dev/null || true
+    # Rename the database
+    gosu postgres psql -c "ALTER DATABASE lidify RENAME TO kima;"
+    echo "✓ Database renamed: lidify -> kima"
+    # Rename the user if it exists
+    if gosu postgres psql -tc "SELECT 1 FROM pg_roles WHERE rolname = 'lidify'" | grep -q 1; then
+        gosu postgres psql -c "ALTER USER lidify RENAME TO kima;"
+        gosu postgres psql -c "ALTER USER kima WITH PASSWORD 'kima';"
+        echo "✓ User renamed: lidify -> kima"
+    fi
+fi
+
+# Create user and database if they don't exist (fresh install)
 gosu postgres psql -tc "SELECT 1 FROM pg_roles WHERE rolname = 'kima'" | grep -q 1 || \
     gosu postgres psql -c "CREATE USER kima WITH PASSWORD 'kima';"
 gosu postgres psql -tc "SELECT 1 FROM pg_database WHERE datname = 'kima'" | grep -q 1 || \

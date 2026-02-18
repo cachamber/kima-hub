@@ -10,6 +10,18 @@ Kima is built for music lovers who want the convenience of streaming services wi
 
 ![Kima Home Screen](assets/screenshots/desktop-home.png)
 
+> **\* Upgrading from Lidify?** Kima v1.5.0+ renamed the internal database from `lidify` to `kima`. If you upgraded from a Lidify install and v1.5.0 ran before this fix was available, the container created an empty `kima` database while your data remained in the old `lidify` database. **Your data is safe.** Update to v1.5.1+ and restart -- the migration is now automatic. If you already started v1.5.0 and see an empty library, run these commands to fix it:
+>
+> ```bash
+> docker exec -it kima-hub supervisorctl stop backend frontend audio-analyzer audio-analyzer-clap
+> docker exec -it kima-hub gosu postgres psql -c "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = 'kima' AND pid <> pg_backend_pid();"
+> docker exec -it kima-hub gosu postgres psql -c "DROP DATABASE kima;"
+> docker exec -it kima-hub gosu postgres psql -c "ALTER DATABASE lidify RENAME TO kima;"
+> docker exec -it kima-hub gosu postgres psql -c "ALTER USER lidify RENAME TO kima;"
+> docker exec -it kima-hub gosu postgres psql -c "ALTER USER kima WITH PASSWORD 'kima';"
+> docker restart kima-hub
+> ```
+
 ---
 
 ## A Note on Native Apps
