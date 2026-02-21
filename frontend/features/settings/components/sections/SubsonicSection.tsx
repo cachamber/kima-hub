@@ -19,6 +19,7 @@ export function SubsonicSection() {
     const [apiKeys, setApiKeys] = useState<ApiKey[]>([]);
     const [generating, setGenerating] = useState(false);
     const [newToken, setNewToken] = useState<string | null>(null);
+    const [deviceName, setDeviceName] = useState("");
     const [status, setStatus] = useState<StatusType>("idle");
     const [message, setMessage] = useState("");
     const [revoking, setRevoking] = useState<string | null>(null);
@@ -39,13 +40,14 @@ export function SubsonicSection() {
     }, []);
 
     const handleGenerate = async () => {
+        const name = deviceName.trim() || "Subsonic";
         setGenerating(true);
         setStatus("loading");
         setMessage("");
         setNewToken(null);
         try {
             const data = await api.post<{ apiKey: string }>("/api-keys", {
-                deviceName: "Subsonic",
+                deviceName: name,
             });
             setNewToken(data.apiKey);
             setStatus("success");
@@ -118,20 +120,30 @@ export function SubsonicSection() {
                 label="API Token"
                 description="Generate a token to use as the password in your client"
             >
-                <div className="inline-flex items-center gap-3">
-                    <button
-                        onClick={handleGenerate}
-                        disabled={generating}
-                        className="px-4 py-2 bg-[#fca208] text-black text-xs font-black rounded-lg uppercase tracking-wider
-                            hover:bg-[#f97316] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                    >
-                        {generating ? "Generating..." : "Generate Token"}
-                    </button>
-                    <InlineStatus
-                        status={status}
-                        message={message}
-                        onClear={() => setStatus("idle")}
+                <div className="flex flex-col gap-2">
+                    <input
+                        type="text"
+                        value={deviceName}
+                        onChange={(e) => setDeviceName(e.target.value)}
+                        placeholder="Client name (e.g. Symfonium, DSub)"
+                        className="text-sm text-white bg-white/5 border border-white/10 px-3 py-2 rounded-lg font-mono
+                            placeholder:text-white/20 focus:outline-none focus:border-white/20 w-full"
                     />
+                    <div className="inline-flex items-center gap-3">
+                        <button
+                            onClick={handleGenerate}
+                            disabled={generating}
+                            className="px-4 py-2 bg-[#fca208] text-black text-xs font-black rounded-lg uppercase tracking-wider
+                                hover:bg-[#f97316] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        >
+                            {generating ? "Generating..." : "Generate Token"}
+                        </button>
+                        <InlineStatus
+                            status={status}
+                            message={message}
+                            onClear={() => setStatus("idle")}
+                        />
+                    </div>
                 </div>
             </SettingsRow>
 
