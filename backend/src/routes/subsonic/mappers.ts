@@ -31,7 +31,7 @@ export type TrackRow = {
     duration: number | null;
     filePath: string | null;
     mime: string | null;
-    fileSize: bigint | null;
+    fileSize: number | null;
 };
 
 export function mapArtist(a: ArtistRow) {
@@ -75,7 +75,7 @@ export function mapSong(
         "@_bitRate": estimateBitrateFromMime(track.mime),
         "@_track": track.trackNo || undefined,
         "@_year": album.year || undefined,
-        "@_size": track.fileSize ? Number(track.fileSize) : undefined,
+        "@_size": track.fileSize ?? undefined,
         "@_contentType": track.mime || "audio/mpeg",
         "@_suffix": mimeToSuffix(track.mime),
         "@_albumId": album.id,

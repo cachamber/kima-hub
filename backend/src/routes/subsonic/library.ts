@@ -6,8 +6,7 @@ import { mapArtist, mapAlbum, mapSong } from "./mappers";
 
 export const libraryRouter = Router();
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function wrap(fn: (req: Request, res: Response) => Promise<any>) {
+function wrap(fn: (req: Request, res: Response) => Promise<void | Response>) {
     return (req: Request, res: Response) => {
         fn(req, res).catch((err: unknown) => {
             if (!res.headersSent) {
@@ -60,9 +59,10 @@ libraryRouter.all(["/getArtists.view", "/getIndexes.view"], wrap(async (req, res
             artist: artistList,
         }));
 
+    const responseKey = req.path.includes("getIndexes") ? "indexes" : "artists";
     subsonicOk(req, res, {
-        artists: {
-            "@_ignoredArticles": "The An A Is Los Las Le Les",
+        [responseKey]: {
+            "@_ignoredArticles": "The A An",
             index: indexes,
         },
     });
@@ -127,12 +127,7 @@ libraryRouter.all("/getAlbum.view", wrap(async (req, res) => {
         album: {
             ...mapAlbum({ ...album, songCount: album.tracks.length, duration: totalDuration }, artistName),
             song: album.tracks.map((t) =>
-                mapSong(
-                    { ...t, fileSize: t.fileSize !== null ? BigInt(t.fileSize) : null },
-                    album,
-                    artistName,
-                    album.artist.id
-                )
+                mapSong(t, album, artistName, album.artist.id)
             ),
         },
     });
@@ -162,12 +157,7 @@ libraryRouter.all("/getSong.view", wrap(async (req, res) => {
 
     const artistName = track.album.artist.displayName || track.album.artist.name;
     subsonicOk(req, res, {
-        song: mapSong(
-            { ...track, fileSize: track.fileSize !== null ? BigInt(track.fileSize) : null },
-            track.album,
-            artistName,
-            track.album.artist.id
-        ),
+        song: mapSong(track, track.album, artistName, track.album.artist.id),
     });
 }));
 
