@@ -2,7 +2,7 @@
 import { Router } from "express";
 import { prisma } from "../../utils/db";
 import { subsonicOk, subsonicError, SubsonicError } from "../../utils/subsonicResponse";
-import { mapArtist, mapAlbum, mapSong, wrap } from "./mappers";
+import { mapArtist, mapAlbum, mapSong, firstArtistGenre, wrap } from "./mappers";
 
 export const libraryRouter = Router();
 
@@ -80,11 +80,12 @@ libraryRouter.all("/getArtist.view", wrap(async (req, res) => {
     }
 
     const artistName = artist.displayName || artist.name;
+    const genre = firstArtistGenre(artist.genres, artist.userGenres);
     subsonicOk(req, res, {
         artist: {
             ...mapArtist({ ...artist, albumCount: artist.albums.length }),
             album: artist.albums.map((al) =>
-                mapAlbum({ ...al, songCount: al._count.tracks }, artistName)
+                mapAlbum({ ...al, songCount: al._count.tracks, genre }, artistName)
             ),
         },
     });
@@ -101,7 +102,7 @@ libraryRouter.all("/getAlbum.view", wrap(async (req, res) => {
     const album = await prisma.album.findUnique({
         where: { id },
         include: {
-            artist: { select: { id: true, name: true, displayName: true } },
+            artist: { select: { id: true, name: true, displayName: true, genres: true, userGenres: true } },
             tracks: { orderBy: { trackNo: "asc" } },
         },
     });
@@ -110,13 +111,14 @@ libraryRouter.all("/getAlbum.view", wrap(async (req, res) => {
     }
 
     const artistName = album.artist.displayName || album.artist.name;
+    const genre = firstArtistGenre(album.artist.genres, album.artist.userGenres);
     const totalDuration = album.tracks.reduce((sum, t) => sum + (t.duration ?? 0), 0);
 
     subsonicOk(req, res, {
         album: {
-            ...mapAlbum({ ...album, songCount: album.tracks.length, duration: totalDuration }, artistName),
+            ...mapAlbum({ ...album, songCount: album.tracks.length, duration: totalDuration, genre }, artistName),
             song: album.tracks.map((t) =>
-                mapSong(t, album, artistName, album.artist.id)
+                mapSong(t, album, artistName, album.artist.id, genre)
             ),
         },
     });
@@ -135,7 +137,7 @@ libraryRouter.all("/getSong.view", wrap(async (req, res) => {
         include: {
             album: {
                 include: {
-                    artist: { select: { id: true, name: true, displayName: true } },
+                    artist: { select: { id: true, name: true, displayName: true, genres: true, userGenres: true } },
                 },
             },
         },
@@ -145,8 +147,9 @@ libraryRouter.all("/getSong.view", wrap(async (req, res) => {
     }
 
     const artistName = track.album.artist.displayName || track.album.artist.name;
+    const genre = firstArtistGenre(track.album.artist.genres, track.album.artist.userGenres);
     subsonicOk(req, res, {
-        song: mapSong(track, track.album, artistName, track.album.artist.id),
+        song: mapSong(track, track.album, artistName, track.album.artist.id, genre),
     });
 }));
 
@@ -164,6 +167,8 @@ type AlbumWithArtist = {
         id: string;
         name: string;
         displayName: string | null;
+        genres?: unknown;
+        userGenres?: unknown;
     };
 };
 
@@ -184,7 +189,7 @@ libraryRouter.all(["/getAlbumList2.view", "/getAlbumList.view"], wrap(async (req
                 orderBy: { id: "desc" },
                 take: size,
                 skip: offset,
-                include: { artist: { select: { id: true, name: true, displayName: true } } },
+                include: { artist: { select: { id: true, name: true, displayName: true, genres: true, userGenres: true } } },
             });
             break;
 
@@ -194,7 +199,7 @@ libraryRouter.all(["/getAlbumList2.view", "/getAlbumList.view"], wrap(async (req
                 orderBy: { title: "asc" },
                 take: size,
                 skip: offset,
-                include: { artist: { select: { id: true, name: true, displayName: true } } },
+                include: { artist: { select: { id: true, name: true, displayName: true, genres: true, userGenres: true } } },
             });
             break;
 
@@ -204,7 +209,7 @@ libraryRouter.all(["/getAlbumList2.view", "/getAlbumList.view"], wrap(async (req
                 orderBy: { artist: { name: "asc" } },
                 take: size,
                 skip: offset,
-                include: { artist: { select: { id: true, name: true, displayName: true } } },
+                include: { artist: { select: { id: true, name: true, displayName: true, genres: true, userGenres: true } } },
             });
             break;
 
@@ -225,7 +230,7 @@ libraryRouter.all(["/getAlbumList2.view", "/getAlbumList.view"], wrap(async (req
                 orderBy: { year: fromYear <= toYear ? "asc" : "desc" },
                 take: size,
                 skip: offset,
-                include: { artist: { select: { id: true, name: true, displayName: true } } },
+                include: { artist: { select: { id: true, name: true, displayName: true, genres: true, userGenres: true } } },
             });
             break;
         }
@@ -235,13 +240,18 @@ libraryRouter.all(["/getAlbumList2.view", "/getAlbumList.view"], wrap(async (req
             if (!genre) {
                 return subsonicError(req, res, SubsonicError.MISSING_PARAM, "byGenre requires genre");
             }
-            // genres is a JSON array column; use raw query for ILIKE match
+            // Genre lives on Artist, not Album — filter via artist's enriched genres
             const rows = await prisma.$queryRaw<AlbumWithArtist[]>`
                 SELECT a.id, a.title, a."displayTitle", a.year, a."coverUrl", a."userCoverUrl", a."artistId",
-                       json_build_object('id', ar.id, 'name', ar.name, 'displayName', ar."displayName") as artist
+                       json_build_object('id', ar.id, 'name', ar.name, 'displayName', ar."displayName",
+                           'genres', ar.genres, 'userGenres', ar."userGenres") as artist
                 FROM "Album" a
                 JOIN "Artist" ar ON a."artistId" = ar.id
-                WHERE EXISTS (SELECT 1 FROM jsonb_array_elements_text(a.genres) g WHERE g ILIKE ${"%" + genre + "%"})
+                WHERE EXISTS (
+                    SELECT 1 FROM jsonb_array_elements_text(
+                        COALESCE(NULLIF(ar."userGenres", 'null'::jsonb), ar.genres)
+                    ) g WHERE g ILIKE ${"%" + genre + "%"}
+                )
                   AND EXISTS (SELECT 1 FROM "Track" t WHERE t."albumId" = a.id)
                 ORDER BY a.title ASC
                 LIMIT ${size} OFFSET ${offset}
@@ -262,14 +272,15 @@ libraryRouter.all(["/getAlbumList2.view", "/getAlbumList.view"], wrap(async (req
                 orderBy: { title: "asc" },
                 take: size,
                 skip: offset,
-                include: { artist: { select: { id: true, name: true, displayName: true } } },
+                include: { artist: { select: { id: true, name: true, displayName: true, genres: true, userGenres: true } } },
             });
             break;
 
         case "random": {
             const rows = await prisma.$queryRaw<AlbumWithArtist[]>`
                 SELECT a.id, a.title, a."displayTitle", a.year, a."coverUrl", a."userCoverUrl", a."artistId",
-                       json_build_object('id', ar.id, 'name', ar.name, 'displayName', ar."displayName") as artist
+                       json_build_object('id', ar.id, 'name', ar.name, 'displayName', ar."displayName",
+                           'genres', ar.genres, 'userGenres', ar."userGenres") as artist
                 FROM "Album" a
                 JOIN "Artist" ar ON a."artistId" = ar.id
                 WHERE EXISTS (SELECT 1 FROM "Track" t WHERE t."albumId" = a.id)
@@ -283,14 +294,15 @@ libraryRouter.all(["/getAlbumList2.view", "/getAlbumList.view"], wrap(async (req
         case "recent": {
             const rows = await prisma.$queryRaw<AlbumWithArtist[]>`
                 SELECT a.id, a.title, a."displayTitle", a.year, a."coverUrl", a."userCoverUrl", a."artistId",
-                       json_build_object('id', ar.id, 'name', ar.name, 'displayName', ar."displayName") as artist
+                       json_build_object('id', ar.id, 'name', ar.name, 'displayName', ar."displayName",
+                           'genres', ar.genres, 'userGenres', ar."userGenres") as artist
                 FROM "Album" a
                 JOIN "Artist" ar ON a."artistId" = ar.id
                 JOIN "Track" t ON t."albumId" = a.id
                 JOIN "Play" p ON p."trackId" = t.id
                 WHERE p."userId" = ${userId}
                 GROUP BY a.id, a.title, a."displayTitle", a.year, a."coverUrl", a."userCoverUrl", a."artistId",
-                         ar.id, ar.name, ar."displayName"
+                         ar.id, ar.name, ar."displayName", ar.genres, ar."userGenres"
                 ORDER BY MAX(p."playedAt") DESC
                 LIMIT ${size} OFFSET ${offset}
             `;
@@ -301,14 +313,15 @@ libraryRouter.all(["/getAlbumList2.view", "/getAlbumList.view"], wrap(async (req
         case "frequent": {
             const rows = await prisma.$queryRaw<AlbumWithArtist[]>`
                 SELECT a.id, a.title, a."displayTitle", a.year, a."coverUrl", a."userCoverUrl", a."artistId",
-                       json_build_object('id', ar.id, 'name', ar.name, 'displayName', ar."displayName") as artist
+                       json_build_object('id', ar.id, 'name', ar.name, 'displayName', ar."displayName",
+                           'genres', ar.genres, 'userGenres', ar."userGenres") as artist
                 FROM "Album" a
                 JOIN "Artist" ar ON a."artistId" = ar.id
                 JOIN "Track" t ON t."albumId" = a.id
                 JOIN "Play" p ON p."trackId" = t.id
                 WHERE p."userId" = ${userId}
                 GROUP BY a.id, a.title, a."displayTitle", a.year, a."coverUrl", a."userCoverUrl", a."artistId",
-                         ar.id, ar.name, ar."displayName"
+                         ar.id, ar.name, ar."displayName", ar.genres, ar."userGenres"
                 ORDER BY COUNT(p.id) DESC
                 LIMIT ${size} OFFSET ${offset}
             `;
@@ -322,13 +335,14 @@ libraryRouter.all(["/getAlbumList2.view", "/getAlbumList.view"], wrap(async (req
                 orderBy: { id: "desc" },
                 take: size,
                 skip: offset,
-                include: { artist: { select: { id: true, name: true, displayName: true } } },
+                include: { artist: { select: { id: true, name: true, displayName: true, genres: true, userGenres: true } } },
             });
     }
 
     const albumList = albums.map((a) => {
         const artistName = a.artist.displayName || a.artist.name;
-        return mapAlbum({ ...a, artistId: a.artist.id }, artistName);
+        const genre = firstArtistGenre(a.artist.genres, a.artist.userGenres);
+        return mapAlbum({ ...a, artistId: a.artist.id, genre }, artistName);
     });
 
     const key = req.path.includes("getAlbumList2") ? "albumList2" : "albumList";
@@ -338,22 +352,25 @@ libraryRouter.all(["/getAlbumList2.view", "/getAlbumList.view"], wrap(async (req
 // ===================== GENRES =====================
 
 libraryRouter.all("/getGenres.view", wrap(async (req, res) => {
-    const albums = await prisma.album.findMany({
+    // Genres live on artists (from enrichment), not on albums.
+    const artists = await prisma.artist.findMany({
+        where: { libraryAlbumCount: { gt: 0 } },
         select: {
             genres: true,
-            _count: { select: { tracks: true } },
+            userGenres: true,
+            libraryAlbumCount: true,
+            totalTrackCount: true,
         },
     });
 
     const genreCounts: Record<string, { albums: number; songs: number }> = {};
-    for (const album of albums) {
-        if (!album.genres) continue;
-        const genres = (album.genres as string[]) || [];
+    for (const artist of artists) {
+        const genres = ((artist.userGenres ?? artist.genres) as string[] | null) || [];
         for (const g of genres) {
-            if (!g) continue;
+            if (!g || g.startsWith("_")) continue;
             if (!genreCounts[g]) genreCounts[g] = { albums: 0, songs: 0 };
-            genreCounts[g].albums++;
-            genreCounts[g].songs += album._count.tracks;
+            genreCounts[g].albums += artist.libraryAlbumCount;
+            genreCounts[g].songs += artist.totalTrackCount;
         }
     }
 

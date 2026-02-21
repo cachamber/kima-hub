@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { prisma } from "../../utils/db";
 import { subsonicOk, subsonicError, SubsonicError } from "../../utils/subsonicResponse";
-import { mapSong, wrap, parseIntParam } from "./mappers";
+import { mapSong, firstArtistGenre, wrap, parseIntParam } from "./mappers";
 
 export const userRouter = Router();
 
@@ -43,7 +43,7 @@ userRouter.all(["/getStarred2.view", "/getStarred.view"], wrap(async (req, res) 
                 include: {
                     album: {
                         include: {
-                            artist: { select: { id: true, name: true, displayName: true } },
+                            artist: { select: { id: true, name: true, displayName: true, genres: true, userGenres: true } },
                         },
                     },
                 },
@@ -59,8 +59,9 @@ userRouter.all(["/getStarred2.view", "/getStarred.view"], wrap(async (req, res) 
                 song: liked.map((l) => {
                     const t = l.track;
                     const artistName = t.album.artist.displayName || t.album.artist.name;
+                    const genre = firstArtistGenre(t.album.artist.genres, t.album.artist.userGenres);
                     return {
-                        ...mapSong(t, t.album, artistName, t.album.artist.id),
+                        ...mapSong(t, t.album, artistName, t.album.artist.id, genre),
                         "@_starred": l.likedAt.toISOString(),
                     };
                 }),
@@ -114,6 +115,7 @@ userRouter.all(["/getArtistInfo2.view", "/getArtistInfo.view"], wrap(async (req,
             id: true,
             mbid: true,
             summary: true,
+            userSummary: true,
             heroUrl: true,
             similarArtistsJson: true,
         },
@@ -159,7 +161,7 @@ userRouter.all(["/getArtistInfo2.view", "/getArtistInfo.view"], wrap(async (req,
     const infoKey = req.path.includes("getArtistInfo2") ? "artistInfo2" : "artistInfo";
     return subsonicOk(req, res, {
         [infoKey]: {
-            biography: artist.summary || undefined,
+            biography: artist.userSummary || artist.summary || undefined,
             musicBrainzId: artist.mbid || undefined,
             "@_coverArt": `ar-${artist.id}`,
             "@_largeImageUrl": artist.heroUrl || undefined,

@@ -24,6 +24,7 @@ export type AlbumRow = {
     artistId: string;
     songCount?: number;
     duration?: number;
+    genre?: string | null;
 };
 
 export type TrackRow = {
@@ -56,6 +57,7 @@ export function mapAlbum(album: AlbumRow, artistName: string) {
         "@_songCount": album.songCount ?? 0,
         "@_duration": album.duration !== undefined ? Math.round(album.duration) : 0,
         "@_year": album.year || undefined,
+        "@_genre": album.genre || undefined,
     };
 }
 
@@ -63,7 +65,8 @@ export function mapSong(
     track: TrackRow,
     album: { id: string; title: string; displayTitle: string | null; year: number | null },
     artistName: string,
-    artistId: string
+    artistId: string,
+    genre?: string | null
 ) {
     return {
         "@_id": track.id,
@@ -83,7 +86,18 @@ export function mapSong(
         "@_albumId": album.id,
         "@_artistId": artistId,
         "@_type": "music",
+        "@_genre": genre || undefined,
     };
+}
+
+// Extract the first genre string from an artist's enriched genre array.
+// Prefers userGenres override; falls back to enrichment genres.
+// Tags starting with "_" are internal markers (e.g. "_no_mood_tags") — filtered out.
+export function firstArtistGenre(genres: unknown, userGenres: unknown): string | undefined {
+    const arr = ((userGenres as string[] | null)?.length
+        ? (userGenres as string[])
+        : (genres as string[] | null)) ?? [];
+    return arr.find((g) => g && !g.startsWith("_"));
 }
 
 function estimateBitrateFromMime(mime: string | null): number {

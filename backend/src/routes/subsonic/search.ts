@@ -3,7 +3,7 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "../../utils/db";
 import { subsonicOk } from "../../utils/subsonicResponse";
 import { searchService } from "../../services/search";
-import { wrap, clamp, parseIntParam } from "./mappers";
+import { wrap, clamp, parseIntParam, firstArtistGenre } from "./mappers";
 
 export const searchRouter = Router();
 
@@ -38,6 +38,19 @@ searchRouter.all(["/search3.view", "/search2.view"], wrap(async (req, res) => {
             : Promise.resolve([]),
     ]);
 
+    // Batch-fetch artist genres for all results in one query
+    const artistIds = new Set([
+        ...albums.map((al) => al.artistId),
+        ...tracks.map((t) => t.artistId),
+    ]);
+    const artistGenreRows = artistIds.size > 0
+        ? await prisma.artist.findMany({
+              where: { id: { in: [...artistIds] } },
+              select: { id: true, genres: true, userGenres: true },
+          })
+        : [];
+    const genreMap = new Map(artistGenreRows.map((a) => [a.id, firstArtistGenre(a.genres, a.userGenres)]));
+
     const result: Record<string, unknown> = {};
 
     if (artists.length > 0) {
@@ -56,6 +69,7 @@ searchRouter.all(["/search3.view", "/search2.view"], wrap(async (req, res) => {
             "@_artistId": al.artistId,
             "@_coverArt": al.id,
             "@_year": al.year || undefined,
+            "@_genre": genreMap.get(al.artistId) || undefined,
         }));
     }
 
@@ -70,6 +84,7 @@ searchRouter.all(["/search3.view", "/search2.view"], wrap(async (req, res) => {
             "@_coverArt": t.albumId,
             "@_duration": t.duration ? Math.round(t.duration) : 0,
             "@_type": "music",
+            "@_genre": genreMap.get(t.artistId) || undefined,
         }));
     }
 
@@ -101,7 +116,12 @@ searchRouter.all("/getRandomSongs.view", wrap(async (req, res) => {
     }
 
     if (genre) {
-        whereConditions.push(Prisma.sql`EXISTS (SELECT 1 FROM jsonb_array_elements_text(al.genres) g WHERE g ILIKE ${"%" + genre + "%"})`);
+        // Genre lives on Artist, not Album — filter via artist's enriched genres
+        whereConditions.push(Prisma.sql`EXISTS (
+            SELECT 1 FROM jsonb_array_elements_text(
+                COALESCE(NULLIF(ar."userGenres", 'null'::jsonb), ar.genres)
+            ) g WHERE g ILIKE ${"%" + genre + "%"}
+        )`);
     }
 
     const whereClause = Prisma.join(whereConditions, " AND ");
@@ -118,10 +138,13 @@ searchRouter.all("/getRandomSongs.view", wrap(async (req, res) => {
         albumYear: number | null;
         artistId: string;
         artistName: string;
+        artistGenres: unknown;
+        artistUserGenres: unknown;
     }[]>`
         SELECT t.id, t.title, t."trackNo", t.duration, t.mime, t."fileSize",
                al.id AS "albumId", al.title AS "albumTitle", al.year AS "albumYear",
-               ar.id AS "artistId", ar.name AS "artistName"
+               ar.id AS "artistId", ar.name AS "artistName",
+               ar.genres AS "artistGenres", ar."userGenres" AS "artistUserGenres"
         FROM "Track" t
         JOIN "Album" al ON t."albumId" = al.id
         JOIN "Artist" ar ON al."artistId" = ar.id
@@ -144,6 +167,7 @@ searchRouter.all("/getRandomSongs.view", wrap(async (req, res) => {
         "@_contentType": r.mime || "audio/mpeg",
         "@_size": r.fileSize ?? undefined,
         "@_type": "music",
+        "@_genre": firstArtistGenre(r.artistGenres, r.artistUserGenres) || undefined,
     }));
 
     return subsonicOk(req, res, {
