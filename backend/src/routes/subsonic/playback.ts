@@ -70,6 +70,7 @@ playbackRouter.all("/stream.view", wrap(async (req, res) => {
         );
         await streamingService.streamFileWithRangeSupport(req, res, filePath, mimeType);
     } finally {
+        // destroy() only clears the cache eviction interval — does not abort the active stream
         streamingService.destroy();
     }
 }));
@@ -99,6 +100,7 @@ playbackRouter.all("/download.view", wrap(async (req, res) => {
         );
         await streamingService.streamFileWithRangeSupport(req, res, filePath, mimeType);
     } finally {
+        // destroy() only clears the cache eviction interval — does not abort the active stream
         streamingService.destroy();
     }
 }));
@@ -114,7 +116,8 @@ playbackRouter.all("/getCoverArt.view", wrap(async (req, res) => {
 
     let coverUrl: string | null = null;
 
-    // Try album first (most common)
+    // Try album first (most common); ar- prefix skips album lookup since that ID is an artist ID.
+    // Falls through to artist/track as a cascade — clients may use any prefix for any entity.
     if (!rawId.startsWith("ar-")) {
         const album = await prisma.album.findUnique({
             where: { id },
@@ -158,12 +161,16 @@ playbackRouter.all("/getCoverArt.view", wrap(async (req, res) => {
 
     // Native paths use "native:" prefix; resolve against the covers cache directory
     if (coverUrl.startsWith("native:")) {
-        const nativePath = coverUrl.replace("native:", "");
+        const nativePath = coverUrl.slice("native:".length);
+        if (!nativePath) {
+            return subsonicError(req, res, SubsonicError.NOT_FOUND, "Cover art not found");
+        }
+
         const coversBase = path.resolve(config.music.transcodeCachePath, "../covers");
         const resolvedPath = path.resolve(coversBase, nativePath);
 
         // Security: ensure resolved path stays within the covers directory
-        if (!resolvedPath.startsWith(coversBase + path.sep) && resolvedPath !== coversBase) {
+        if (!resolvedPath.startsWith(coversBase + path.sep)) {
             return subsonicError(req, res, SubsonicError.NOT_FOUND, "Cover art not found");
         }
 
@@ -171,7 +178,9 @@ playbackRouter.all("/getCoverArt.view", wrap(async (req, res) => {
             return subsonicError(req, res, SubsonicError.NOT_FOUND, "Cover art file not found");
         }
 
-        res.setHeader("Content-Type", "image/jpeg");
+        const ext = path.extname(resolvedPath).toLowerCase();
+        const contentType = ext === ".png" ? "image/png" : ext === ".webp" ? "image/webp" : "image/jpeg";
+        res.setHeader("Content-Type", contentType);
         res.setHeader("Cache-Control", "public, max-age=86400");
         res.setHeader("Access-Control-Allow-Origin", "*");
         return res.sendFile(resolvedPath);
