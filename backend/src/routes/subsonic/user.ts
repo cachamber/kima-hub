@@ -1,14 +1,18 @@
 import { Router } from "express";
 import { prisma } from "../../utils/db";
 import { subsonicOk, subsonicError, SubsonicError } from "../../utils/subsonicResponse";
-import { mapSong, wrap } from "./mappers";
+import { mapSong, wrap, parseIntParam } from "./mappers";
 
 export const userRouter = Router();
 
 // ===================== USER =====================
 
-userRouter.all("/getUser.view", (req, res) => {
-    subsonicOk(req, res, {
+userRouter.all("/getUser.view", wrap(async (req, res) => {
+    const requested = req.query.username as string | undefined;
+    if (requested && requested !== req.user!.username) {
+        return subsonicError(req, res, SubsonicError.NOT_AUTHORIZED, "Access denied");
+    }
+    return subsonicOk(req, res, {
         user: {
             "@_username": req.user!.username,
             "@_scrobblingEnabled": true,
@@ -26,7 +30,7 @@ userRouter.all("/getUser.view", (req, res) => {
             folder: [1],
         },
     });
-});
+}));
 
 // ===================== STARRED =====================
 
@@ -49,49 +53,50 @@ userRouter.all(["/getStarred2.view", "/getStarred.view"], wrap(async (req, res) 
     });
 
     const key = req.path.includes("getStarred2") ? "starred2" : "starred";
-    subsonicOk(req, res, {
+    return subsonicOk(req, res, {
         [key]: {
-            song: liked.map((l) => {
-                const t = l.track;
-                const artistName = t.album.artist.displayName || t.album.artist.name;
-                return {
-                    ...mapSong(t, t.album, artistName, t.album.artist.id),
-                    "@_starred": l.likedAt.toISOString(),
-                };
-            }),
+            ...(liked.length > 0 ? {
+                song: liked.map((l) => {
+                    const t = l.track;
+                    const artistName = t.album.artist.displayName || t.album.artist.name;
+                    return {
+                        ...mapSong(t, t.album, artistName, t.album.artist.id),
+                        "@_starred": l.likedAt.toISOString(),
+                    };
+                }),
+            } : {}),
         },
     });
 }));
 
 // star.view — only track starring (Kima's LikedTrack model); albumId/artistId params silently ignored
 userRouter.all("/star.view", wrap(async (req, res) => {
-    const id = req.query.id as string | undefined;
-    if (!id) return subsonicOk(req, res);
-
     const userId = req.user!.id;
-    const track = await prisma.track.findUnique({ where: { id }, select: { id: true } });
-    if (track) {
+    const raw = req.query.id;
+    const ids: string[] = Array.isArray(raw) ? (raw as string[]) : raw ? [raw as string] : [];
+
+    for (const trackId of ids) {
         await prisma.likedTrack
             .upsert({
-                where: { userId_trackId: { userId, trackId: id } },
-                create: { userId, trackId: id },
+                where: { userId_trackId: { userId, trackId } },
+                create: { userId, trackId },
                 update: {},
             })
-            .catch(() => {});
+            .catch(() => {}); // Absorbs FK violation if trackId doesn't exist
     }
-
     return subsonicOk(req, res);
 }));
 
 userRouter.all("/unstar.view", wrap(async (req, res) => {
-    const id = req.query.id as string | undefined;
-    if (!id) return subsonicOk(req, res);
-
     const userId = req.user!.id;
-    await prisma.likedTrack
-        .delete({ where: { userId_trackId: { userId, trackId: id } } })
-        .catch(() => {});
+    const raw = req.query.id;
+    const ids: string[] = Array.isArray(raw) ? (raw as string[]) : raw ? [raw as string] : [];
 
+    if (ids.length > 0) {
+        await prisma.likedTrack.deleteMany({
+            where: { userId, trackId: { in: ids } },
+        });
+    }
     return subsonicOk(req, res);
 }));
 
@@ -101,10 +106,13 @@ userRouter.all(["/getArtistInfo2.view", "/getArtistInfo.view"], wrap(async (req,
     const id = req.query.id as string | undefined;
     if (!id) return subsonicError(req, res, SubsonicError.MISSING_PARAM, "Required parameter is missing: id");
 
+    const count = Math.min(parseIntParam(req.query.count as string | undefined, 20), 50);
+
     const artist = await prisma.artist.findUnique({
         where: { id },
         select: {
             id: true,
+            mbid: true,
             summary: true,
             heroUrl: true,
             similarArtistsJson: true,
@@ -116,9 +124,9 @@ userRouter.all(["/getArtistInfo2.view", "/getArtistInfo.view"], wrap(async (req,
     const resolvedSimilar: Array<{ id: string; name: string; coverArt: string }> = [];
 
     if (rawSimilar.length > 0) {
-        const top10 = rawSimilar.slice(0, 10);
-        const mbids = top10.filter((s) => s.mbid).map((s) => s.mbid as string);
-        const names = top10.map((s) => s.name.toLowerCase());
+        const top = rawSimilar.slice(0, count);
+        const mbids = top.filter((s) => s.mbid).map((s) => s.mbid as string);
+        const names = top.map((s) => s.name.toLowerCase());
 
         const candidates = await prisma.artist.findMany({
             where: {
@@ -128,14 +136,17 @@ userRouter.all(["/getArtistInfo2.view", "/getArtistInfo.view"], wrap(async (req,
                 ],
             },
             select: { id: true, name: true, displayName: true, mbid: true, normalizedName: true },
-            take: 20,
+            take: count * 2,
         });
 
-        for (const s of top10) {
+        const usedIds = new Set<string>();
+        for (const s of top) {
             const found = candidates.find(
-                (a) => (s.mbid && a.mbid === s.mbid) || a.normalizedName === s.name.toLowerCase()
+                (a) => !usedIds.has(a.id) &&
+                    ((s.mbid && a.mbid === s.mbid) || a.normalizedName === s.name.toLowerCase())
             );
             if (found) {
+                usedIds.add(found.id);
                 resolvedSimilar.push({
                     id: found.id,
                     name: found.displayName || found.name,
@@ -149,8 +160,11 @@ userRouter.all(["/getArtistInfo2.view", "/getArtistInfo.view"], wrap(async (req,
     return subsonicOk(req, res, {
         [infoKey]: {
             biography: artist.summary || undefined,
-            coverArt: `ar-${artist.id}`,
-            artistImageUrl: artist.heroUrl || undefined,
+            musicBrainzId: artist.mbid || undefined,
+            "@_coverArt": `ar-${artist.id}`,
+            "@_largeImageUrl": artist.heroUrl || undefined,
+            "@_smallImageUrl": artist.heroUrl || undefined,
+            "@_mediumImageUrl": artist.heroUrl || undefined,
             ...(resolvedSimilar.length > 0 ? {
                 similarArtist: resolvedSimilar.map((s) => ({
                     "@_id": s.id,
