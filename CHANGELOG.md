@@ -5,6 +5,39 @@ All notable changes to Kima will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.4] - 2026-02-21
+
+### Fixed
+
+- **Vibe embeddings never starting**: `queueVibeEmbeddings` only checked for `NULL` or `'failed'` status, but the `add_vibe_analysis_fields` migration set the column default to `'pending'` — every track was silently skipped forever. Added `'pending'` to the WHERE clause.
+- **CLAP infinite retry**: Added `VIBE_MAX_RETRIES` SQL guard to `queueVibeEmbeddings` so permanently-failed tracks (retry count ≥ 3) are never re-queued. Fixed off-by-one: cleanup used `>=` (giving 2 resets) instead of `>` (giving the correct 3).
+- **Null byte crash in music scanner**: ASCII control characters in ID3 tags (e.g. embedded null bytes) caused PostgreSQL query failures. `sanitizeTagString()` now strips control chars from title, artist, and album tags before any DB write.
+- **Soulseek stuck downloads cycling**: Downloads removed from the active list on timeout or stream error were not removed from `SlskClient.downloads`, causing the slot to be permanently occupied. Added `removeDownload()` and called it in all three error paths (timeout, download stream error, write stream error).
+- **Artist enrichment duplicate MBID race condition**: Two artists resolving to the same real MBID simultaneously caused a Prisma `P2002` unique constraint violation, leaving one artist stuck in `processing`. The error is now caught specifically — the duplicate is immediately marked `unresolvable` with a warning log.
+- **Admin vibe retry silently skipping tracks**: `POST /vibe/retry` reset `EnrichmentFailure.retryCount` but left `Track.vibeAnalysisRetryCount` at its max value, causing the SQL guard in `queueVibeEmbeddings` to silently skip the track forever. Both counts are now reset together.
+- **Preview job missing ownership check**: Spotify preview jobs stored in Redis had no `userId` — any authenticated user could read or consume another user's preview result. `userId` is now stored in the Redis payload and validated on both `GET /preview/:jobId` and `POST /import`.
+- **Playlist import DB pool exhaustion**: `matchTrack` inside `startImport` used an unbounded `Promise.all`, saturating the connection pool on large playlists. Wrapped with `pLimit(8)`.
+- **PWA safe area double-inset on iOS**: `body` padding and `AuthenticatedLayout` margin both applied `env(safe-area-inset-*)`, doubling the inset gap. Replaced with `--standalone-safe-area-top/bottom` CSS custom properties that default to `0px` in browser mode and are set to the real env values only inside `@media (display-mode: standalone)`. Fixes both the double-inset on iOS PWA and the Vivaldi browser over-inset.
+- **Mobile bottom content gap**: Removed the 96px bottom padding (`pb-24`) reserved for the mini player. The player is swipeable so the padding is no longer needed.
+
+## [1.5.3] - 2026-02-18
+
+### Fixed
+
+- **Circuit breaker `circuitOpenedAt` drift**: `failureCount >= CIRCUIT_BREAKER_THRESHOLD` stayed true after threshold failures, resetting `circuitOpenedAt` on every subsequent `onFailure()` call — the same rolling-timestamp problem as `lastFailureTime`. Added `&& this.circuitOpenedAt === null` to enforce the single-write invariant.
+- **Circuit breaker deadlock**: `shouldAttemptReset()` measured time since last failure, which resets every cleanup cycle, so the 5-minute recovery window never expired. Fixed by recording `circuitOpenedAt` at the moment the breaker first opens and measuring from that fixed point.
+- **`recordSuccess()` race condition**: Success detection bracketed only `cleanupStaleProcessing()` — a millisecond window that never captured Python completions (~14s batch cadence). Replaced with `audioLastCycleCompletedCount` tracked across cycles; `recordSuccess()` fires whenever the completed count grows since the previous cycle.
+- **CLAP vibe queue self-heal**: `queueVibeEmbeddings` filtered `vibeAnalysisStatus = 'pending'`, skipping thousands of tracks left as `'completed'` after the `reduce_embedding_dimension` migration dropped their embeddings. Changed filter to `<> 'processing'` so `te.track_id IS NULL` (actual embedding existence) is the source of truth.
+
+## [1.5.2] - 2026-02-18
+
+### Fixed
+
+- **Audio analysis enrichment deadlock**: Three compounding bugs caused enrichment to deadlock after 12+ hours of operation.
+  - `runFullEnrichment` reset `analysisStatus` to `pending` without clearing `analysisRetryCount`, silently orphaning tracks the Python analyzer would never pick up (it ignores tracks with `retryCount >= MAX_RETRIES`).
+  - `queueAudioAnalysis` had no `retryCount` filter, queuing tracks Python ignores — these timed out and fed false positives to the circuit breaker.
+  - The circuit breaker fired on `permanentlyFailedCount > 0`, which is expected cleanup behavior, making it permanently unrecoverable — it reopened immediately on every `HALF_OPEN` attempt.
+
 ## [1.5.1] - 2026-02-18
 
 ### Fixed
