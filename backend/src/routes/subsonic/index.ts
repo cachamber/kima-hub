@@ -7,7 +7,7 @@ import { libraryRouter } from "./library";
 import { playbackRouter } from "./playback";
 // Sub-routers are added in later phases (uncomment as they are implemented):
 import { searchRouter } from "./search";
-// import { playlistRouter } from "./playlists";
+import { playlistRouter } from "./playlists";
 // import { userRouter } from "./user";
 
 export const subsonicRouter = Router();
@@ -63,7 +63,7 @@ subsonicRouter.all("/getOpenSubsonicExtensions.view", (req: Request, res: Respon
 subsonicRouter.use(libraryRouter);
 subsonicRouter.use(playbackRouter);
 subsonicRouter.use(searchRouter);
-// subsonicRouter.use(playlistRouter);
+subsonicRouter.use(playlistRouter);
 // subsonicRouter.use(userRouter);
 
 // Catch-all: inform clients that an endpoint isn't implemented yet
