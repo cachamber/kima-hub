@@ -241,7 +241,7 @@ libraryRouter.all(["/getAlbumList2.view", "/getAlbumList.view"], wrap(async (req
                        json_build_object('id', ar.id, 'name', ar.name, 'displayName', ar."displayName") as artist
                 FROM "Album" a
                 JOIN "Artist" ar ON a."artistId" = ar.id
-                WHERE a.genres::text ILIKE ${"%" + genre + "%"}
+                WHERE EXISTS (SELECT 1 FROM jsonb_array_elements_text(a.genres) g WHERE g ILIKE ${"%" + genre + "%"})
                   AND EXISTS (SELECT 1 FROM "Track" t WHERE t."albumId" = a.id)
                 ORDER BY a.title ASC
                 LIMIT ${size} OFFSET ${offset}

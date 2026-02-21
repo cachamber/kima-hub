@@ -24,25 +24,18 @@ playbackRouter.all("/stream.view", wrap(async (req, res) => {
         ? "original"
         : bitrateToQuality(req.query.maxBitRate as string | undefined);
 
-    const userId = req.user!.id;
-
-    // Log play non-blocking — deduplicated to 30s window to avoid double-counting
-    prisma.play.findFirst({
-        where: {
-            userId,
-            trackId: id,
-            playedAt: { gte: new Date(Date.now() - 30_000) },
-        },
-    }).then((recent) => {
-        if (!recent) {
-            prisma.play
-                .create({ data: { userId, trackId: id, source: ListenSource.SUBSONIC } })
-                .catch(() => {});
-        }
-    }).catch(() => {});
+    // Play logging is handled exclusively by scrobble.view to avoid double-counting.
+    // Subsonic clients call scrobble.view on track completion; logging here would produce
+    // two Play rows per listen for clients that implement both behaviors (Symfonium, DSub).
 
     const normalizedFilePath = track.filePath.replace(/\\/g, "/");
-    const absolutePath = path.join(config.music.musicPath, normalizedFilePath);
+    const resolvedMusicPath = path.resolve(config.music.musicPath);
+    const absolutePath = path.resolve(resolvedMusicPath, normalizedFilePath);
+
+    // Security: ensure resolved path stays within the music directory
+    if (!absolutePath.startsWith(resolvedMusicPath + path.sep)) {
+        return subsonicError(req, res, SubsonicError.NOT_FOUND, "Song not found");
+    }
 
     const streamingService = new AudioStreamingService(
         config.music.musicPath,
@@ -72,7 +65,13 @@ playbackRouter.all("/download.view", wrap(async (req, res) => {
     if (!track || !track.filePath) return subsonicError(req, res, SubsonicError.NOT_FOUND, "Song not found");
 
     const normalizedFilePath = track.filePath.replace(/\\/g, "/");
-    const absolutePath = path.join(config.music.musicPath, normalizedFilePath);
+    const resolvedMusicPath = path.resolve(config.music.musicPath);
+    const absolutePath = path.resolve(resolvedMusicPath, normalizedFilePath);
+
+    // Security: ensure resolved path stays within the music directory
+    if (!absolutePath.startsWith(resolvedMusicPath + path.sep)) {
+        return subsonicError(req, res, SubsonicError.NOT_FOUND, "Song not found");
+    }
 
     const streamingService = new AudioStreamingService(
         config.music.musicPath,
