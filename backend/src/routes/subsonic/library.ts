@@ -1,21 +1,10 @@
 // backend/src/routes/subsonic/library.ts
-import { Router, Request, Response } from "express";
+import { Router } from "express";
 import { prisma } from "../../utils/db";
 import { subsonicOk, subsonicError, SubsonicError } from "../../utils/subsonicResponse";
-import { mapArtist, mapAlbum, mapSong } from "./mappers";
+import { mapArtist, mapAlbum, mapSong, wrap } from "./mappers";
 
 export const libraryRouter = Router();
-
-function wrap(fn: (req: Request, res: Response) => Promise<void | Response>) {
-    return (req: Request, res: Response) => {
-        fn(req, res).catch((err: unknown) => {
-            if (!res.headersSent) {
-                const msg = err instanceof Error ? err.message : "Internal error";
-                subsonicError(req, res, SubsonicError.GENERIC, msg);
-            }
-        });
-    };
-}
 
 const IGNORED_ARTICLES = ["the ", "a ", "an "];
 

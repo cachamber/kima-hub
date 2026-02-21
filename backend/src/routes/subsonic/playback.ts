@@ -1,25 +1,14 @@
-import { Router, Request, Response } from "express";
+import { Router } from "express";
 import path from "path";
 import fs from "fs";
 import { prisma } from "../../utils/db";
 import { subsonicOk, subsonicError, SubsonicError } from "../../utils/subsonicResponse";
 import { AudioStreamingService } from "../../services/audioStreaming";
 import { config } from "../../config";
-import { bitrateToQuality } from "./mappers";
+import { bitrateToQuality, wrap } from "./mappers";
 import { ListenSource } from "@prisma/client";
 
 export const playbackRouter = Router();
-
-function wrap(fn: (req: Request, res: Response) => Promise<void | Response>) {
-    return (req: Request, res: Response) => {
-        fn(req, res).catch((err: unknown) => {
-            if (!res.headersSent) {
-                const msg = err instanceof Error ? err.message : "Streaming error";
-                subsonicError(req, res, SubsonicError.GENERIC, msg);
-            }
-        });
-    };
-}
 
 // ===================== STREAMING =====================
 

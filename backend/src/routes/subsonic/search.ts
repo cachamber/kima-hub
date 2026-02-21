@@ -1,31 +1,11 @@
-import { Router, Request, Response } from "express";
+import { Router } from "express";
 import { Prisma } from "@prisma/client";
 import { prisma } from "../../utils/db";
-import { subsonicOk, subsonicError, SubsonicError } from "../../utils/subsonicResponse";
+import { subsonicOk } from "../../utils/subsonicResponse";
 import { searchService } from "../../services/search";
+import { wrap, clamp, parseIntParam } from "./mappers";
 
 export const searchRouter = Router();
-
-function wrap(fn: (req: Request, res: Response) => Promise<void | Response>) {
-    return (req: Request, res: Response) => {
-        fn(req, res).catch((err: unknown) => {
-            if (!res.headersSent) {
-                const msg = err instanceof Error ? err.message : "Internal error";
-                subsonicError(req, res, SubsonicError.GENERIC, msg);
-            }
-        });
-    };
-}
-
-function clamp(value: number, min: number, max: number): number {
-    return Math.max(min, Math.min(max, value));
-}
-
-function parseIntParam(raw: string | undefined, defaultVal: number): number {
-    if (raw === undefined || raw === "") return defaultVal;
-    const n = parseInt(raw, 10);
-    return isNaN(n) ? defaultVal : n;
-}
 
 // ===================== SEARCH =====================
 
@@ -110,14 +90,18 @@ searchRouter.all("/getRandomSongs.view", wrap(async (req, res) => {
 
     const whereConditions: Prisma.Sql[] = [Prisma.sql`t."filePath" IS NOT NULL`];
 
-    if (fromYear !== undefined && toYear !== undefined && !isNaN(fromYear) && !isNaN(toYear)) {
+    if (fromYear !== undefined && !isNaN(fromYear) && toYear !== undefined && !isNaN(toYear)) {
         const lo = Math.min(fromYear, toYear);
         const hi = Math.max(fromYear, toYear);
         whereConditions.push(Prisma.sql`al.year BETWEEN ${lo} AND ${hi}`);
+    } else if (fromYear !== undefined && !isNaN(fromYear)) {
+        whereConditions.push(Prisma.sql`al.year >= ${fromYear}`);
+    } else if (toYear !== undefined && !isNaN(toYear)) {
+        whereConditions.push(Prisma.sql`al.year <= ${toYear}`);
     }
 
     if (genre) {
-        whereConditions.push(Prisma.sql`al.genres::text ILIKE ${"%" + genre + "%"}`);
+        whereConditions.push(Prisma.sql`EXISTS (SELECT 1 FROM jsonb_array_elements_text(al.genres) g WHERE g ILIKE ${"%" + genre + "%"})`);
     }
 
     const whereClause = Prisma.join(whereConditions, " AND ");

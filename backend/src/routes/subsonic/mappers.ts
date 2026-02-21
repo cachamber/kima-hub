@@ -3,6 +3,8 @@
 // These convert Kima's Prisma models to Subsonic API response shapes.
 // The @_ prefix convention is used by fast-xml-parser for XML attributes.
 // subsonicResponse.ts strips these prefixes for JSON output automatically.
+import { Request, Response } from "express";
+import { subsonicError, SubsonicError } from "../../utils/subsonicResponse";
 
 export type ArtistRow = {
     id: string;
@@ -120,4 +122,25 @@ export function bitrateToQuality(
     if (br >= 192) return "high";
     if (br >= 128) return "medium";
     return "low";
+}
+
+export function wrap(fn: (req: Request, res: Response) => Promise<void | Response>) {
+    return (req: Request, res: Response) => {
+        fn(req, res).catch((err: unknown) => {
+            if (!res.headersSent) {
+                const msg = err instanceof Error ? err.message : "Internal error";
+                subsonicError(req, res, SubsonicError.GENERIC, msg);
+            }
+        });
+    };
+}
+
+export function clamp(value: number, min: number, max: number): number {
+    return Math.max(min, Math.min(max, value));
+}
+
+export function parseIntParam(raw: string | undefined, defaultVal: number): number {
+    if (raw === undefined || raw === "") return defaultVal;
+    const n = parseInt(raw, 10);
+    return isNaN(n) ? defaultVal : n;
 }
