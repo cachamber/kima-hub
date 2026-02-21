@@ -67,7 +67,7 @@ libraryRouter.all("/getArtist.view", wrap(async (req, res) => {
         where: { id },
         include: {
             albums: {
-                where: { tracks: { some: {} } },
+                where: { location: "LIBRARY", tracks: { some: {} } },
                 orderBy: { year: "desc" },
                 include: {
                     _count: { select: { tracks: true } },
@@ -106,7 +106,7 @@ libraryRouter.all("/getAlbum.view", wrap(async (req, res) => {
             tracks: { orderBy: { trackNo: "asc" } },
         },
     });
-    if (!album) {
+    if (!album || album.location !== "LIBRARY") {
         return subsonicError(req, res, SubsonicError.NOT_FOUND, "Album not found");
     }
 
@@ -142,7 +142,7 @@ libraryRouter.all("/getSong.view", wrap(async (req, res) => {
             },
         },
     });
-    if (!track) {
+    if (!track || track.album.location !== "LIBRARY") {
         return subsonicError(req, res, SubsonicError.NOT_FOUND, "Song not found");
     }
 
@@ -184,9 +184,8 @@ libraryRouter.all(["/getAlbumList2.view", "/getAlbumList.view"], wrap(async (req
     switch (type) {
         case "newest":
             albums = await prisma.album.findMany({
-                where: { tracks: { some: {} } },
-                // Album has no createdAt; cuid() IDs are time-sortable
-                orderBy: { id: "desc" },
+                where: { location: "LIBRARY", tracks: { some: {} } },
+                orderBy: { lastSynced: "desc" },
                 take: size,
                 skip: offset,
                 include: { artist: { select: { id: true, name: true, displayName: true, genres: true, userGenres: true } } },
@@ -195,7 +194,7 @@ libraryRouter.all(["/getAlbumList2.view", "/getAlbumList.view"], wrap(async (req
 
         case "alphabeticalByName":
             albums = await prisma.album.findMany({
-                where: { tracks: { some: {} } },
+                where: { location: "LIBRARY", tracks: { some: {} } },
                 orderBy: { title: "asc" },
                 take: size,
                 skip: offset,
@@ -205,7 +204,7 @@ libraryRouter.all(["/getAlbumList2.view", "/getAlbumList.view"], wrap(async (req
 
         case "alphabeticalByArtist":
             albums = await prisma.album.findMany({
-                where: { tracks: { some: {} } },
+                where: { location: "LIBRARY", tracks: { some: {} } },
                 orderBy: { artist: { name: "asc" } },
                 take: size,
                 skip: offset,
@@ -221,6 +220,7 @@ libraryRouter.all(["/getAlbumList2.view", "/getAlbumList.view"], wrap(async (req
             }
             albums = await prisma.album.findMany({
                 where: {
+                    location: "LIBRARY",
                     year: {
                         gte: Math.min(fromYear, toYear),
                         lte: Math.max(fromYear, toYear),
@@ -247,9 +247,10 @@ libraryRouter.all(["/getAlbumList2.view", "/getAlbumList.view"], wrap(async (req
                            'genres', ar.genres, 'userGenres', ar."userGenres") as artist
                 FROM "Album" a
                 JOIN "Artist" ar ON a."artistId" = ar.id
-                WHERE EXISTS (
+                WHERE a."location" = 'LIBRARY'
+                  AND EXISTS (
                     SELECT 1 FROM jsonb_array_elements_text(
-                        COALESCE(NULLIF(ar."userGenres", 'null'::jsonb), ar.genres)
+                        COALESCE(NULLIF(NULLIF(ar."userGenres", 'null'::jsonb), '[]'::jsonb), ar.genres)
                     ) g WHERE g ILIKE ${"%" + genre + "%"}
                 )
                   AND EXISTS (SELECT 1 FROM "Track" t WHERE t."albumId" = a.id)
@@ -263,6 +264,7 @@ libraryRouter.all(["/getAlbumList2.view", "/getAlbumList.view"], wrap(async (req
         case "starred":
             albums = await prisma.album.findMany({
                 where: {
+                    location: "LIBRARY",
                     tracks: {
                         some: {
                             likedBy: { some: { userId } },
@@ -283,7 +285,8 @@ libraryRouter.all(["/getAlbumList2.view", "/getAlbumList.view"], wrap(async (req
                            'genres', ar.genres, 'userGenres', ar."userGenres") as artist
                 FROM "Album" a
                 JOIN "Artist" ar ON a."artistId" = ar.id
-                WHERE EXISTS (SELECT 1 FROM "Track" t WHERE t."albumId" = a.id)
+                WHERE a."location" = 'LIBRARY'
+                  AND EXISTS (SELECT 1 FROM "Track" t WHERE t."albumId" = a.id)
                 ORDER BY RANDOM()
                 LIMIT ${size}
             `;
@@ -300,7 +303,8 @@ libraryRouter.all(["/getAlbumList2.view", "/getAlbumList.view"], wrap(async (req
                 JOIN "Artist" ar ON a."artistId" = ar.id
                 JOIN "Track" t ON t."albumId" = a.id
                 JOIN "Play" p ON p."trackId" = t.id
-                WHERE p."userId" = ${userId}
+                WHERE a."location" = 'LIBRARY'
+                  AND p."userId" = ${userId}
                 GROUP BY a.id, a.title, a."displayTitle", a.year, a."coverUrl", a."userCoverUrl", a."artistId",
                          ar.id, ar.name, ar."displayName", ar.genres, ar."userGenres"
                 ORDER BY MAX(p."playedAt") DESC
@@ -319,7 +323,8 @@ libraryRouter.all(["/getAlbumList2.view", "/getAlbumList.view"], wrap(async (req
                 JOIN "Artist" ar ON a."artistId" = ar.id
                 JOIN "Track" t ON t."albumId" = a.id
                 JOIN "Play" p ON p."trackId" = t.id
-                WHERE p."userId" = ${userId}
+                WHERE a."location" = 'LIBRARY'
+                  AND p."userId" = ${userId}
                 GROUP BY a.id, a.title, a."displayTitle", a.year, a."coverUrl", a."userCoverUrl", a."artistId",
                          ar.id, ar.name, ar."displayName", ar.genres, ar."userGenres"
                 ORDER BY COUNT(p.id) DESC
@@ -331,8 +336,8 @@ libraryRouter.all(["/getAlbumList2.view", "/getAlbumList.view"], wrap(async (req
 
         default:
             albums = await prisma.album.findMany({
-                where: { tracks: { some: {} } },
-                orderBy: { id: "desc" },
+                where: { location: "LIBRARY", tracks: { some: {} } },
+                orderBy: { lastSynced: "desc" },
                 take: size,
                 skip: offset,
                 include: { artist: { select: { id: true, name: true, displayName: true, genres: true, userGenres: true } } },

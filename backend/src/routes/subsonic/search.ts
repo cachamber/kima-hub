@@ -119,7 +119,7 @@ searchRouter.all("/getRandomSongs.view", wrap(async (req, res) => {
         // Genre lives on Artist, not Album — filter via artist's enriched genres
         whereConditions.push(Prisma.sql`EXISTS (
             SELECT 1 FROM jsonb_array_elements_text(
-                COALESCE(NULLIF(ar."userGenres", 'null'::jsonb), ar.genres)
+                COALESCE(NULLIF(NULLIF(ar."userGenres", 'null'::jsonb), '[]'::jsonb), ar.genres)
             ) g WHERE g ILIKE ${"%" + genre + "%"}
         )`);
     }
