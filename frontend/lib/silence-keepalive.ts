@@ -49,6 +49,7 @@ function buildSilentWavBlob(): Blob {
 class SilenceKeepalive {
     private audio: HTMLAudioElement | null = null;
     private blobUrl: string | null = null;
+    private pendingStop = false;
 
     private getAudio(): HTMLAudioElement {
         if (this.audio) return this.audio;
@@ -83,9 +84,15 @@ class SilenceKeepalive {
      */
     start(): void {
         if (typeof window === "undefined") return;
+        this.pendingStop = false;
         const el = this.getAudio();
         if (!el.paused) return;
-        el.play().catch(() => {
+        el.play().then(() => {
+            if (this.pendingStop && this.audio && !this.audio.paused) {
+                this.audio.pause();
+                this.pendingStop = false;
+            }
+        }).catch(() => {
             // Will be retried on next prime() call or visibility change.
         });
     }
@@ -95,8 +102,12 @@ class SilenceKeepalive {
      * Call when main audio resumes or no media is loaded.
      */
     stop(): void {
-        if (!this.audio || this.audio.paused) return;
-        this.audio.pause();
+        if (!this.audio) return;
+        this.pendingStop = true;
+        if (!this.audio.paused) {
+            this.audio.pause();
+            this.pendingStop = false;
+        }
     }
 
     destroy(): void {

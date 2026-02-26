@@ -511,7 +511,7 @@ class DownloadQueueManager {
             logger.debug("   Starting library scan...");
 
             // Get first user for scanning
-            const firstUser = await prisma.user.findFirst();
+            const firstUser = await prisma.user.findFirst({ select: { id: true } });
             if (!firstUser) {
                 logger.error(` No users found in database, cannot scan`);
                 return false;

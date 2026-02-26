@@ -322,8 +322,6 @@ export default function AudiobooksPage() {
         );
     }
 
-    const sectionIndex = 0;
-
     return (
         <div className="min-h-screen bg-gradient-to-b from-[#0a0a0a] to-black relative">
             {/* Atmospheric overlay */}

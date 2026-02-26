@@ -54,6 +54,7 @@ export function useAudio() {
         playPodcast: controls.playPodcast,
         pause: controls.pause,
         resume: controls.resume,
+        resumeWithGesture: controls.resumeWithGesture,
         next: controls.next,
         previous: controls.previous,
         addToQueue: controls.addToQueue,

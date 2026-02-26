@@ -13,7 +13,7 @@ import { dispatchQueryEvent } from "@/lib/query-events";
 export function usePodcastActions(podcastId: string, sortedEpisodes?: Episode[]) {
     const router = useRouter();
     const queryClient = useQueryClient();
-    const { playPodcast, currentPodcast, isPlaying, pause, resume } =
+    const { playPodcast, currentPodcast, isPlaying, pause, resumeWithGesture } =
         useAudio();
     const { setPodcastEpisodeQueue } = useAudioState();
 
@@ -84,12 +84,12 @@ export function usePodcastActions(podcastId: string, sortedEpisodes?: Episode[])
             if (isCurrentEpisode && isPlaying) {
                 pause();
             } else if (isCurrentEpisode) {
-                resume();
+                resumeWithGesture();
             } else {
                 handlePlayEpisode(episode, podcast);
             }
         },
-        [podcastId, currentPodcast, isPlaying, pause, resume, handlePlayEpisode]
+        [podcastId, currentPodcast, isPlaying, pause, resumeWithGesture, handlePlayEpisode]
     );
 
     const isEpisodePlaying = useCallback(
@@ -138,7 +138,6 @@ export function usePodcastActions(podcastId: string, sortedEpisodes?: Episode[])
         isEpisodePlaying,
         isPlaying,
         pause,
-        resume,
     };
 }
 

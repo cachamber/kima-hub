@@ -51,7 +51,7 @@ export function TVLayout({ children }: { children: React.ReactNode }) {
         playbackType,
         isPlaying,
         pause,
-        resume,
+        resumeWithGesture,
         currentTime,
         duration,
         next,
@@ -140,7 +140,7 @@ export function TVLayout({ children }: { children: React.ReactNode }) {
                         }
                     }
                     e.preventDefault();
-                    if (isPlaying) { pause(); } else { resume(); }
+                    if (isPlaying) { pause(); } else { resumeWithGesture(); }
                     return;
                 case "MediaTrackNext":
                     e.preventDefault();
@@ -183,7 +183,7 @@ export function TVLayout({ children }: { children: React.ReactNode }) {
             // Delegate to content navigation hook
             handleContentKeyDown(e);
         }
-    }, [isNavFocused, focusedTabIndex, router, hasMedia, isPlaying, pause, resume, next, previous, seek, focusFirstCard, handleContentKeyDown]);
+    }, [isNavFocused, focusedTabIndex, router, hasMedia, isPlaying, pause, resumeWithGesture, next, previous, seek, focusFirstCard, handleContentKeyDown]);
 
     useEffect(() => {
         window.addEventListener("keydown", handleKeyDown);
@@ -289,7 +289,7 @@ export function TVLayout({ children }: { children: React.ReactNode }) {
                     </button>
 
                     {/* Play/Pause */}
-                    <button onClick={() => isPlaying ? pause() : resume()} className="tv-np-btn">
+                    <button onClick={() => isPlaying ? pause() : resumeWithGesture()} className="tv-np-btn">
                         {isPlaying ? (
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
                                 <rect x="6" y="4" width="4" height="16" />

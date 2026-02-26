@@ -17,7 +17,7 @@ export function useAudiobookActions(
     playbackType,
     isPlaying,
     pause,
-    resume,
+    resumeWithGesture,
     playAudiobook,
     currentTime,
     updateCurrentTime,
@@ -40,9 +40,9 @@ export function useAudiobookActions(
       pause();
     } else {
       // Same audiobook is paused - resume it
-      resume();
+      resumeWithGesture();
     }
-  }, [audiobook, audiobookId, currentAudiobook, isPlaying, pause, resume, playAudiobook]);
+  }, [audiobook, audiobookId, currentAudiobook, isPlaying, pause, resumeWithGesture, playAudiobook]);
 
   const handleMarkAsCompleted = useCallback(async () => {
     if (!audiobook) return;

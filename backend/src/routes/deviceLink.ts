@@ -11,7 +11,7 @@ function generateLinkCode(): string {
     const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // Exclude similar looking chars
     let code = "";
     for (let i = 0; i < 6; i++) {
-        code += chars.charAt(Math.floor(Math.random() * chars.length));
+        code += chars[crypto.randomInt(chars.length)];
     }
     return code;
 }

@@ -46,7 +46,7 @@ export default function SeriesDetailPage() {
     const { toast } = useToast();
     const { currentAudiobook, playbackType } = useAudioState();
     const { isPlaying } = useAudioPlayback();
-    const { playAudiobook, pause, resume } = useAudioControls();
+    const { playAudiobook, pause, resumeWithGesture } = useAudioControls();
 
     const seriesName = decodeURIComponent(params.name as string);
     const [books, setBooks] = useState<Audiobook[]>([]);
@@ -269,7 +269,7 @@ export default function SeriesDetailPage() {
                                                             }`}
                                                             onClick={() => {
                                                                 if (isCurrentBook) {
-                                                                    resume();
+                                                                    resumeWithGesture();
                                                                 } else {
                                                                     playAudiobook(book);
                                                                 }

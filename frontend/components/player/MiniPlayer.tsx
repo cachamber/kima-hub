@@ -60,7 +60,7 @@ export function MiniPlayer() {
     const { duration, progress } = usePlaybackProgress();
     const {
         pause,
-        resume,
+        resumeWithGesture,
         next,
         previous,
         toggleShuffle,
@@ -381,12 +381,12 @@ export function MiniPlayer() {
                                         onClick={() => {
                                             if (audioError) {
                                                 clearAudioError();
-                                                resume();
+                                                resumeWithGesture();
                                             } else if (!isBuffering) {
                                                 if (isPlaying) {
                                                     pause();
                                                 } else {
-                                                    resume();
+                                                    resumeWithGesture();
                                                 }
                                             }
                                         }}
@@ -649,7 +649,7 @@ export function MiniPlayer() {
                                     ? undefined
                                     : isPlaying
                                     ? pause
-                                    : resume
+                                    : resumeWithGesture
                             }
                             disabled={!hasMedia || isBuffering}
                             className={cn(

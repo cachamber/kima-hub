@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { useAudio } from '@/lib/audio-context';
+import { useAudio } from "@/lib/audio-context";
 import { useIsTV } from '@/lib/tv-utils';
 
 /**
@@ -20,7 +20,7 @@ export function useKeyboardShortcuts() {
   const isTV = useIsTV();
   const {
     isPlaying,
-    resume,
+    resumeWithGesture,
     pause,
     next,
     previous,
@@ -75,7 +75,7 @@ export function useKeyboardShortcuts() {
           if (isPlaying) {
             pause();
           } else {
-            resume();
+            resumeWithGesture();
           }
           break;
 
@@ -133,7 +133,7 @@ export function useKeyboardShortcuts() {
     isTV,
     isPlaying,
     pause,
-    resume,
+    resumeWithGesture,
     next,
     previous,
     seek,

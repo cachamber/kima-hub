@@ -4,6 +4,7 @@ import { z } from "zod";
 import { requireAuthOrToken } from "../middleware/auth";
 import { prisma } from "../utils/db";
 import { sessionLog } from "../utils/playlistLogger";
+import { safeError } from "../utils/errors";
 
 const router = Router();
 
@@ -1140,17 +1141,14 @@ router.post("/:id/pending/:trackId/retry", async (req, res) => {
                     })
                     .catch(() => undefined);
             });
-    } catch (error: any) {
+    } catch (error) {
         logger.error("Retry pending track error:", error);
         sessionLog(
             "PENDING-RETRY",
-            `Handler error: ${error?.message || error}`,
+            `Handler error: ${error instanceof Error ? error.message : String(error)}`,
             "ERROR"
         );
-        res.status(500).json({
-            error: "Failed to retry download",
-            details: error.message,
-        });
+        safeError(res, "Retry pending track download", error);
     }
 });
 
