@@ -74,7 +74,7 @@ export default function PlaylistDetailPage() {
     const { toast } = useToast();
     const { currentTrack } = useAudioState();
     const { isPlaying } = useAudioPlayback();
-    const { playTracks, addToQueue, pause, resume } = useAudioControls();
+    const { playTracks, addToQueue, pause, resumeWithGesture } = useAudioControls();
     const playlistId = params.id as string;
 
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -320,7 +320,7 @@ export default function PlaylistDetailPage() {
             if (isPlaying) {
                 pause();
             } else {
-                resume();
+                resumeWithGesture();
             }
             return;
         }

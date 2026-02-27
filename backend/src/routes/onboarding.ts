@@ -93,6 +93,15 @@ router.post("/register", async (req, res) => {
         const userCount = await prisma.user.count();
         const isFirstUser = userCount === 0;
 
+        // After initial setup, only allow registration if admin has enabled it
+        if (!isFirstUser) {
+            const rows = await prisma.$queryRaw<Array<{ registrationOpen: boolean }>>`
+                SELECT "registrationOpen" FROM "SystemSettings" LIMIT 1`;
+            if (!rows[0]?.registrationOpen) {
+                return res.status(403).json({ error: "Registration is closed" });
+            }
+        }
+
         // If this is the first user, ensure encryption key is generated
         if (isFirstUser) {
             await ensureEncryptionKey();
@@ -493,6 +502,14 @@ router.get("/status", async (req, res) => {
         const userCount = await prisma.user.count();
         const hasAccount = userCount > 0;
 
+        // Check if registration is open (always open for first user)
+        let registrationOpen = !hasAccount;
+        if (hasAccount) {
+            const rows = await prisma.$queryRaw<Array<{ registrationOpen: boolean }>>`
+                SELECT "registrationOpen" FROM "SystemSettings" LIMIT 1`;
+            registrationOpen = rows[0]?.registrationOpen ?? false;
+        }
+
         // Check for JWT token in Authorization header
         const authHeader = req.headers.authorization;
         const token = authHeader?.startsWith("Bearer ")
@@ -504,6 +521,7 @@ router.get("/status", async (req, res) => {
             return res.json({
                 needsOnboarding: !hasAccount,
                 hasAccount,
+                registrationOpen,
             });
         }
 
@@ -522,12 +540,14 @@ router.get("/status", async (req, res) => {
             res.json({
                 needsOnboarding: !user?.onboardingComplete,
                 hasAccount: true,
+                registrationOpen,
             });
         } catch {
             // Invalid token - return basic status
             res.json({
                 needsOnboarding: !hasAccount,
                 hasAccount,
+                registrationOpen,
             });
         }
     } catch (err: any) {

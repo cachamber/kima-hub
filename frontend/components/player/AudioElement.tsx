@@ -307,11 +307,6 @@ export const AudioElement = memo(function AudioElement() {
 
         const handlePlaying = () => {
             setIsBuffering(false);
-            // Main audio is playing — the engine holds the session, keepalive not needed.
-            // Also attempt a prime here for Android and permissive iOS contexts; the
-            // definitive iOS prime comes from the MediaSession handler in useMediaSession.
-            silenceKeepalive.prime();
-            silenceKeepalive.stop();
             // If audio started playing while React state says we're paused
             // (e.g. direct tryResume() call from MediaSession handler bypassed the
             // React update chain), sync state back to playing so the UI reflects reality.

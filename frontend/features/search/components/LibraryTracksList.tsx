@@ -18,7 +18,7 @@ interface LibraryTracksListProps {
 export function LibraryTracksList({ tracks }: LibraryTracksListProps) {
     const { currentTrack } = useAudioState();
     const { isPlaying } = useAudioPlayback();
-    const { playTracks, pause, resume } = useAudioControls();
+    const { playTracks, pause, resumeWithGesture } = useAudioControls();
 
     if (!tracks || tracks.length === 0) {
         return null;
@@ -47,7 +47,7 @@ export function LibraryTracksList({ tracks }: LibraryTracksListProps) {
             if (isPlaying) {
                 pause();
             } else {
-                resume();
+                resumeWithGesture();
             }
         } else {
             // Play from this track

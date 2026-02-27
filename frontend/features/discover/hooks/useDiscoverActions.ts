@@ -14,7 +14,7 @@ export function useDiscoverActions(
     updateTrackLiked?: (albumId: string, isLiked: boolean) => void
 ) {
     const { toast } = useToast();
-    const { playTracks, isPlaying, pause, resume } = useAudio();
+    const { playTracks, isPlaying, pause, resumeWithGesture } = useAudio();
 
     const handleGenerate = useCallback(async () => {
         if (isGenerating) {
@@ -115,9 +115,9 @@ export function useDiscoverActions(
         if (isPlaying) {
             pause();
         } else {
-            resume();
+            resumeWithGesture();
         }
-    }, [isPlaying, pause, resume]);
+    }, [isPlaying, pause, resumeWithGesture]);
 
     return {
         handleGenerate,

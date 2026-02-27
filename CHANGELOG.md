@@ -5,6 +5,34 @@ All notable changes to Kima will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.8] - 2026-02-26
+
+### Fixed
+
+- **Mobile playback: infinite network retry loop**: On mobile networks, transient `MEDIA_ERR_NETWORK` errors triggered a retry cycle that never terminated -- `canplay` and `playing` events reset the retry counter to 0 on every cycle, and `audio.load()` reset `currentTime` to 0, causing the "2-3 seconds then starts over" symptom. Fixed by removing the premature counter resets (counter now only resets on new track load) and saving/restoring playback position across retries.
+- **Mobile playback: silence keepalive running during active playback**: The silence keepalive element (used to hold the iOS/Android audio session while paused in background) was started via `prime()` from a non-gesture context, then `stop()` failed to pause it because the `play()` promise hadn't resolved yet, making `el.paused` still true. Fixed by adding proper async play-promise tracking with a `pendingStop` flag, and removing the non-gesture `prime()`/`stop()` calls from the audio engine's `playing` event handler.
+- **Mobile playback: play button tap fails to resume on iOS**: All in-app play buttons called `resume()` which only set React state; the actual `audio.play()` ran in a `useEffect` after re-render, outside the iOS user-gesture activation window. Fixed by adding a `resumeWithGesture()` helper that calls `audioEngine.tryResume()` and `silenceKeepalive.prime()` synchronously within the gesture context -- the same pattern already used by MediaSession lock-screen handlers. Applied across all 13 play/resume call sites.
+- **Mobile playback: lock screen / notification controls unresponsive after app restore**: MediaSession action handlers were never registered when the app loaded with a server-restored track because the `hasPlayedLocallyRef` guard blocked registration, and the handler registration effect's dependency array was missing `isPlaying`, so it never re-ran when the flag was set. Fixed by adding `isPlaying` to the dependency array.
+- **Cover art proxy transient fetch errors**: External cover art fetches that hit transient TCP errors (`ECONNRESET`, `ETIMEDOUT`, `UND_ERR_SOCKET`) now retry once with a 500ms delay before failing.
+
+### Security
+
+- **Error message leakage**: All ~82 backend route catch blocks replaced with a `safeError()` helper that logs the full error server-side but returns only `"Internal server error"` to the client. Prevents stack traces, file paths, and internal details from leaking to users.
+- **SSRF protection on cover art proxy**: The cover-art proxy endpoint now validates URLs before fetching -- blocks private/loopback IPs, non-HTTP schemes, and resolves DNS to check for rebinding attacks. Audiobook cover paths also block directory traversal.
+- **Login timing side-channel**: Login endpoint previously returned early on user-not-found, allowing username enumeration via response timing. Now runs a dummy bcrypt compare against an invalid hash to normalize response times regardless of whether the user exists.
+- **Device link code generation**: Replaced `Math.random()` with `crypto.randomInt()` for cryptographically secure device link codes.
+- **Unscoped user queries**: Added `select` clauses to all Prisma user queries that previously loaded full rows (including `passwordHash`) when only the ID or specific fields were needed.
+- **Metrics endpoint authentication**: `/api/metrics` now requires authentication.
+- **Registration gate**: Added `registrationOpen` system setting (default: closed) and rate limiter on the registration endpoint. After the first user is created, new registrations require an admin to explicitly open registration.
+- **Admin password reset role check**: Fixed case mismatch (`"ADMIN"` vs `"admin"`) that could allow non-admin users to trigger password resets.
+
+### Housekeeping
+
+- Removed unused `sectionIndex` variables in audiobooks, home, and podcasts pages.
+- Removed dead commented-out album cover grid code and unused imports in DiscoverHero.
+- Fixed missing `useCallback` wrapper for `loadPresets` in MoodMixer.
+- Added missing `previewLoadState` to effect dependency array in usePodcastData.
+
 ## [1.5.7] - 2026-02-23
 
 ### Added

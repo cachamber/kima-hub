@@ -5,6 +5,7 @@ import { prisma } from "../utils/db";
 import { rssParserService } from "../services/rss-parser";
 import { podcastCacheService } from "../services/podcastCache";
 import { parseRangeHeader } from "../utils/rangeParser";
+import { safeError } from "../utils/errors";
 import axios from "axios";
 import fs from "fs";
 
@@ -39,12 +40,8 @@ router.post("/sync-covers", requireAuth, async (req, res) => {
             podcasts: podcastResult,
             episodes: episodeResult,
         });
-    } catch (error: any) {
-        logger.error("Podcast cover sync failed:", error);
-        res.status(500).json({
-            error: "Sync failed",
-            message: error.message,
-        });
+    } catch (error) {
+        safeError(res, "Podcast cover sync failed", error);
     }
 });
 
@@ -115,12 +112,8 @@ router.get("/", requireAuth, async (req, res) => {
         });
 
         res.json(podcasts);
-    } catch (error: any) {
-        logger.error("Error fetching podcasts:", error);
-        res.status(500).json({
-            error: "Failed to fetch podcasts",
-            message: error.message,
-        });
+    } catch (error) {
+        safeError(res, "Error fetching podcasts", error);
     }
 });
 
@@ -163,12 +156,8 @@ router.get("/discover/top", requireAuthOrToken, async (req, res) => {
 
         logger.debug(`   Found ${podcasts.length} podcasts`);
         res.json(podcasts);
-    } catch (error: any) {
-        logger.error("Error fetching top podcasts:", error);
-        res.status(500).json({
-            error: "Failed to fetch top podcasts",
-            message: error.message,
-        });
+    } catch (error) {
+        safeError(res, "Error fetching top podcasts", error);
     }
 });
 
@@ -262,12 +251,8 @@ router.get("/discover/genres", async (req, res) => {
             `   Fetched podcasts for ${genreIds.length} genres (parallel)`
         );
         res.json(results);
-    } catch (error: any) {
-        logger.error("Error fetching genre podcasts:", error);
-        res.status(500).json({
-            error: "Failed to fetch genre podcasts",
-            message: error.message,
-        });
+    } catch (error) {
+        safeError(res, "Error fetching genre podcasts", error);
     }
 });
 
@@ -342,12 +327,8 @@ router.get("/discover/genre/:genreId", async (req, res) => {
             `   Found ${podcasts.length} podcasts (total available: ${allPodcasts.length})`
         );
         res.json(podcasts);
-    } catch (error: any) {
-        logger.error("Error fetching paginated genre podcasts:", error);
-        res.status(500).json({
-            error: "Failed to fetch podcasts",
-            message: error.message,
-        });
+    } catch (error) {
+        safeError(res, "Error fetching paginated genre podcasts", error);
     }
 });
 
@@ -444,12 +425,8 @@ router.get("/preview/:itunesId", requireAuth, async (req, res) => {
             isSubscribed,
             subscribedPodcastId: isSubscribed ? existingPodcast!.id : null,
         });
-    } catch (error: any) {
-        logger.error("Error previewing podcast:", error);
-        res.status(500).json({
-            error: "Failed to preview podcast",
-            message: error.message,
-        });
+    } catch (error) {
+        safeError(res, "Error previewing podcast", error);
     }
 });
 
@@ -536,12 +513,8 @@ router.get("/:id", requireAuth, async (req, res) => {
             episodes: episodesWithProgress,
             isSubscribed: true,
         });
-    } catch (error: any) {
-        logger.error("Error fetching podcast:", error);
-        res.status(500).json({
-            error: "Failed to fetch podcast",
-            message: error.message,
-        });
+    } catch (error) {
+        safeError(res, "Error fetching podcast", error);
     }
 });
 
@@ -707,12 +680,8 @@ router.post("/subscribe", requireAuth, async (req, res) => {
             },
             message: "Subscribed successfully",
         });
-    } catch (error: any) {
-        logger.error("Error subscribing to podcast:", error);
-        res.status(500).json({
-            error: "Failed to subscribe to podcast",
-            message: error.message,
-        });
+    } catch (error) {
+        safeError(res, "Error subscribing to podcast", error);
     }
 });
 
@@ -768,12 +737,8 @@ router.delete("/:id/unsubscribe", requireAuth, async (req, res) => {
             success: true,
             message: "Unsubscribed successfully",
         });
-    } catch (error: any) {
-        logger.error("Error unsubscribing from podcast:", error);
-        res.status(500).json({
-            error: "Failed to unsubscribe",
-            message: error.message,
-        });
+    } catch (error) {
+        safeError(res, "Error unsubscribing from podcast", error);
     }
 });
 
@@ -800,15 +765,11 @@ router.get("/:id/refresh", requireAuth, async (req, res) => {
             totalEpisodes: result.totalEpisodes,
             message: `Found ${result.newEpisodesCount} new episodes`,
         });
-    } catch (error: any) {
-        if (error.message?.includes("not found")) {
+    } catch (error) {
+        if (error instanceof Error && error.message?.includes("not found")) {
             return res.status(404).json({ error: "Podcast not found" });
         }
-        logger.error("Error refreshing podcast:", error);
-        res.status(500).json({
-            error: "Failed to refresh podcast",
-            message: error.message,
-        });
+        safeError(res, "Error refreshing podcast", error);
     }
 });
 
@@ -1220,13 +1181,11 @@ router.get("/:podcastId/episodes/:episodeId/stream", requireAuthOrToken, async (
                 throw error;
             }
         }
-    } catch (error: any) {
-        logger.error("\n [PODCAST STREAM] Error:", error.message);
+    } catch (error) {
         if (!res.headersSent) {
-            res.status(500).json({
-                error: "Failed to stream episode",
-                message: error.message,
-            });
+            safeError(res, "Podcast stream error", error);
+        } else {
+            logger.error("Podcast stream error (headers already sent):", error);
         }
     }
 });
@@ -1282,12 +1241,8 @@ router.post("/:podcastId/episodes/:episodeId/progress", requireAuth, async (req,
                 isFinished: progress.isFinished,
             },
         });
-    } catch (error: any) {
-        logger.error("Error updating progress:", error);
-        res.status(500).json({
-            error: "Failed to update progress",
-            message: error.message,
-        });
+    } catch (error) {
+        safeError(res, "Error updating progress", error);
     }
 });
 
@@ -1316,12 +1271,8 @@ router.delete("/:podcastId/episodes/:episodeId/progress", requireAuth, async (re
             success: true,
             message: "Progress removed",
         });
-    } catch (error: any) {
-        logger.error("Error removing progress:", error);
-        res.status(500).json({
-            error: "Failed to remove progress",
-            message: error.message,
-        });
+    } catch (error) {
+        safeError(res, "Error removing progress", error);
     }
 });
 
@@ -1438,12 +1389,8 @@ router.get("/:id/similar", async (req, res) => {
         // No recommendations available
         logger.debug(`    No recommendations found`);
         res.json([]);
-    } catch (error: any) {
-        logger.error("Error fetching similar podcasts:", error);
-        res.status(500).json({
-            error: "Failed to fetch similar podcasts",
-            message: error.message,
-        });
+    } catch (error) {
+        safeError(res, "Error fetching similar podcasts", error);
     }
 });
 
@@ -1499,12 +1446,8 @@ router.get("/:id/cover", async (req, res) => {
         }
 
         res.status(404).json({ error: "Cover not found" });
-    } catch (error: any) {
-        logger.error("Error serving podcast cover:", error);
-        res.status(500).json({
-            error: "Failed to serve cover",
-            message: error.message,
-        });
+    } catch (error) {
+        safeError(res, "Error serving podcast cover", error);
     }
 });
 
@@ -1560,12 +1503,8 @@ router.get("/episodes/:episodeId/cover", async (req, res) => {
         }
 
         res.status(404).json({ error: "Cover not found" });
-    } catch (error: any) {
-        logger.error("Error serving episode cover:", error);
-        res.status(500).json({
-            error: "Failed to serve cover",
-            message: error.message,
-        });
+    } catch (error) {
+        safeError(res, "Error serving episode cover", error);
     }
 });
 

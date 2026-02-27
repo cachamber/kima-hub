@@ -34,6 +34,7 @@ class AudioEngine {
     private networkRetryCount = 0;
     private readonly MAX_NETWORK_RETRIES = 2;
     private networkRetryTimeout: ReturnType<typeof setTimeout> | null = null;
+    private retrySeekTime: number | null = null;
 
     // Preload for gapless playback
     private preloadAudio: HTMLAudioElement | null = null;
@@ -78,7 +79,11 @@ class AudioEngine {
         });
 
         add("canplay", () => {
-            this.networkRetryCount = 0;
+            if (this.retrySeekTime !== null) {
+                const seekTo = this.retrySeekTime;
+                this.retrySeekTime = null;
+                try { audio.currentTime = seekTo; } catch {}
+            }
             this.emit("canplay", { duration: audio.duration || 0 });
         });
 
@@ -88,7 +93,6 @@ class AudioEngine {
 
         // "playing" fires when playback resumes after buffering
         add("playing", () => {
-            this.networkRetryCount = 0;
             this.emit("play");
         });
 
@@ -108,6 +112,7 @@ class AudioEngine {
                 );
                 this.networkRetryTimeout = setTimeout(() => {
                     if (this.audio && this.state.currentSrc) {
+                        this.retrySeekTime = this.audio.currentTime || null;
                         this.audio.load();
                         this.audio.play().catch(() => {});
                     }
@@ -459,6 +464,7 @@ class AudioEngine {
             this.networkRetryTimeout = null;
         }
         this.networkRetryCount = 0;
+        this.retrySeekTime = null;
     }
 
     /**

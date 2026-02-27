@@ -132,7 +132,8 @@ app.use(
 app.use("/api/auth/login", authLimiter);
 app.use("/api/auth/register", authLimiter);
 app.use("/api/auth", authRoutes);
-app.use("/api/onboarding", onboardingRoutes); // Public onboarding routes
+app.use("/api/onboarding/register", authLimiter);
+app.use("/api/onboarding", onboardingRoutes);
 
 // Apply general API rate limiting to all API routes
 app.use("/api/api-keys", apiLimiter, apiKeysRoutes);
@@ -181,7 +182,7 @@ app.get("/api/health", (req, res) => {
 });
 
 // Prometheus metrics endpoint
-app.get("/api/metrics", async (req, res) => {
+app.get("/api/metrics", requireAuth, async (req, res) => {
     try {
         const { getMetrics } = await import("./utils/metrics");
         res.set("Content-Type", "text/plain; version=0.0.4; charset=utf-8");
@@ -270,7 +271,10 @@ async function checkPasswordReset() {
     if (!resetPassword) return;
 
     const bcrypt = await import("bcrypt");
-    const adminUser = await prisma.user.findFirst({ where: { role: "ADMIN" } });
+    const adminUser = await prisma.user.findFirst({
+        where: { role: "admin" },
+        select: { id: true },
+    });
     if (!adminUser) {
         logger.warn("[Password Reset] No admin user found");
         return;

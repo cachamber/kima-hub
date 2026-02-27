@@ -36,7 +36,7 @@ export default function MixPage() {
     // Use split hooks to avoid re-renders from currentTime updates
     const { currentTrack } = useAudioState();
     const { isPlaying } = useAudioPlayback();
-    const { playTracks, addToQueue, pause, resume } = useAudioControls();
+    const { playTracks, addToQueue, pause, resumeWithGesture } = useAudioControls();
 
     const { data: mix, isLoading } = useMixQuery(mixId);
     const [isSaving, setIsSaving] = useState(false);
@@ -92,7 +92,7 @@ export default function MixPage() {
             if (isPlaying) {
                 pause();
             } else {
-                resume();
+                resumeWithGesture();
             }
             return;
         }

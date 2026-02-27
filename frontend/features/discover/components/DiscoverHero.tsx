@@ -1,8 +1,6 @@
 import { format } from "date-fns";
-import Image from "next/image";
 import { Settings } from "lucide-react";
 import { DiscoverPlaylist, DiscoverConfig } from "../types";
-import { api } from "@/lib/api";
 
 interface DiscoverHeroProps {
     playlist: DiscoverPlaylist | null;
@@ -24,19 +22,6 @@ export function DiscoverHero({ playlist, config, onOpenSettings }: DiscoverHeroP
         return `${mins} min`;
     };
 
-    // Get unique album covers from playlist (up to 4)
-    const albumCovers = playlist?.tracks
-        ? Array.from(
-              new Map(
-                  playlist.tracks
-                      .filter((t) => t.coverUrl)
-                      .map((t) => [t.coverUrl, t])
-              ).values()
-          )
-              .slice(0, 4)
-              .map((t) => t.coverUrl!)
-        : [];
-
     return (
         <div className="relative bg-gradient-to-b from-[#0f0f0f] to-[#0a0a0a] pt-20 pb-8 px-6 md:px-8 border-b border-white/10">
             <div className="max-w-[1600px] mx-auto">
@@ -50,47 +35,6 @@ export function DiscoverHero({ playlist, config, onOpenSettings }: DiscoverHeroP
                 </button>
 
                 <div className="flex items-end gap-8">
-                    {/* Album Cover Grid - commented out */}
-                    {/* <div className="w-[180px] h-[180px] md:w-[232px] md:h-[232px] shrink-0 relative">
-                        {albumCovers.length > 0 ? (
-                            <div className="w-full h-full grid grid-cols-2 gap-1 border-2 border-white/20 shadow-2xl shadow-black/40 group">
-                                {albumCovers.map((cover, i) => (
-                                    <div
-                                        key={i}
-                                        className="relative bg-[#0a0a0a]"
-                                    >
-                                        <Image
-                                            src={api.getCoverArtUrl(cover, 200)}
-                                            alt=""
-                                            fill
-                                            className="object-cover"
-                                            unoptimized
-                                        />
-                                    </div>
-                                ))}
-                                {Array.from({ length: 4 - albumCovers.length }).map(
-                                    (_, i) => (
-                                        <div
-                                            key={`empty-${i}`}
-                                            className="bg-[#0a0a0a] border border-white/10"
-                                        />
-                                    )
-                                )}
-                            </div>
-                        ) : (
-                            <div className="w-full h-full grid grid-cols-2 gap-1 border-2 border-white/20">
-                                {Array.from({ length: 4 }).map((_, i) => (
-                                    <div
-                                        key={i}
-                                        className="bg-[#0a0a0a] border border-white/10 flex items-center justify-center"
-                                    >
-                                        <div className="text-white/10 text-4xl">?</div>
-                                    </div>
-                                ))}
-                            </div>
-                        )}
-                    </div> */}
-
                     {/* Info - Bottom Aligned */}
                     <div className="flex-1 min-w-0 pb-2">
                         <h1 className="text-5xl md:text-6xl lg:text-7xl font-black tracking-tighter text-white leading-none mb-6">

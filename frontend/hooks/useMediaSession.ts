@@ -1,8 +1,6 @@
 import { useEffect, useCallback, useRef } from "react";
 import { useAudio } from "@/lib/audio-context";
 import { api } from "@/lib/api";
-import { audioEngine } from "@/lib/audio-engine";
-import { silenceKeepalive } from "@/lib/silence-keepalive";
 
 /**
  * Media Session API integration for OS-level media controls
@@ -22,7 +20,7 @@ export function useMediaSession() {
         playbackType,
         isPlaying,
         pause,
-        resume,
+        resumeWithGesture,
         next,
         previous,
         seek,
@@ -245,16 +243,7 @@ export function useMediaSession() {
 
         // Register action handlers
         navigator.mediaSession.setActionHandler("play", () => {
-            resume();
-            // Call the engine directly within the MediaSession user-activation context.
-            // iOS releases the audio session when a backgrounded PWA pauses audio.
-            // By the time React processes the state update chain, the activation window
-            // has expired and audio.play() is blocked. Calling it synchronously here
-            // bypasses that race condition.
-            audioEngine.tryResume();
-            // Prime the silence keepalive element. MediaSession handlers are user-gesture
-            // contexts on both iOS and Android, making this the most reliable unlock point.
-            silenceKeepalive.prime();
+            resumeWithGesture();
         });
 
         navigator.mediaSession.setActionHandler("pause", () => {
@@ -337,11 +326,12 @@ export function useMediaSession() {
         };
     }, [
         pause,
-        resume,
+        resumeWithGesture,
         next,
         previous,
         seek,
         playbackType,
+        isPlaying,
         currentTrack,
         currentAudiobook,
         currentPodcast,

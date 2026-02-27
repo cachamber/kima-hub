@@ -38,7 +38,7 @@ export function UnifiedSongsList({
 }: UnifiedSongsListProps) {
     const { currentTrack } = useAudioState();
     const { isPlaying } = useAudioPlayback();
-    const { playTracks, pause, resume } = useAudioControls();
+    const { playTracks, pause, resumeWithGesture } = useAudioControls();
 
     const librarySlice = tracks.slice(0, maxLibrary);
     const soulseekSlots = maxTotal - librarySlice.length;
@@ -72,7 +72,7 @@ export function UnifiedSongsList({
             if (isPlaying) {
                 pause();
             } else {
-                resume();
+                resumeWithGesture();
             }
         } else {
             playTracks(formattedTracks, index);
