@@ -177,24 +177,6 @@ const PlayableCard = memo(function PlayableCard({
                                 {isDownloading ? "Downloading..." : "Download"}
                             </button>
 
-                            {onSaveLocally && (
-                                <button
-                                    onClick={(e) => {
-                                        e.preventDefault();
-                                        e.stopPropagation();
-                                        e.nativeEvent.stopImmediatePropagation();
-                                        onSaveLocally(e);
-                                    }}
-                                    onMouseDown={(e) => {
-                                        e.stopPropagation();
-                                    }}
-                                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium transition-colors bg-white/10 hover:bg-white/20 border border-white/20 hover:border-white/30 text-white/90"
-                                    title="Save Album Locally"
-                                >
-                                    <HardDriveDownload className="w-3 h-3" />
-                                    Save album locally
-                                </button>
-                            )}
                         </div>
                     )}
                 </div>
