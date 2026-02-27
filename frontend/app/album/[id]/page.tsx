@@ -43,7 +43,14 @@ export default function AlbumPage({ params }: AlbumPageProps) {
 
     // Custom hooks
     const { album, source, loading, reloadAlbum } = useAlbumData(id);
-    const { playAlbum, shufflePlay, addToQueue, downloadAlbum } =
+    const {
+        playAlbum,
+        shufflePlay,
+        addToQueue,
+        downloadAlbum,
+        saveTrackLocally,
+        saveAlbumLocally,
+    } =
         useAlbumActions();
     const { isPendingByMbid } = useDownloadContext();
     const { previewTrack, previewPlaying, handlePreview } = useTrackPreview();
@@ -147,6 +154,7 @@ export default function AlbumPage({ params }: AlbumPageProps) {
                     onPlayAll={() => playAlbum(album, 0)}
                     onShuffle={() => shufflePlay(album)}
                     onDownloadAlbum={() => downloadAlbum(album)}
+                    onSaveAlbumLocally={() => saveAlbumLocally(album)}
                     onAddToPlaylist={handleAddAlbumToPlaylist}
                     isPendingDownload={isPendingByMbid(
                         album?.mbid || album?.rgMbid || ""
@@ -192,6 +200,9 @@ export default function AlbumPage({ params }: AlbumPageProps) {
                                 addToQueue(track, album)
                             }
                             onAddToPlaylist={handleAddToPlaylist}
+                            onSaveTrackLocally={(track: AlbumTrack) =>
+                                saveTrackLocally(track, album)
+                            }
                             previewTrack={previewTrack}
                             previewPlaying={previewPlaying}
                             onPreview={(track: AlbumTrack, e: React.MouseEvent) =>

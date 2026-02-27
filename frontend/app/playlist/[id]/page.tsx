@@ -5,6 +5,11 @@ import { useParams, useRouter } from "next/navigation";
 import Image from "next/image";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { api } from "@/lib/api";
+import {
+    type DownloadedFile,
+    fetchTrackForLocalSave,
+    saveFilesAsZip,
+} from "@/lib/local-save";
 import { useAudioState, useAudioPlayback, useAudioControls, Track as AudioTrack } from "@/lib/audio-context";
 import { cn } from "@/utils/cn";
 import { shuffleArray } from "@/utils/shuffle";
@@ -23,6 +28,7 @@ import {
     ListPlus,
     ListMusic,
     Music,
+    HardDriveDownload,
     Volume2,
     RefreshCw,
     AlertCircle,
@@ -82,6 +88,7 @@ export default function PlaylistDetailPage() {
     const [retryingTrackId, setRetryingTrackId] = useState<string | null>(null);
     const [removingTrackId, setRemovingTrackId] = useState<string | null>(null);
     const [retryingAll, setRetryingAll] = useState(false);
+    const [isSavingLocally, setIsSavingLocally] = useState(false);
     const previewAudioRef = useRef<HTMLAudioElement | null>(null);
 
     useEffect(() => {
@@ -378,6 +385,62 @@ export default function PlaylistDetailPage() {
         addToQueue(formattedTrack);
     };
 
+    const handleSavePlaylistLocally = async () => {
+        if (!playlist?.items?.length) {
+            toast.error("No tracks available to save");
+            return;
+        }
+
+        setIsSavingLocally(true);
+        try {
+            const files: DownloadedFile[] = [];
+            let failed = 0;
+
+            toast.info(
+                `Saving ${playlist.items.length} track${playlist.items.length === 1 ? "" : "s"} from "${playlist.name}"`
+            );
+
+            for (const [index, item] of playlist.items.entries()) {
+                const trackNumber = String(index + 1).padStart(2, "0");
+                const artistName = item.track.album.artist.name || "Unknown Artist";
+                const trackTitle = item.track.title || "Unknown Track";
+                const baseName = `${playlist.name} - ${trackNumber} - ${artistName} - ${trackTitle}`;
+
+                try {
+                    const file = await fetchTrackForLocalSave(item.track.id, baseName);
+                    const extension = file.filename.split(".").pop() || "mp3";
+                    files.push({
+                        ...file,
+                        zipPath: `${playlist.name}/${trackNumber} - ${artistName} - ${trackTitle}.${extension}`,
+                    });
+                } catch {
+                    failed += 1;
+                }
+            }
+
+            if (!files.length) {
+                toast.error(`Failed to save tracks from "${playlist.name}"`);
+                return;
+            }
+
+            toast.info("Creating zip...");
+            await saveFilesAsZip(files, playlist.name);
+
+            if (failed === 0) {
+                toast.success(
+                    `Saved ${files.length} track${files.length === 1 ? "" : "s"} from "${playlist.name}"`
+                );
+                return;
+            }
+
+            toast.warning(
+                `Saved ${files.length}, failed ${failed} track${failed === 1 ? "" : "s"}`
+            );
+        } finally {
+            setIsSavingLocally(false);
+        }
+    };
+
     if (isLoading) {
         return (
             <div className="flex items-center justify-center min-h-screen bg-[#0a0a0a]">
@@ -541,6 +604,27 @@ export default function PlaylistDetailPage() {
                             title="Shuffle play"
                         >
                             <Shuffle className="w-5 h-5" />
+                        </button>
+                    )}
+
+                    {playlist.items && playlist.items.length > 0 && (
+                        <button
+                            onClick={handleSavePlaylistLocally}
+                            disabled={isSavingLocally}
+                            className={cn(
+                                "h-8 px-3 rounded-lg flex items-center gap-2 justify-center transition-all text-xs font-mono uppercase tracking-wider",
+                                isSavingLocally
+                                    ? "bg-white/10 text-white/40 cursor-not-allowed"
+                                    : "hover:bg-white/10 text-white/40 hover:text-white"
+                            )}
+                            title="Save playlist locally"
+                        >
+                            {isSavingLocally ? (
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                            ) : (
+                                <HardDriveDownload className="w-4 h-4" />
+                            )}
+                            <span>Save playlist locally</span>
                         </button>
                     )}
 

@@ -1,6 +1,6 @@
 import React, { memo, useCallback } from "react";
 import { Card } from "@/components/ui/Card";
-import { Play, Pause, Volume2, ListPlus, Plus } from "lucide-react";
+import { Play, Pause, Volume2, ListPlus, Plus, Download } from "lucide-react";
 import { cn } from "@/utils/cn";
 import type { Track, Album, AlbumSource } from "../types";
 import type { ColorPalette } from "@/hooks/useImageColor";
@@ -16,6 +16,7 @@ interface TrackListProps {
     onPlayTrack: (track: Track, index: number) => void;
     onAddToQueue: (track: Track) => void;
     onAddToPlaylist: (trackId: string) => void;
+    onSaveTrackLocally: (track: Track) => void;
     previewTrack: string | null;
     previewPlaying: boolean;
     onPreview: (track: Track, e: React.MouseEvent) => void;
@@ -32,6 +33,7 @@ interface TrackRowProps {
     onPlayTrack: (track: Track, index: number) => void;
     onAddToQueue: (track: Track) => void;
     onAddToPlaylist: (trackId: string) => void;
+    onSaveTrackLocally: (track: Track) => void;
     onPreview: (track: Track, e: React.MouseEvent) => void;
 }
 
@@ -49,6 +51,7 @@ const TrackRow = memo(
         onPlayTrack,
         onAddToQueue,
         onAddToPlaylist,
+        onSaveTrackLocally,
         onPreview,
     }: TrackRowProps) {
         const isPreviewOnly = !isOwned;
@@ -74,6 +77,21 @@ const TrackRow = memo(
                 onPreview(track, e);
             },
             [track, onPreview]
+        );
+
+        const handleSaveTrackLocally = useCallback(
+            (e: React.MouseEvent) => {
+                e.stopPropagation();
+                const trackWithNumber = {
+                    ...track,
+                    trackNumber:
+                        track.trackNumber ||
+                        track.displayTrackNo ||
+                        index + 1,
+                };
+                onSaveTrackLocally(trackWithNumber);
+            },
+            [track, index, onSaveTrackLocally]
         );
 
         const handlePlayTrack = useCallback(() => {
@@ -197,6 +215,14 @@ const TrackRow = memo(
                         >
                             <Plus className="w-4 h-4" />
                         </button>
+                        <button
+                            onClick={handleSaveTrackLocally}
+                            className="opacity-100 sm:opacity-0 sm:group-hover:opacity-100 p-2 hover:bg-[#2a2a2a] rounded-full transition-all text-gray-400 hover:text-white"
+                            aria-label="Save track locally"
+                            title="Save track locally"
+                        >
+                            <Download className="w-4 h-4" />
+                        </button>
                     </>
                 )}
 
@@ -244,6 +270,7 @@ export const TrackList = memo(function TrackList({
     onPlayTrack,
     onAddToQueue,
     onAddToPlaylist,
+    onSaveTrackLocally,
     previewTrack,
     previewPlaying,
     onPreview,
@@ -275,6 +302,7 @@ export const TrackList = memo(function TrackList({
                                 onPlayTrack={onPlayTrack}
                                 onAddToQueue={onAddToQueue}
                                 onAddToPlaylist={onAddToPlaylist}
+                                onSaveTrackLocally={onSaveTrackLocally}
                                 onPreview={onPreview}
                             />
                         );

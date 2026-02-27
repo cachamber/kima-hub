@@ -2,7 +2,7 @@
 
 import { ReactNode, memo, useMemo } from "react";
 import Link from "next/link";
-import { Play, Pause, Check, Download } from "lucide-react";
+import { Play, Pause, Check, Download, HardDriveDownload } from "lucide-react";
 import { Card, CardProps } from "./Card";
 import { cn } from "@/utils/cn";
 import type { ColorPalette } from "@/hooks/useImageColor";
@@ -20,6 +20,7 @@ export interface PlayableCardProps extends Omit<CardProps, "onPlay"> {
     isPlaying?: boolean;
     onPlay?: (e: React.MouseEvent) => void;
     onDownload?: (e: React.MouseEvent) => void;
+    onSaveLocally?: (e: React.MouseEvent) => void;
     showPlayButton?: boolean;
     circular?: boolean;
     badge?: "owned" | "download" | null;
@@ -37,6 +38,7 @@ const PlayableCard = memo(function PlayableCard({
     isPlaying = false,
     onPlay,
     onDownload,
+    onSaveLocally,
     showPlayButton = true,
     circular = false,
     badge = null,
@@ -114,45 +116,86 @@ const PlayableCard = memo(function PlayableCard({
             {badge && (
                 <div className="mb-1.5">
                     {badge === "owned" && (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-green-500/20 border border-green-500/30 rounded-full text-xs font-medium text-green-400">
-                            <Check className="w-3 h-3" />
-                            Owned
-                        </span>
+                        <div className="inline-flex items-center gap-1.5">
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-green-500/20 border border-green-500/30 rounded-full text-xs font-medium text-green-400">
+                                <Check className="w-3 h-3" />
+                                Owned
+                            </span>
+                            {onSaveLocally && (
+                                <button
+                                    onClick={(e) => {
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                        e.nativeEvent.stopImmediatePropagation();
+                                        onSaveLocally(e);
+                                    }}
+                                    onMouseDown={(e) => {
+                                        e.stopPropagation();
+                                    }}
+                                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium transition-colors bg-white/10 hover:bg-white/20 border border-white/20 hover:border-white/30 text-white/90"
+                                    title="Save Album Locally"
+                                >
+                                    <HardDriveDownload className="w-3 h-3" />
+                                    Save album locally
+                                </button>
+                            )}
+                        </div>
                     )}
                     {badge === "download" && (
-                        <button
-                            onClick={(e) => {
-                                e.preventDefault();
-                                e.stopPropagation();
-                                e.nativeEvent.stopImmediatePropagation();
-                                if (!isDownloading && onDownload) {
-                                    onDownload(e);
-                                }
-                            }}
-                            onMouseDown={(e) => {
-                                e.stopPropagation();
-                            }}
-                            disabled={isDownloading}
-                            className={cn(
-                                "inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium transition-colors",
-                                isDownloading ?
-                                    "bg-gray-500/20 border border-gray-500/30 text-gray-500 cursor-not-allowed"
-                                :   "bg-yellow-500/20 hover:bg-yellow-500/30 border border-yellow-500/30 hover:border-yellow-500/50 text-yellow-400 hover:text-yellow-300",
-                            )}
-                            title={
-                                isDownloading ? "Downloading..." : (
-                                    "Download Album"
-                                )
-                            }
-                        >
-                            <Download
+                        <div className="flex items-center gap-1.5">
+                            <button
+                                onClick={(e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    e.nativeEvent.stopImmediatePropagation();
+                                    if (!isDownloading && onDownload) {
+                                        onDownload(e);
+                                    }
+                                }}
+                                onMouseDown={(e) => {
+                                    e.stopPropagation();
+                                }}
+                                disabled={isDownloading}
                                 className={cn(
-                                    "w-3 h-3",
-                                    isDownloading && "animate-pulse",
+                                    "inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium transition-colors",
+                                    isDownloading ?
+                                        "bg-gray-500/20 border border-gray-500/30 text-gray-500 cursor-not-allowed"
+                                    :   "bg-yellow-500/20 hover:bg-yellow-500/30 border border-yellow-500/30 hover:border-yellow-500/50 text-yellow-400 hover:text-yellow-300",
                                 )}
-                            />
-                            {isDownloading ? "Downloading..." : "Download"}
-                        </button>
+                                title={
+                                    isDownloading ? "Downloading..." : (
+                                        "Download Album"
+                                    )
+                                }
+                            >
+                                <Download
+                                    className={cn(
+                                        "w-3 h-3",
+                                        isDownloading && "animate-pulse",
+                                    )}
+                                />
+                                {isDownloading ? "Downloading..." : "Download"}
+                            </button>
+
+                            {onSaveLocally && (
+                                <button
+                                    onClick={(e) => {
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                        e.nativeEvent.stopImmediatePropagation();
+                                        onSaveLocally(e);
+                                    }}
+                                    onMouseDown={(e) => {
+                                        e.stopPropagation();
+                                    }}
+                                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium transition-colors bg-white/10 hover:bg-white/20 border border-white/20 hover:border-white/30 text-white/90"
+                                    title="Save Album Locally"
+                                >
+                                    <HardDriveDownload className="w-3 h-3" />
+                                    Save album locally
+                                </button>
+                            )}
+                        </div>
                     )}
                 </div>
             )}

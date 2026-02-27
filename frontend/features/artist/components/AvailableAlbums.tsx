@@ -14,6 +14,7 @@ interface AvailableAlbumsProps {
     source: ArtistSource;
     colors: ColorPalette | null;
     onDownloadAlbum: (album: Album, e: React.MouseEvent) => void;
+    onSaveAlbumLocally: (album: Album, e: React.MouseEvent) => void;
     isPendingDownload: (mbid: string) => boolean;
 }
 
@@ -23,6 +24,7 @@ function LazyAlbumCard({
     source,
     colors,
     onDownloadAlbum,
+    onSaveAlbumLocally,
     isPendingDownload,
     index,
 }: {
@@ -30,6 +32,7 @@ function LazyAlbumCard({
     source: ArtistSource;
     colors: ColorPalette | null;
     onDownloadAlbum: (album: Album, e: React.MouseEvent) => void;
+    onSaveAlbumLocally: (album: Album, e: React.MouseEvent) => void;
     isPendingDownload: (mbid: string) => boolean;
     index: number;
 }) {
@@ -98,6 +101,7 @@ function LazyAlbumCard({
             colors={colors}
             isDownloading={isPendingDownload(albumMbid)}
             onDownload={(e) => onDownloadAlbum(album, e)}
+            onSaveLocally={(e) => onSaveAlbumLocally(album, e)}
             tvCardIndex={index}
         />
     );
@@ -108,6 +112,7 @@ function AlbumGrid({
     source,
     colors,
     onDownloadAlbum,
+    onSaveAlbumLocally,
     isPendingDownload,
 }: Omit<AvailableAlbumsProps, "artistName">) {
     return (
@@ -119,6 +124,7 @@ function AlbumGrid({
                     source={source}
                     colors={colors}
                     onDownloadAlbum={onDownloadAlbum}
+                    onSaveAlbumLocally={onSaveAlbumLocally}
                     isPendingDownload={isPendingDownload}
                     index={index}
                 />
@@ -133,6 +139,7 @@ export function AvailableAlbums({
     source,
     colors,
     onDownloadAlbum,
+    onSaveAlbumLocally,
     isPendingDownload,
 }: AvailableAlbumsProps) {
     if (!albums || albums.length === 0) {
@@ -159,6 +166,7 @@ export function AvailableAlbums({
                             source={source}
                             colors={colors}
                             onDownloadAlbum={onDownloadAlbum}
+                            onSaveAlbumLocally={onSaveAlbumLocally}
                             isPendingDownload={isPendingDownload}
                         />
                     </div>
@@ -175,6 +183,7 @@ export function AvailableAlbums({
                             source={source}
                             colors={colors}
                             onDownloadAlbum={onDownloadAlbum}
+                            onSaveAlbumLocally={onSaveAlbumLocally}
                             isPendingDownload={isPendingDownload}
                         />
                     </div>

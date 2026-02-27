@@ -9,7 +9,21 @@ import { useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "@/hooks/useQueries";
 import { useAuth } from "@/lib/auth-context";
 import { useAudioControls } from "@/lib/audio-context";
-import { Play, Music, Eye, EyeOff, ListMusic } from "lucide-react";
+import {
+    type DownloadedFile,
+    fetchTrackForLocalSave,
+    saveFilesAsZip,
+} from "@/lib/local-save";
+import { useToast } from "@/lib/toast-context";
+import {
+    Play,
+    Music,
+    Eye,
+    EyeOff,
+    ListMusic,
+    HardDriveDownload,
+    Loader2,
+} from "lucide-react";
 import { GradientSpinner } from "@/components/ui/GradientSpinner";
 import { api } from "@/lib/api";
 import { cn } from "@/utils/cn";
@@ -127,13 +141,17 @@ function PlaylistCard({
     playlist,
     index,
     onPlay,
+    onSaveLocally,
     onToggleHide,
+    isSavingLocally,
     isHiddenView = false,
 }: {
     playlist: Playlist;
     index: number;
     onPlay: (playlistId: string) => void;
+    onSaveLocally: (playlistId: string, playlistName: string) => void;
     onToggleHide: (playlistId: string, hide: boolean) => void;
+    isSavingLocally?: boolean;
     isHiddenView?: boolean;
 }) {
     const isShared = playlist.isOwner === false;
@@ -214,6 +232,30 @@ function PlaylistCard({
                         <Play className="w-4 h-4 fill-current ml-0.5 text-black" />
                     </button>
 
+                    <button
+                        onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            onSaveLocally(playlist.id, playlist.name);
+                        }}
+                        disabled={isSavingLocally}
+                        className={cn(
+                            "absolute bottom-2 left-2 h-8 px-2 rounded-lg flex items-center justify-center",
+                            "bg-black/60 transition-all duration-200",
+                            "opacity-0 translate-y-2 group-hover:opacity-100 group-hover:translate-y-0",
+                            isSavingLocally
+                                ? "text-white/40 cursor-not-allowed"
+                                : "text-white/70 hover:text-white"
+                        )}
+                        title="Save playlist locally"
+                    >
+                        {isSavingLocally ? (
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
+                            <HardDriveDownload className="w-4 h-4" />
+                        )}
+                    </button>
+
                     {/* Bottom accent line */}
                     <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-[#fca208] to-[#f97316] transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300 origin-left" />
                 </div>
@@ -244,9 +286,13 @@ function PlaylistCard({
 export default function PlaylistsPage() {
     useRouter();
     useAuth();
+    const { toast } = useToast();
     const { playTracks } = useAudioControls();
     const queryClient = useQueryClient();
     const [showHiddenTab, setShowHiddenTab] = useState(false);
+    const [savingPlaylistId, setSavingPlaylistId] = useState<string | null>(
+        null
+    );
 
     const { data: playlists = [], isLoading } = usePlaylistsQuery();
 
@@ -316,6 +362,74 @@ export default function PlaylistsPage() {
             queryClient.invalidateQueries({ queryKey: queryKeys.playlists() });
         } catch (error) {
             console.error("Failed to toggle playlist visibility:", error);
+        }
+    };
+
+    const handleSavePlaylistLocally = async (
+        playlistId: string,
+        playlistName: string
+    ) => {
+        setSavingPlaylistId(playlistId);
+        try {
+            const playlist = await api.getPlaylist(playlistId);
+            const items = playlist?.items || [];
+
+            if (!items.length) {
+                toast.error("No tracks available to save");
+                return;
+            }
+
+            toast.info(
+                `Saving ${items.length} track${items.length === 1 ? "" : "s"} from "${playlistName}"`
+            );
+
+            const files: DownloadedFile[] = [];
+            let failed = 0;
+
+            for (const [index, item] of items.entries()) {
+                const trackNumber = String(index + 1).padStart(2, "0");
+                const artistName =
+                    item.track?.album?.artist?.name || "Unknown Artist";
+                const trackTitle = item.track?.title || "Unknown Track";
+                const baseName = `${playlistName} - ${trackNumber} - ${artistName} - ${trackTitle}`;
+
+                try {
+                    const file = await fetchTrackForLocalSave(
+                        item.track.id,
+                        baseName
+                    );
+                    const extension = file.filename.split(".").pop() || "mp3";
+                    files.push({
+                        ...file,
+                        zipPath: `${playlistName}/${trackNumber} - ${artistName} - ${trackTitle}.${extension}`,
+                    });
+                } catch {
+                    failed += 1;
+                }
+            }
+
+            if (!files.length) {
+                toast.error(`Failed to save tracks from "${playlistName}"`);
+                return;
+            }
+
+            toast.info("Creating zip...");
+            await saveFilesAsZip(files, playlistName);
+
+            if (failed === 0) {
+                toast.success(
+                    `Saved ${files.length} track${files.length === 1 ? "" : "s"} from "${playlistName}"`
+                );
+                return;
+            }
+
+            toast.warning(
+                `Saved ${files.length}, failed ${failed} track${failed === 1 ? "" : "s"}`
+            );
+        } catch {
+            toast.error("Failed to save playlist locally");
+        } finally {
+            setSavingPlaylistId(null);
         }
     };
 
@@ -429,7 +543,13 @@ export default function PlaylistsPage() {
                                             playlist={playlist}
                                             index={index}
                                             onPlay={handlePlayPlaylist}
+                                            onSaveLocally={
+                                                handleSavePlaylistLocally
+                                            }
                                             onToggleHide={handleToggleHide}
+                                            isSavingLocally={
+                                                savingPlaylistId === playlist.id
+                                            }
                                             isHiddenView={showHiddenTab}
                                         />
                                     )

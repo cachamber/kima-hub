@@ -11,6 +11,7 @@ interface DiscographyProps {
     albums: Album[];
     colors: ColorPalette | null;
     onPlayAlbum: (albumId: string, albumTitle: string) => Promise<void>;
+    onSaveAlbumLocally: (album: Album, e: React.MouseEvent) => void;
     sortBy: "year" | "dateAdded";
     onSortChange: (sortBy: "year" | "dateAdded") => void;
 }
@@ -19,6 +20,7 @@ export function Discography({
     albums,
     colors,
     onPlayAlbum,
+    onSaveAlbumLocally,
     sortBy,
     onSortChange,
 }: DiscographyProps) {
@@ -74,6 +76,7 @@ export function Discography({
                             circular={false}
                             colors={colors}
                             onPlay={() => onPlayAlbum(album.id, album.title)}
+                            onSaveLocally={(e) => onSaveAlbumLocally(album, e)}
                             tvCardIndex={index}
                         />
                     );

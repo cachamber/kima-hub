@@ -1,4 +1,4 @@
-import { Play, Pause, Shuffle, Download, ListPlus } from "lucide-react";
+import { Play, Pause, Shuffle, Download, ListPlus, HardDriveDownload } from "lucide-react";
 import { cn } from "@/utils/cn";
 import type { Album } from "../types";
 import type { AlbumSource } from "../types";
@@ -11,6 +11,7 @@ interface AlbumActionBarProps {
     onPlayAll: () => void;
     onShuffle: () => void;
     onDownloadAlbum: () => void;
+    onSaveAlbumLocally: () => void;
     onAddToPlaylist: () => void;
     isPendingDownload: boolean;
     isPlaying?: boolean;
@@ -25,6 +26,7 @@ export function AlbumActionBar({
     onPlayAll,
     onShuffle,
     onDownloadAlbum,
+    onSaveAlbumLocally,
     onAddToPlaylist,
     isPendingDownload,
     isPlaying = false,
@@ -75,6 +77,14 @@ export function AlbumActionBar({
                         title="Add to playlist"
                     >
                         <ListPlus className="w-5 h-5" />
+                    </button>
+
+                    <button
+                        onClick={onSaveAlbumLocally}
+                        className="h-8 w-8 rounded-full hover:bg-white/10 flex items-center justify-center text-white/60 hover:text-white transition-all"
+                        title="Save album locally"
+                    >
+                        <HardDriveDownload className="w-5 h-5" />
                     </button>
                 </>
             )}

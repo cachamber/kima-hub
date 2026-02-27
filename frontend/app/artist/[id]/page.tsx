@@ -51,7 +51,7 @@ export default function ArtistPage() {
 
     // Action hooks
     const { playAll, shufflePlay } = useArtistActions();
-    const { downloadArtist, downloadAlbum } = useDownloadActions();
+    const { downloadArtist, downloadAlbum, saveAlbumLocally } = useDownloadActions();
     const { previewTrack, previewPlaying, handlePreview } = useTrackPreview();
 
     // Separate owned and available albums
@@ -123,6 +123,10 @@ export default function ArtistPage() {
     // Download album handler
     function handleDownloadAlbum(album: Album, e: React.MouseEvent) {
         downloadAlbum(album, artist?.name || "", e);
+    }
+
+    function handleSaveAlbumLocally(album: Album, e: React.MouseEvent) {
+        saveAlbumLocally(album, artist?.name || "", e);
     }
 
     // Start artist radio handler
@@ -249,6 +253,7 @@ export default function ArtistPage() {
                         albums={ownedAlbums}
                         colors={colors}
                         onPlayAlbum={handlePlayAlbum}
+                        onSaveAlbumLocally={handleSaveAlbumLocally}
                         sortBy={sortBy}
                         onSortChange={setSortBy}
                     />
@@ -260,6 +265,7 @@ export default function ArtistPage() {
                         source={source}
                         colors={colors}
                         onDownloadAlbum={handleDownloadAlbum}
+                        onSaveAlbumLocally={handleSaveAlbumLocally}
                         isPendingDownload={isPendingByMbid}
                     />
 
