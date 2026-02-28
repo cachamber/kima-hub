@@ -18,6 +18,8 @@ import { coverArtService } from "../services/coverArt";
 import { getSystemSettings } from "../utils/systemSettings";
 import { AudioStreamingService } from "../services/audioStreaming";
 import { scanQueue } from "../workers/queues";
+import { validateUrlForFetch } from "../utils/ssrf";
+import { safeError } from "../utils/errors";
 import { organizeSingles } from "../workers/organizeSingles";
 import { extractColorsFromImage } from "../utils/colorExtractor";
 import { dataCacheService } from "../services/dataCache";
@@ -670,13 +672,8 @@ router.get("/artists", async (req, res) => {
       limit,
       nextCursor, // For cursor-based pagination
     });
-  } catch (error: any) {
-    logger.error("[Library] Get artists error:", error?.message || error);
-    logger.error("[Library] Stack:", error?.stack);
-    res.status(500).json({
-      error: "Failed to fetch artists",
-      details: error?.message,
-    });
+  } catch (error) {
+    safeError(res, "Get artists", error);
   }
 });
 
@@ -1529,13 +1526,8 @@ router.get("/albums", async (req, res) => {
       offset,
       limit,
     });
-  } catch (error: any) {
-    logger.error("[Library] Get albums error:", error?.message || error);
-    logger.error("[Library] Stack:", error?.stack);
-    res.status(500).json({
-      error: "Failed to fetch albums",
-      details: error?.message,
-    });
+  } catch (error) {
+    safeError(res, "Get albums", error);
   }
 });
 
@@ -1819,6 +1811,11 @@ router.get("/cover-art/:id?", imageLimiter, async (req, res) => {
         isAudiobook = true;
         const audiobookPath = decodedUrl.replace("audiobook__", "");
 
+        // Block path traversal attempts
+        if (audiobookPath.includes("..") || audiobookPath.includes("://")) {
+          return res.status(400).json({ error: "Invalid audiobook cover path" });
+        }
+
         // Get Audiobookshelf settings
         const settings = await getSystemSettings();
         const audiobookshelfUrl =
@@ -2081,13 +2078,32 @@ router.get("/cover-art/:id?", imageLimiter, async (req, res) => {
       logger.warn("[COVER-ART] Redis cache read error:", cacheError);
     }
 
-    // Fetch the image and proxy it to avoid CORS issues
+    // SSRF protection: validate URL before fetching
+    const ssrfError = await validateUrlForFetch(coverUrl);
+    if (ssrfError) {
+      logger.warn(`[COVER-ART] SSRF blocked: ${ssrfError} for ${coverUrl.substring(0, 100)}`);
+      return res.status(400).json({ error: "Invalid cover art URL" });
+    }
+
+    // Fetch the image and proxy it to avoid CORS issues (retry once on transient network errors)
     logger.debug(`[COVER-ART] Fetching: ${coverUrl.substring(0, 100)}...`);
-    const imageResponse = await fetch(coverUrl, {
-      headers: {
-        "User-Agent": "Kima/1.0.0 (https://github.com/Chevron7Locked/kima-hub)",
-      },
-    });
+    let imageResponse: Awaited<ReturnType<typeof globalThis.fetch>>;
+    const fetchOpts = {
+      headers: { "User-Agent": "Kima/1.0.0 (https://github.com/Chevron7Locked/kima-hub)" },
+    };
+    try {
+      imageResponse = await fetch(coverUrl, fetchOpts);
+    } catch (fetchErr: unknown) {
+      const cause = fetchErr instanceof Error && "cause" in fetchErr ? (fetchErr.cause as { code?: string }) : null;
+      const code = cause?.code;
+      if (code === "ECONNRESET" || code === "ETIMEDOUT" || code === "UND_ERR_SOCKET") {
+        logger.warn(`[COVER-ART] Transient error (${code}), retrying once...`);
+        await new Promise(r => setTimeout(r, 500));
+        imageResponse = await fetch(coverUrl, fetchOpts);
+      } else {
+        throw fetchErr;
+      }
+    }
     if (!imageResponse.ok) {
       logger.error(
         `[COVER-ART] Failed to fetch: ${coverUrl} (${imageResponse.status} ${imageResponse.statusText})`,
@@ -2821,13 +2837,8 @@ router.delete("/artists/:id", async (req, res) => {
       lidarrDeleted,
       lidarrError,
     });
-  } catch (error: any) {
-    logger.error("Delete artist error:", error?.message || error);
-    logger.error("Delete artist stack:", error?.stack);
-    res.status(500).json({
-      error: "Failed to delete artist",
-      details: error?.message || "Unknown error",
-    });
+  } catch (error) {
+    safeError(res, "Delete artist", error);
   }
 });
 

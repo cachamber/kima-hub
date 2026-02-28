@@ -2,6 +2,7 @@ import { Router } from "express";
 import { withRetry } from "../utils/async";
 import { logger } from "../utils/logger";
 import { requireAuthOrToken } from "../middleware/auth";
+import { safeError } from "../utils/errors";
 import { z } from "zod";
 import { spotifyService } from "../services/spotify";
 import { spotifyImportService } from "../services/spotifyImport";
@@ -53,12 +54,11 @@ router.post("/parse", async (req, res) => {
             id: parsed.id,
             url: `https://open.spotify.com/playlist/${parsed.id}`,
         });
-    } catch (error: any) {
-        logger.error("Spotify parse error:", error);
-        if (error.name === "ZodError") {
+    } catch (error) {
+        if (error instanceof Error && error.name === "ZodError") {
             return res.status(400).json({ error: "Invalid request body" });
         }
-        res.status(500).json({ error: error.message || "Failed to parse URL" });
+        safeError(res, "Spotify parse", error);
     }
 });
 
@@ -76,12 +76,11 @@ router.post("/preview/start", async (req, res) => {
         logger.debug(`[Playlist Import] Starting preview job for: ${url}`);
         const { jobId } = await spotifyImportService.startPreviewJob(url, req.user.id);
         res.json({ jobId });
-    } catch (error: any) {
-        logger.error("Playlist preview start error:", error);
-        if (error.name === "ZodError") {
+    } catch (error) {
+        if (error instanceof Error && error.name === "ZodError") {
             return res.status(400).json({ error: "Invalid request body" });
         }
-        res.status(500).json({ error: error.message || "Failed to start preview" });
+        safeError(res, "Playlist preview start", error);
     }
 });
 
@@ -104,9 +103,8 @@ router.get("/preview/:jobId", async (req, res) => {
             return res.status(403).json({ error: "Not authorized to view this preview" });
         }
         res.json(result);
-    } catch (error: any) {
-        logger.error("Playlist preview fetch error:", error);
-        res.status(500).json({ error: error.message || "Failed to fetch preview" });
+    } catch (error) {
+        safeError(res, "Playlist preview fetch", error);
     }
 });
 
@@ -182,16 +180,11 @@ router.post("/import", async (req, res) => {
             status: job.status,
             message: "Import started",
         });
-    } catch (error: any) {
-        logger.error("Spotify import error:", error);
-        if (error.name === "ZodError") {
+    } catch (error) {
+        if (error instanceof Error && error.name === "ZodError") {
             return res.status(400).json({ error: "Invalid request body" });
         }
-        const isNetworkError = ["ECONNRESET", "ETIMEDOUT", "ECONNREFUSED"].includes(error.code);
-        const userMessage = isNetworkError
-            ? "Deezer API is temporarily unavailable. Please try again in a moment."
-            : (error.message || "Failed to start import");
-        res.status(500).json({ error: userMessage });
+        safeError(res, "Spotify import", error);
     }
 });
 
@@ -220,11 +213,8 @@ router.get("/import/:jobId/status", async (req, res) => {
         }
 
         res.json(job);
-    } catch (error: any) {
-        logger.error("Spotify job status error:", error);
-        res.status(500).json({
-            error: error.message || "Failed to get job status",
-        });
+    } catch (error) {
+        safeError(res, "Spotify job status", error);
     }
 });
 
@@ -240,11 +230,8 @@ router.get("/imports", async (req, res) => {
         const userId = req.user.id;
         const jobs = await spotifyImportService.getUserJobs(userId);
         res.json(jobs);
-    } catch (error: any) {
-        logger.error("Spotify imports error:", error);
-        res.status(500).json({
-            error: error.message || "Failed to get imports",
-        });
+    } catch (error) {
+        safeError(res, "Spotify imports", error);
     }
 });
 
@@ -280,11 +267,8 @@ router.post("/import/:jobId/refresh", async (req, res) => {
             added: result.added,
             total: result.total,
         });
-    } catch (error: any) {
-        logger.error("Spotify refresh error:", error);
-        res.status(500).json({
-            error: error.message || "Failed to refresh tracks",
-        });
+    } catch (error) {
+        safeError(res, "Spotify refresh", error);
     }
 });
 
@@ -318,11 +302,8 @@ router.post("/import/:jobId/cancel", async (req, res) => {
             playlistId: result.playlistId,
             tracksMatched: result.tracksMatched,
         });
-    } catch (error: any) {
-        logger.error("Spotify cancel error:", error);
-        res.status(500).json({
-            error: error.message || "Failed to cancel import",
-        });
+    } catch (error) {
+        safeError(res, "Spotify cancel", error);
     }
 });
 
@@ -339,11 +320,8 @@ router.get("/import/session-log", async (req, res) => {
             path: logPath,
             content: log,
         });
-    } catch (error: any) {
-        logger.error("Session log error:", error);
-        res.status(500).json({
-            error: error.message || "Failed to read session log",
-        });
+    } catch (error) {
+        safeError(res, "Session log", error);
     }
 });
 

@@ -94,7 +94,7 @@ export function usePodcastData() {
 
     loadPreviewData();
     return () => { cancelled = true; };
-  }, [isPodcastLoading, podcast, isAuthenticated, podcastId, router]);
+  }, [isPodcastLoading, podcast, isAuthenticated, podcastId, router, previewLoadState]);
 
   // Save sort order to localStorage when it changes
   useEffect(() => {

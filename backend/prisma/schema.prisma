@@ -570,6 +570,7 @@ model SystemSettings {
   lastfmUserKey               String?
   lastfmEnabled               Boolean?
   publicUrl                   String?
+  registrationOpen            Boolean  @default(false)
 }
 
 model Track {

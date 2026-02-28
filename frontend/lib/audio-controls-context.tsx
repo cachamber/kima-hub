@@ -18,6 +18,8 @@ import {
 } from "./audio-state-context";
 import { useAudioPlayback } from "./audio-playback-context";
 import { api } from "@/lib/api";
+import { audioEngine } from "@/lib/audio-engine";
+import { silenceKeepalive } from "@/lib/silence-keepalive";
 import { audioSeekEmitter } from "./audio-seek-emitter";
 
 function queueDebugEnabled(): boolean {
@@ -52,6 +54,7 @@ interface AudioControlsContextType {
     // Playback controls
     pause: () => void;
     resume: () => void;
+    resumeWithGesture: () => void;
     next: () => void;
     previous: () => void;
 
@@ -337,6 +340,12 @@ export function AudioControlsProvider({ children }: { children: ReactNode }) {
 
     const resume = useCallback(() => {
         playback.setIsPlaying(true);
+    }, [playback]);
+
+    const resumeWithGesture = useCallback(() => {
+        playback.setIsPlaying(true);
+        audioEngine.tryResume();
+        silenceKeepalive.prime();
     }, [playback]);
 
     const seek = useCallback(
@@ -885,6 +894,7 @@ export function AudioControlsProvider({ children }: { children: ReactNode }) {
             nextPodcastEpisode,
             pause,
             resume,
+            resumeWithGesture,
             next,
             previous,
             addToQueue,
@@ -912,6 +922,7 @@ export function AudioControlsProvider({ children }: { children: ReactNode }) {
             nextPodcastEpisode,
             pause,
             resume,
+            resumeWithGesture,
             next,
             previous,
             addToQueue,

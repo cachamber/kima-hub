@@ -1,3 +1,15 @@
+import { Response } from "express";
+import { logger } from "./logger";
+
+/**
+ * Log the full error server-side and return a generic message to the client.
+ * Prevents leaking internal details (stack traces, DB errors, file paths).
+ */
+export function safeError(res: Response, context: string, error: unknown, statusCode = 500): void {
+    logger.error(`${context}:`, error);
+    res.status(statusCode).json({ error: "Internal server error" });
+}
+
 /**
  * Error categories for classification
  */

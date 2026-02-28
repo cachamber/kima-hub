@@ -52,7 +52,7 @@ export function OverlayPlayer() {
     const { duration, displayTime, progress } = usePlaybackProgress();
     const {
         pause,
-        resume,
+        resumeWithGesture,
         next,
         previous,
         returnToPreviousMode,
@@ -321,13 +321,13 @@ export function OverlayPlayer() {
                                 audioError
                                     ? () => {
                                         clearAudioError();
-                                        resume();
+                                        resumeWithGesture();
                                     }
                                     : isBuffering
                                     ? undefined
                                     : isPlaying
                                     ? pause
-                                    : resume
+                                    : resumeWithGesture
                             }
                             className={cn(
                                 "w-16 h-16 rounded-full flex items-center justify-center hover:scale-105 transition-all shadow-xl",

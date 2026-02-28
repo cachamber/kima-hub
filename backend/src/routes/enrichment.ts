@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { logger } from "../utils/logger";
+import { safeError } from "../utils/errors";
 import { requireAuth, requireAdmin } from "../middleware/auth";
 import { enrichmentService } from "../services/enrichment";
 import { prisma } from "../utils/db";
@@ -64,11 +65,8 @@ router.post("/pause", requireAdmin, async (req, res) => {
       message: "Enrichment paused",
       state,
     });
-  } catch (error: any) {
-    logger.error("Pause enrichment error:", error);
-    res.status(400).json({
-      error: error.message || "Failed to pause enrichment",
-    });
+  } catch (error) {
+    safeError(res, "Pause enrichment", error, 400);
   }
 });
 
@@ -83,11 +81,8 @@ router.post("/resume", requireAdmin, async (req, res) => {
       message: "Enrichment resumed",
       state,
     });
-  } catch (error: any) {
-    logger.error("Resume enrichment error:", error);
-    res.status(400).json({
-      error: error.message || "Failed to resume enrichment",
-    });
+  } catch (error) {
+    safeError(res, "Resume enrichment", error, 400);
   }
 });
 
@@ -102,11 +97,8 @@ router.post("/stop", requireAdmin, async (req, res) => {
       message: "Enrichment stopping...",
       state,
     });
-  } catch (error: any) {
-    logger.error("Stop enrichment error:", error);
-    res.status(400).json({
-      error: error.message || "Failed to stop enrichment",
-    });
+  } catch (error) {
+    safeError(res, "Stop enrichment", error, 400);
   }
 });
 
@@ -227,11 +219,8 @@ router.post("/sync", async (req, res) => {
       description: "Processing new and pending items only",
       result,
     });
-  } catch (error: any) {
-    logger.error("Trigger sync error:", error);
-    res.status(500).json({
-      error: error.message || "Failed to start sync",
-    });
+  } catch (error) {
+    safeError(res, "Trigger incremental sync", error);
   }
 });
 
@@ -299,11 +288,8 @@ router.post("/artist/:id", async (req, res) => {
       confidence: enrichmentData.confidence,
       data: enrichmentData,
     });
-  } catch (error: any) {
-    logger.error("Enrich artist error:", error);
-    res.status(500).json({
-      error: error.message || "Failed to enrich artist",
-    });
+  } catch (error) {
+    safeError(res, "Enrich artist", error);
   }
 });
 
@@ -341,11 +327,8 @@ router.post("/album/:id", async (req, res) => {
       confidence: enrichmentData.confidence,
       data: enrichmentData,
     });
-  } catch (error: any) {
-    logger.error("Enrich album error:", error);
-    res.status(500).json({
-      error: error.message || "Failed to enrich album",
-    });
+  } catch (error) {
+    safeError(res, "Enrich album", error);
   }
 });
 
@@ -377,11 +360,8 @@ router.post("/start", async (req, res) => {
       success: true,
       message: "Library enrichment started in background",
     });
-  } catch (error: any) {
-    logger.error("Start enrichment error:", error);
-    res.status(500).json({
-      error: error.message || "Failed to start enrichment",
-    });
+  } catch (error) {
+    safeError(res, "Start library enrichment", error);
   }
 });
 
@@ -532,11 +512,8 @@ router.post("/retry", requireAdmin, async (req, res) => {
       queued,
       skipped,
     });
-  } catch (error: any) {
-    logger.error("Retry failures error:", error);
-    res.status(500).json({
-      error: error.message || "Failed to retry failures",
-    });
+  } catch (error) {
+    safeError(res, "Retry enrichment failures", error);
   }
 });
 
@@ -559,11 +536,8 @@ router.post("/skip", requireAdmin, async (req, res) => {
       message: `Skipped ${count} failures`,
       count,
     });
-  } catch (error: any) {
-    logger.error("Skip failures error:", error);
-    res.status(500).json({
-      error: error.message || "Failed to skip failures",
-    });
+  } catch (error) {
+    safeError(res, "Skip enrichment failures", error);
   }
 });
 
@@ -589,11 +563,8 @@ router.delete("/failures", requireAdmin, async (req, res) => {
       message: `Cleared ${count} failure${count !== 1 ? "s" : ""}`,
       count,
     });
-  } catch (error: any) {
-    logger.error("Clear all failures error:", error);
-    res.status(500).json({
-      error: error.message || "Failed to clear failures",
-    });
+  } catch (error) {
+    safeError(res, "Clear enrichment failures", error);
   }
 });
 
@@ -610,11 +581,8 @@ router.delete("/failures/:id", requireAdmin, async (req, res) => {
       message: "Failure deleted",
       count,
     });
-  } catch (error: any) {
-    logger.error("Delete failure error:", error);
-    res.status(500).json({
-      error: error.message || "Failed to delete failure",
-    });
+  } catch (error) {
+    safeError(res, "Delete enrichment failure", error);
   }
 });
 
@@ -676,11 +644,8 @@ router.put("/artists/:id/metadata", async (req, res) => {
     }
 
     res.json(artist);
-  } catch (error: any) {
-    logger.error("Update artist metadata error:", error);
-    res.status(500).json({
-      error: error.message || "Failed to update artist",
-    });
+  } catch (error) {
+    safeError(res, "Update artist metadata", error);
   }
 });
 
@@ -741,11 +706,8 @@ router.put("/albums/:id/metadata", async (req, res) => {
     });
 
     res.json(album);
-  } catch (error: any) {
-    logger.error("Update album metadata error:", error);
-    res.status(500).json({
-      error: error.message || "Failed to update album",
-    });
+  } catch (error) {
+    safeError(res, "Update album metadata", error);
   }
 });
 
@@ -796,11 +758,8 @@ router.put("/tracks/:id/metadata", async (req, res) => {
     });
 
     res.json(track);
-  } catch (error: any) {
-    logger.error("Update track metadata error:", error);
-    res.status(500).json({
-      error: error.message || "Failed to update track",
-    });
+  } catch (error) {
+    safeError(res, "Update track metadata", error);
   }
 });
 
@@ -855,18 +814,14 @@ router.post("/artists/:id/reset", async (req, res) => {
       message: "Artist metadata reset to original values",
       artist,
     });
-  } catch (error: any) {
-    // Handle P2025 specifically in case of race condition
-    if (error.code === "P2025") {
+  } catch (error) {
+    if (typeof error === "object" && error !== null && "code" in error && (error as { code: string }).code === "P2025") {
       return res.status(404).json({
         error: "Artist not found",
         message: "The artist may have been deleted",
       });
     }
-    logger.error("Reset artist metadata error:", error);
-    res.status(500).json({
-      error: error.message || "Failed to reset artist metadata",
-    });
+    safeError(res, "Reset artist metadata", error);
   }
 });
 
@@ -920,18 +875,14 @@ router.post("/albums/:id/reset", async (req, res) => {
       message: "Album metadata reset to original values",
       album,
     });
-  } catch (error: any) {
-    // Handle P2025 specifically in case of race condition
-    if (error.code === "P2025") {
+  } catch (error) {
+    if (typeof error === "object" && error !== null && "code" in error && (error as { code: string }).code === "P2025") {
       return res.status(404).json({
         error: "Album not found",
         message: "The album may have been deleted",
       });
     }
-    logger.error("Reset album metadata error:", error);
-    res.status(500).json({
-      error: error.message || "Failed to reset album metadata",
-    });
+    safeError(res, "Reset album metadata", error);
   }
 });
 
@@ -981,18 +932,14 @@ router.post("/tracks/:id/reset", async (req, res) => {
       message: "Track metadata reset to original values",
       track,
     });
-  } catch (error: any) {
-    // Handle P2025 specifically in case of race condition
-    if (error.code === "P2025") {
+  } catch (error) {
+    if (typeof error === "object" && error !== null && "code" in error && (error as { code: string }).code === "P2025") {
       return res.status(404).json({
         error: "Track not found",
         message: "The track may have been deleted",
       });
     }
-    logger.error("Reset track metadata error:", error);
-    res.status(500).json({
-      error: error.message || "Failed to reset track metadata",
-    });
+    safeError(res, "Reset track metadata", error);
   }
 });
 

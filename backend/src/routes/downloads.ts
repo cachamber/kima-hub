@@ -9,6 +9,7 @@ import { musicBrainzService } from "../services/musicbrainz";
 import { lastFmService } from "../services/lastfm";
 import { simpleDownloadManager } from "../services/simpleDownloadManager";
 import crypto from "crypto";
+import { safeError } from "../utils/errors";
 
 const router = Router();
 
@@ -715,13 +716,8 @@ router.delete("/:id", async (req, res) => {
 
         // Return success even if nothing was deleted (idempotent delete)
         res.json({ success: true, deleted: result.count > 0 });
-    } catch (error: any) {
-        logger.error("Delete download job error:", error);
-        logger.error("Error details:", error.message, error.stack);
-        res.status(500).json({
-            error: "Failed to delete download job",
-            details: error.message,
-        });
+    } catch (error) {
+        safeError(res, "Delete download job", error);
     }
 });
 

@@ -39,6 +39,7 @@ export function useAudio() {
 
         // Playback
         isPlaying: playback.isPlaying,
+        setIsPlaying: playback.setIsPlaying,
         currentTime: playback.currentTime,
         duration: playback.duration,
         isBuffering: playback.isBuffering,
@@ -54,6 +55,7 @@ export function useAudio() {
         playPodcast: controls.playPodcast,
         pause: controls.pause,
         resume: controls.resume,
+        resumeWithGesture: controls.resumeWithGesture,
         next: controls.next,
         previous: controls.previous,
         addToQueue: controls.addToQueue,

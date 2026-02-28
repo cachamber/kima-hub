@@ -2,6 +2,7 @@ import { Router } from "express";
 import { withRetry } from "../utils/async";
 import { logger } from "../utils/logger";
 import { requireAuthOrToken } from "../middleware/auth";
+import { safeError } from "../utils/errors";
 import { spotifyService } from "../services/spotify";
 import { deezerService, DeezerPlaylistPreview, DeezerRadioStation } from "../services/deezer";
 
@@ -76,9 +77,8 @@ router.get("/playlists/featured", async (req, res) => {
             total: playlists.length,
             source: "deezer",
         });
-    } catch (error: any) {
-        logger.error("Browse featured playlists error:", error);
-        res.status(500).json({ error: error.message || "Failed to fetch playlists" });
+    } catch (error) {
+        safeError(res, "Browse featured playlists", error);
     }
 });
 
@@ -105,9 +105,8 @@ router.get("/playlists/search", async (req, res) => {
             query,
             source: "deezer",
         });
-    } catch (error: any) {
-        logger.error("Browse search playlists error:", error);
-        res.status(500).json({ error: error.message || "Failed to search playlists" });
+    } catch (error) {
+        safeError(res, "Browse search playlists", error);
     }
 });
 
@@ -129,13 +128,8 @@ router.get("/playlists/:id", async (req, res) => {
             source: "deezer",
             url: `https://www.deezer.com/playlist/${id}`,
         });
-    } catch (error: any) {
-        logger.error("Playlist fetch error:", error);
-        const isNetworkError = ["ECONNRESET", "ETIMEDOUT", "ECONNREFUSED"].includes(error.code);
-        const userMessage = isNetworkError
-            ? "Deezer API is temporarily unavailable. Please try again in a moment."
-            : (error.message || "Failed to fetch playlist");
-        res.status(500).json({ error: userMessage });
+    } catch (error) {
+        safeError(res, "Playlist fetch", error);
     }
 });
 
@@ -153,9 +147,8 @@ router.get("/radios", async (req, res) => {
             total: radios.length,
             source: "deezer",
         });
-    } catch (error: any) {
-        logger.error("Browse radios error:", error);
-        res.status(500).json({ error: error.message || "Failed to fetch radios" });
+    } catch (error) {
+        safeError(res, "Browse radios", error);
     }
 });
 
@@ -180,9 +173,8 @@ router.get("/radios/by-genre", async (req, res) => {
             total: result.length,
             source: "deezer",
         });
-    } catch (error: any) {
-        logger.error("Browse radios by genre error:", error);
-        res.status(500).json({ error: error.message || "Failed to fetch radios" });
+    } catch (error) {
+        safeError(res, "Browse radios by genre", error);
     }
 });
 
@@ -206,9 +198,8 @@ router.get("/radios/:id", async (req, res) => {
             source: "deezer",
             type: "radio",
         });
-    } catch (error: any) {
-        logger.error("Radio tracks error:", error);
-        res.status(500).json({ error: error.message || "Failed to fetch radio tracks" });
+    } catch (error) {
+        safeError(res, "Radio tracks", error);
     }
 });
 
@@ -226,9 +217,8 @@ router.get("/genres", async (req, res) => {
             total: genres.length,
             source: "deezer",
         });
-    } catch (error: any) {
-        logger.error("Browse genres error:", error);
-        res.status(500).json({ error: error.message || "Failed to fetch genres" });
+    } catch (error) {
+        safeError(res, "Browse genres", error);
     }
 });
 
@@ -252,9 +242,8 @@ router.get("/genres/:id", async (req, res) => {
             radios: content.radios.map(deezerRadioToUnified),
             source: "deezer",
         });
-    } catch (error: any) {
-        logger.error("Genre content error:", error);
-        res.status(500).json({ error: error.message || "Failed to fetch genre content" });
+    } catch (error) {
+        safeError(res, "Genre content", error);
     }
 });
 
@@ -283,9 +272,8 @@ router.get("/genres/:id/playlists", async (req, res) => {
             genre: genre.name,
             source: "deezer",
         });
-    } catch (error: any) {
-        logger.error("Genre playlists error:", error);
-        res.status(500).json({ error: error.message || "Failed to fetch genre playlists" });
+    } catch (error) {
+        safeError(res, "Genre playlists", error);
     }
 });
 
@@ -326,9 +314,8 @@ router.post("/playlists/parse", async (req, res) => {
         return res.status(400).json({ 
             error: "Invalid or unsupported URL. Please provide a Spotify or Deezer playlist URL." 
         });
-    } catch (error: any) {
-        logger.error("Parse URL error:", error);
-        res.status(500).json({ error: error.message || "Failed to parse URL" });
+    } catch (error) {
+        safeError(res, "Parse URL", error);
     }
 });
 
@@ -353,9 +340,8 @@ router.get("/all", async (req, res) => {
             genres,
             source: "deezer",
         });
-    } catch (error: any) {
-        logger.error("Browse all error:", error);
-        res.status(500).json({ error: error.message || "Failed to fetch browse content" });
+    } catch (error) {
+        safeError(res, "Browse all", error);
     }
 });
 

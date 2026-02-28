@@ -67,7 +67,7 @@ export function FullPlayer() {
 
     const {
         pause,
-        resume,
+        resumeWithGesture,
         next,
         previous,
         setPlayerMode,
@@ -301,13 +301,13 @@ export function FullPlayer() {
                                     audioError
                                         ? () => {
                                             clearAudioError();
-                                            resume();
+                                            resumeWithGesture();
                                         }
                                         : isBuffering
                                         ? undefined
                                         : isPlaying
                                         ? pause
-                                        : resume
+                                        : resumeWithGesture
                                 }
                                 className={cn(
                                     "w-10 h-10 rounded-full flex items-center justify-center transition-all duration-200 relative group",

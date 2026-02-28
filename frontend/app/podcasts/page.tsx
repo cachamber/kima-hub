@@ -219,8 +219,6 @@ export default function PodcastsPage() {
         );
     }
 
-    const sectionIndex = 0;
-
     return (
         <div className="min-h-screen relative bg-gradient-to-b from-[#0a0a0a] to-black">
             {/* Atmospheric overlay */}

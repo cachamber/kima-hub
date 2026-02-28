@@ -7,6 +7,7 @@ import { writeEnvFile } from "../utils/envWriter";
 import { invalidateSystemSettingsCache } from "../utils/systemSettings";
 import { queueCleaner } from "../jobs/queueCleaner";
 import { encrypt, decrypt } from "../utils/encryption";
+import { safeError } from "../utils/errors";
 
 const router = Router();
 
@@ -98,6 +99,7 @@ const systemSettingsSchema = z.object({
 
   // Server
   publicUrl: z.union([z.string().url(), z.literal("")]).optional(),
+  registrationOpen: z.boolean().optional(),
 });
 
 // GET /system-settings
@@ -493,26 +495,8 @@ router.post("/test-lidarr", async (req, res) => {
       message: "Lidarr connection successful",
       version: response.data.version,
     });
-  } catch (error: any) {
-    logger.error("[Lidarr Test] Error:", error.message);
-    logger.error("[Lidarr Test] Details:", error.response?.data || error.code);
-
-    let details = error.message;
-    if (error.code === "ECONNREFUSED") {
-      details =
-        "Connection refused - check if Lidarr is running and accessible";
-    } else if (error.code === "ENOTFOUND") {
-      details = "Host not found - check the URL";
-    } else if (error.response?.status === 401) {
-      details = "Invalid API key";
-    } else if (error.response?.data?.message) {
-      details = error.response.data.message;
-    }
-
-    res.status(500).json({
-      error: "Failed to connect to Lidarr",
-      details,
-    });
+  } catch (error) {
+    safeError(res, "Lidarr connection test", error);
   }
 });
 
@@ -544,12 +528,8 @@ router.post("/test-openai", async (req, res) => {
       message: "OpenAI connection successful",
       model: response.data.model,
     });
-  } catch (error: any) {
-    logger.error("OpenAI test error:", error.message);
-    res.status(500).json({
-      error: "Failed to connect to OpenAI",
-      details: error.response?.data?.error?.message || error.message,
-    });
+  } catch (error) {
+    safeError(res, "OpenAI connection test", error);
   }
 });
 
@@ -580,18 +560,8 @@ router.post("/test-fanart", async (req, res) => {
       success: true,
       message: "Fanart.tv connection successful",
     });
-  } catch (error: any) {
-    logger.error("Fanart.tv test error:", error.message);
-    if (error.response?.status === 401) {
-      res.status(401).json({
-        error: "Invalid Fanart.tv API key",
-      });
-    } else {
-      res.status(500).json({
-        error: "Failed to connect to Fanart.tv",
-        details: error.response?.data || error.message,
-      });
-    }
+  } catch (error) {
+    safeError(res, "Fanart.tv connection test", error);
   }
 });
 
@@ -630,18 +600,8 @@ router.post("/test-lastfm", async (req, res) => {
         error: "Unexpected response from Last.fm",
       });
     }
-  } catch (error: any) {
-    logger.error("Last.fm test error:", error.message);
-    if (error.response?.status === 403 || error.response?.data?.error === 10) {
-      res.status(401).json({
-        error: "Invalid Last.fm API key",
-      });
-    } else {
-      res.status(500).json({
-        error: "Failed to connect to Last.fm",
-        details: error.response?.data || error.message,
-      });
-    }
+  } catch (error) {
+    safeError(res, "Last.fm connection test", error);
   }
 });
 
@@ -668,18 +628,8 @@ router.post("/test-audiobookshelf", async (req, res) => {
       message: "Audiobookshelf connection successful",
       libraries: response.data.libraries?.length || 0,
     });
-  } catch (error: any) {
-    logger.error("Audiobookshelf test error:", error.message);
-    if (error.response?.status === 401 || error.response?.status === 403) {
-      res.status(401).json({
-        error: "Invalid Audiobookshelf API key",
-      });
-    } else {
-      res.status(500).json({
-        error: "Failed to connect to Audiobookshelf",
-        details: error.response?.data || error.message,
-      });
-    }
+  } catch (error) {
+    safeError(res, "Audiobookshelf connection test", error);
   }
 });
 
@@ -710,19 +660,11 @@ router.post("/test-soulseek", async (req, res) => {
         soulseekUsername: username,
         isConnected: true,
       });
-    } catch (connectError: any) {
-      logger.error(`[SOULSEEK-TEST] Error: ${connectError.message}`);
-      res.status(401).json({
-        error: "Invalid Soulseek credentials or connection failed",
-        details: connectError.message,
-      });
+    } catch (connectError) {
+      safeError(res, "Soulseek connection test", connectError, 401);
     }
-  } catch (error: any) {
-    logger.error("[SOULSEEK-TEST] Error:", error.message);
-    res.status(500).json({
-      error: "Failed to test Soulseek connection",
-      details: error.message,
-    });
+  } catch (error) {
+    safeError(res, "Soulseek connection test", error);
   }
 });
 
@@ -764,19 +706,11 @@ router.post("/test-spotify", async (req, res) => {
           error: "Invalid Spotify credentials",
         });
       }
-    } catch (tokenError: any) {
-      res.status(401).json({
-        error: "Invalid Spotify credentials",
-        details:
-          tokenError.response?.data?.error_description || tokenError.message,
-      });
+    } catch (tokenError) {
+      safeError(res, "Spotify credentials test", tokenError, 401);
     }
-  } catch (error: any) {
-    logger.error("Spotify test error:", error.message);
-    res.status(500).json({
-      error: "Failed to test Spotify credentials",
-      details: error.message,
-    });
+  } catch (error) {
+    safeError(res, "Spotify credentials test", error);
   }
 });
 
@@ -794,11 +728,8 @@ router.post("/queue-cleaner/start", async (req, res) => {
       message: "Queue cleaner started",
       status: queueCleaner.getStatus(),
     });
-  } catch (error: any) {
-    res.status(500).json({
-      error: "Failed to start queue cleaner",
-      details: error.message,
-    });
+  } catch (error) {
+    safeError(res, "Start queue cleaner", error);
   }
 });
 
@@ -868,12 +799,8 @@ router.post("/clear-caches", async (req, res) => {
         clearedKeys: 0,
       });
     }
-  } catch (error: any) {
-    logger.error("Clear caches error:", error);
-    res.status(500).json({
-      error: "Failed to clear caches",
-      details: error.message,
-    });
+  } catch (error) {
+    safeError(res, "Clear caches", error);
   }
 });
 

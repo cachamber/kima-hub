@@ -5,6 +5,59 @@ All notable changes to Kima will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.10] - 2026-02-27
+
+### Added
+
+- **#122** `DISABLE_CLAP=true` environment variable to disable the CLAP audio embedding analyzer on startup in the all-in-one container (useful for low-memory deployments)
+- **#123** Foobar2000-style track title formatting in Settings > Playback -- configure a format string with `%field%`, `[conditional blocks]`, `$if2()`, `$filepart()` syntax; applied in playlist view
+- **#124** Cancelling a playlist import now creates a partial playlist from all tracks already matched to your library, instead of discarding progress
+
+### Fixed
+
+- **#124** Cancel button previously promised "Playlist will be created with tracks downloaded so far" but discarded all progress -- now delivers on that promise
+- **iOS lock screen controls inverted**: MediaSession `playbackState` was driven by React `useEffect` on `isPlaying` state, which fires asynchronously after render -- not synchronously with the actual audio state change. This caused lock screen controls to show the opposite state (play when playing, pause when paused). Rewrote MediaSession to drive `playbackState` directly from `audioEngine` events, call the engine directly from action handlers to preserve iOS user-gesture context, and use ref-based one-time handler registration to avoid re-registration churn.
+- **Favicon showing old Lidify icon or wrong Kima logo**: Browser tab showed the pre-rebrand Lidify favicon. Replaced with the waveform-only icon generated from `kima-black.webp` as a proper multi-size ICO (16/32/48/64/128/256px) with tight cropping so the waveform fills the tab space.
+- **Enrichment pipeline: no periodic vibe sweep**: The enrichment cycle had no phase for queueing vibe/CLAP embedding jobs. The only automatic path was a lossy pub/sub event from Essentia completion -- if missed (crash, restart, migration wipe), tracks were orphaned forever. Added Phase 5 that sweeps for tracks with completed audio but missing embedding rows via LEFT JOIN.
+- **Enrichment pipeline: crash recovery dead end**: Crash recovery reset `vibeAnalysisStatus` from `processing` to `null`, which nothing in the regular cycle re-queued. Changed to reset to `pending` so the periodic sweep picks them up.
+- **Enrichment pipeline: CLAP analyzer permanent death**: When enrichment was stopped, the backend sent a stop command causing the CLAP analyzer to exit cleanly (code 0). Supervisor's `autorestart=unexpected` treated this as expected and never restarted. Changed to `autorestart=true` and removed the stop signal entirely -- the analyzer has its own idle timeout.
+- **Enrichment pipeline: completion never triggers**: `isFullyComplete` required `clapCompleted + clapFailed >= trackTotal`, which was impossible after `track_embeddings` was wiped by migration. Now checks for actual un-embedded tracks via LEFT JOIN.
+- **Enrichment pipeline: "Reset Vibe Embeddings" incomplete**: `reRunVibeEmbeddingsOnly()` reset `vibeAnalysisStatus` but did not delete existing `track_embeddings` rows, so the re-queue query (which uses LEFT JOIN) silently skipped tracks that already had embeddings. Now deletes all embeddings first for full regeneration.
+- **Feature detection: CLAP reported available when disabled**: When `DISABLE_CLAP=true` was set, `checkCLAP()` skipped the file-existence check but still fell through to heartbeat and data checks. If old embeddings existed in the database, it returned `true`, causing the vibe sweep to queue jobs that no CLAP worker would ever process. Now returns `false` immediately when disabled.
+- **docker-compose.server.yml healthcheck using removed tool**: Healthcheck used `wget` which is removed from the production image during security hardening. Changed to `node /app/healthcheck.js` to match docker-compose.prod.yml.
+- **#126 Subsonic JSON `getGenres.view` breaking Symfonium**: Genre responses used `#text` for the genre name in JSON output -- correct for XML but violates the Subsonic JSON convention which uses `value`. Symfonium's strict JSON parser rejected the response. Fixed `stripAttrPrefix()` to map `#text` to `value` in all JSON responses.
+- **#126 Subsonic `getBookmarks.view` not implemented**: Symfonium calls `getBookmarks.view` during sync and expects a valid response with a `bookmarks` key. The endpoint hit the catch-all "not implemented" handler, returning an error without the required key. Added an empty stub returning `{ bookmarks: {} }`.
+- **#91 Artist page only showing 5 popular tracks**: Frontend sliced popular tracks to 5 even though the backend returned 10. Now displays all 10.
+- **#63 MusicBrainz base URL hardcoded**: MusicBrainz API URL was hardcoded, preventing use of self-hosted mirrors. Now configurable via `MUSICBRAINZ_BASE_URL` environment variable (defaults to `https://musicbrainz.org/ws/2`).
+
+## [1.5.8] - 2026-02-26
+
+### Fixed
+
+- **Mobile playback: infinite network retry loop**: On mobile networks, transient `MEDIA_ERR_NETWORK` errors triggered a retry cycle that never terminated -- `canplay` and `playing` events reset the retry counter to 0 on every cycle, and `audio.load()` reset `currentTime` to 0, causing the "2-3 seconds then starts over" symptom. Fixed by removing the premature counter resets (counter now only resets on new track load) and saving/restoring playback position across retries.
+- **Mobile playback: silence keepalive running during active playback**: The silence keepalive element (used to hold the iOS/Android audio session while paused in background) was started via `prime()` from a non-gesture context, then `stop()` failed to pause it because the `play()` promise hadn't resolved yet, making `el.paused` still true. Fixed by adding proper async play-promise tracking with a `pendingStop` flag, and removing the non-gesture `prime()`/`stop()` calls from the audio engine's `playing` event handler.
+- **Mobile playback: play button tap fails to resume on iOS**: All in-app play buttons called `resume()` which only set React state; the actual `audio.play()` ran in a `useEffect` after re-render, outside the iOS user-gesture activation window. Fixed by adding a `resumeWithGesture()` helper that calls `audioEngine.tryResume()` and `silenceKeepalive.prime()` synchronously within the gesture context -- the same pattern already used by MediaSession lock-screen handlers. Applied across all 13 play/resume call sites.
+- **Mobile playback: lock screen / notification controls unresponsive after app restore**: MediaSession action handlers were never registered when the app loaded with a server-restored track because the `hasPlayedLocallyRef` guard blocked registration, and the handler registration effect's dependency array was missing `isPlaying`, so it never re-ran when the flag was set. Fixed by adding `isPlaying` to the dependency array.
+- **Cover art proxy transient fetch errors**: External cover art fetches that hit transient TCP errors (`ECONNRESET`, `ETIMEDOUT`, `UND_ERR_SOCKET`) now retry once with a 500ms delay before failing.
+
+### Security
+
+- **Error message leakage**: All ~82 backend route catch blocks replaced with a `safeError()` helper that logs the full error server-side but returns only `"Internal server error"` to the client. Prevents stack traces, file paths, and internal details from leaking to users.
+- **SSRF protection on cover art proxy**: The cover-art proxy endpoint now validates URLs before fetching -- blocks private/loopback IPs, non-HTTP schemes, and resolves DNS to check for rebinding attacks. Audiobook cover paths also block directory traversal.
+- **Login timing side-channel**: Login endpoint previously returned early on user-not-found, allowing username enumeration via response timing. Now runs a dummy bcrypt compare against an invalid hash to normalize response times regardless of whether the user exists.
+- **Device link code generation**: Replaced `Math.random()` with `crypto.randomInt()` for cryptographically secure device link codes.
+- **Unscoped user queries**: Added `select` clauses to all Prisma user queries that previously loaded full rows (including `passwordHash`) when only the ID or specific fields were needed.
+- **Metrics endpoint authentication**: `/api/metrics` now requires authentication.
+- **Registration gate**: Added `registrationOpen` system setting (default: closed) and rate limiter on the registration endpoint. After the first user is created, new registrations require an admin to explicitly open registration.
+- **Admin password reset role check**: Fixed case mismatch (`"ADMIN"` vs `"admin"`) that could allow non-admin users to trigger password resets.
+
+### Housekeeping
+
+- Removed unused `sectionIndex` variables in audiobooks, home, and podcasts pages.
+- Removed dead commented-out album cover grid code and unused imports in DiscoverHero.
+- Fixed missing `useCallback` wrapper for `loadPresets` in MoodMixer.
+- Added missing `previewLoadState` to effect dependency array in usePodcastData.
+
 ## [1.5.7] - 2026-02-23
 
 ### Added

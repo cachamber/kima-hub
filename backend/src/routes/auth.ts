@@ -69,15 +69,12 @@ router.post("/login", async (req, res) => {
         const { token } = req.body; // 2FA token if provided
 
         const user = await prisma.user.findUnique({ where: { username } });
-        if (!user) {
-            logger.debug(`[AUTH] User not found: ${username}`);
-            return res.status(401).json({ error: "Invalid credentials" });
-        }
 
-        logger.debug(`[AUTH] Verifying password for user: ${username}`);
-        const valid = await bcrypt.compare(password, user.passwordHash);
-        if (!valid) {
-            logger.debug(`[AUTH] Invalid password for user: ${username}`);
+        // Timing-safe: always run bcrypt to prevent username enumeration
+        const dummyHash = "$2b$10$invalidhashfortimingsafety.00000000000000000000";
+        const valid = await bcrypt.compare(password, user?.passwordHash ?? dummyHash);
+        if (!user || !valid) {
+            logger.debug(`[AUTH] Invalid credentials for: ${username}`);
             return res.status(401).json({ error: "Invalid credentials" });
         }
         logger.debug(`[AUTH] Password verified for user: ${username}`);
@@ -292,6 +289,7 @@ router.post("/change-password", requireAuth, async (req, res) => {
         // Verify current password
         const user = await prisma.user.findUnique({
             where: { id: req.user!.id },
+            select: { id: true, passwordHash: true },
         });
 
         if (!user) {
@@ -548,6 +546,7 @@ router.post("/2fa/disable", requireAuth, async (req, res) => {
 
         const user = await prisma.user.findUnique({
             where: { id: req.user!.id },
+            select: { id: true, passwordHash: true, twoFactorSecret: true },
         });
 
         if (!user) {

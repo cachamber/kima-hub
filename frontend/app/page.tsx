@@ -39,8 +39,6 @@ export default function HomePage() {
         return <LoadingScreen />;
     }
 
-    const sectionIndex = 0;
-
     return (
         <div className="min-h-screen relative bg-gradient-to-b from-[#0a0a0a] to-black">
             {/* Static gradient overlay */}

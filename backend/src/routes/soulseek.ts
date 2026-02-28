@@ -1,4 +1,5 @@
 import { logger } from "../utils/logger";
+import { safeError } from "../utils/errors";
 
 /**
  * Soulseek routes - Direct connection via vendored soulseek-ts
@@ -106,12 +107,8 @@ router.get("/status", requireAuth, async (req, res) => {
             connected: status.connected,
             username: status.username,
         });
-    } catch (error: any) {
-        logger.error("Soulseek status error:", error.message);
-        res.status(500).json({
-            error: "Failed to get Soulseek status",
-            details: error.message,
-        });
+    } catch (error) {
+        safeError(res, "Soulseek status", error);
     }
 });
 
@@ -131,12 +128,8 @@ router.post(
                 success: true,
                 message: "Connected to Soulseek network",
             });
-        } catch (error: any) {
-            logger.error("Soulseek connect error:", error.message);
-            res.status(500).json({
-                error: "Failed to connect to Soulseek",
-                details: error.message,
-            });
+        } catch (error) {
+            safeError(res, "Soulseek connect", error);
         }
     },
 );
@@ -283,12 +276,8 @@ router.post(
                 searchId,
                 message: "Search started",
             });
-        } catch (error: any) {
-            logger.error("Soulseek search error:", error.message);
-            res.status(500).json({
-                error: "Search failed",
-                details: error.message,
-            });
+        } catch (error) {
+            safeError(res, "Soulseek search", error);
         }
     },
 );
@@ -337,12 +326,8 @@ router.get("/search/:searchId", requireAuth, async (req, res) => {
             results: formattedResults,
             count: formattedResults.length,
         });
-    } catch (error: any) {
-        logger.error("Get search results error:", error.message);
-        res.status(500).json({
-            error: "Failed to get results",
-            details: error.message,
-        });
+    } catch (error) {
+        safeError(res, "Get search results", error);
     }
 });
 
@@ -485,18 +470,14 @@ router.post(
                     error: result.error || "Download failed",
                 });
             }
-        } catch (error: any) {
+        } catch (error) {
             if (jobId) {
                 await prisma.downloadJob.update({
                     where: { id: jobId },
-                    data: { status: "failed", error: error.message, completedAt: new Date() },
+                    data: { status: "failed", error: error instanceof Error ? error.message : "Download failed", completedAt: new Date() },
                 }).catch(() => {});
             }
-            logger.error("Soulseek download error:", error.message);
-            res.status(500).json({
-                error: "Download failed",
-                details: error.message,
-            });
+            safeError(res, "Soulseek download", error);
         }
     },
 );
@@ -511,8 +492,8 @@ router.post("/disconnect", requireAuth, async (req, res) => {
     try {
         soulseekService.disconnect();
         res.json({ success: true, message: "Disconnected" });
-    } catch (error: any) {
-        res.status(500).json({ error: error.message });
+    } catch (error) {
+        safeError(res, "Soulseek disconnect", error);
     }
 });
 

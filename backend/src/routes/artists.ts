@@ -7,6 +7,7 @@ import { deezerService } from "../services/deezer";
 import { redisClient } from "../utils/redis";
 import { normalizeToArray } from "../utils/normalize";
 import { requireAuthOrToken } from "../middleware/auth";
+import { safeError } from "../utils/errors";
 
 const router = Router();
 router.use(requireAuthOrToken);
@@ -35,12 +36,8 @@ router.get("/preview/:artistName/:trackTitle", async (req, res) => {
         } else {
             res.status(404).json({ error: "Preview not found" });
         }
-    } catch (error: any) {
-        logger.error("Preview fetch error:", error);
-        res.status(500).json({
-            error: "Failed to fetch preview",
-            message: error.message,
-        });
+    } catch (error) {
+        safeError(res, "Track preview fetch", error);
     }
 });
 
@@ -375,12 +372,8 @@ router.get("/discover/:nameOrMbid", async (req, res) => {
         }
 
         res.json(response);
-    } catch (error: any) {
-        logger.error("Artist discovery error:", error);
-        res.status(500).json({
-            error: "Failed to fetch artist details",
-            message: error.message,
-        });
+    } catch (error) {
+        safeError(res, "Artist discovery", error);
     }
 });
 
@@ -574,12 +567,8 @@ router.get("/album/:mbid", async (req, res) => {
         }
 
         res.json(response);
-    } catch (error: any) {
-        logger.error("Album discovery error:", error);
-        res.status(500).json({
-            error: "Failed to fetch album details",
-            message: error.message,
-        });
+    } catch (error) {
+        safeError(res, "Album discovery", error);
     }
 });
 
