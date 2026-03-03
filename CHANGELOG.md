@@ -9,13 +9,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- **M3U playlist import**: Upload `.m3u` / `.m3u8` playlist files to create playlists by matching entries against your library. 4-tier matching: file path, filename, exact metadata, fuzzy metadata (fuzzball). Available on the Import page under a new "File Import" tab.
+- **Playlist action hub**: Create, Import URL, Import File (M3U), and Browse buttons directly on the playlists page. No more navigating through Browse to import.
+- **Sidebar create playlist**: The "+" button in the sidebar now opens an inline create dialog instead of navigating away.
+- **M3U playlist import**: Upload `.m3u` / `.m3u8` playlist files to create playlists by matching entries against your library. 4-tier matching: file path, filename, exact metadata, fuzzy metadata (fuzzball).
 - **Multi-playlist add**: The "Add to Playlist" picker in the full player now supports selecting multiple playlists at once with checkboxes and a confirm button. Existing single-select callers are unchanged.
 - **Playlist visibility toggle**: Globe/Lock button on the playlist detail page lets owners toggle public/private visibility. Previously required database editing for imported playlists.
 - **BullMQ import queue**: Playlist imports (Spotify, Deezer, M3U) now run via a dedicated `playlist-import` BullMQ queue instead of fire-and-forget async. Provides crash recovery, visibility in Bull Board admin panel, and proper queue semantics.
 - **Podcast refresh buttons**: RefreshCw button on podcast detail page checks for new episodes. "Refresh All" button on main podcasts page queues refresh for all subscriptions via BullMQ.
 - **Custom RSS feed subscription**: "Add RSS Feed" button on the main podcasts page lets users subscribe to any podcast by pasting a direct RSS feed URL, without needing to find it on Apple Podcasts.
 - **Conditional GET for feed refresh**: Podcast feed fetches now send `If-Modified-Since` and `ETag` headers, receiving 304 Not Modified when feeds haven't changed. Reduces bandwidth and server load for hourly auto-refresh.
+
+### Changed
+
+- **Route rename**: `/library` is now `/collection` (redirects preserved). `/import/spotify` is now `/import/playlist` (redirects preserved with query params).
 
 ### Fixed
 
