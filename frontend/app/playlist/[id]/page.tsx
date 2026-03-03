@@ -34,6 +34,8 @@ import {
     Copy,
     Check,
     Link as LinkIcon,
+    Globe,
+    Lock,
 } from "lucide-react";
 import { useTrackFormat } from "@/hooks/useTrackFormat";
 import { formatTrackDisplay } from "@/lib/track-format";
@@ -87,7 +89,7 @@ export default function PlaylistDetailPage() {
 
     const { mutateAsync: removeTrack } = useRemoveFromPlaylistMutation();
     const { mutateAsync: deletePlaylistMut } = useDeletePlaylistMutation();
-    const { mutateAsync: updatePlaylist } = useUpdatePlaylistMutation();
+    const { mutateAsync: updatePlaylist, isPending: isUpdatingPlaylist } = useUpdatePlaylistMutation();
     const [isEditingName, setIsEditingName] = useState(false);
     const [editName, setEditName] = useState("");
     const editSaveRef = useRef(false);
@@ -271,6 +273,19 @@ export default function PlaylistDetailPage() {
             toast.error("Failed to update playlist visibility");
         } finally {
             setIsHiding(false);
+        }
+    };
+
+    const handleTogglePublic = async () => {
+        if (!playlist?.isOwner) return;
+        try {
+            await updatePlaylist({
+                playlistId,
+                data: { isPublic: !playlist.isPublic },
+            });
+            toast.success(playlist.isPublic ? "Playlist set to private" : "Playlist set to public");
+        } catch {
+            toast.error("Failed to update playlist visibility");
         }
     };
 
@@ -766,6 +781,28 @@ export default function PlaylistDetailPage() {
                                 </div>
                             )}
                         </div>
+                    )}
+
+                    {/* Visibility Toggle */}
+                    {playlist.isOwner && (
+                        <button
+                            onClick={handleTogglePublic}
+                            disabled={isUpdatingPlaylist}
+                            className={cn(
+                                "h-8 w-8 rounded-lg flex items-center justify-center transition-all",
+                                playlist.isPublic
+                                    ? "text-[#fca208]"
+                                    : "text-white/30 hover:text-white/60",
+                                isUpdatingPlaylist && "opacity-50 cursor-not-allowed"
+                            )}
+                            title={playlist.isPublic ? "Make private" : "Make public"}
+                        >
+                            {playlist.isPublic ? (
+                                <Globe className="w-5 h-5" />
+                            ) : (
+                                <Lock className="w-5 h-5" />
+                            )}
+                        </button>
                     )}
 
                     {/* Hide Button */}
