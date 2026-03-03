@@ -1414,7 +1414,9 @@ class SpotifyImportService {
         IMPORT_JOB_TTL,
         JSON.stringify(preview),
       );
-    } catch {}
+    } catch (e: any) {
+      logger?.warn(`[Spotify Import] Failed to cache preview for job ${job.id}: ${e.message}`);
+    }
 
     // Enqueue import job to BullMQ for crash-recoverable processing
     const { importQueue } = await import("../workers/queues");
@@ -3319,7 +3321,9 @@ class SpotifyImportService {
     try {
       const cached = await redisClient.get(`import:preview:${importJobId}`);
       if (cached) preview = JSON.parse(cached);
-    } catch {}
+    } catch (e: any) {
+      logger?.warn(`[Spotify Import] Failed to read preview cache for job ${importJobId}: ${e.message}`);
+    }
 
     if (!preview) {
       throw new Error(`Preview not found for import job ${importJobId}`);

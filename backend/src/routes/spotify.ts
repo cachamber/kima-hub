@@ -1,6 +1,7 @@
 import { Router } from "express";
 import multer from "multer";
 import path from "path";
+import rateLimit from "express-rate-limit";
 import { withRetry } from "../utils/async";
 import { logger } from "../utils/logger";
 import { requireAuthOrToken } from "../middleware/auth";
@@ -323,11 +324,27 @@ router.post("/import/:jobId/cancel", async (req, res) => {
     }
 });
 
+const m3uImportLimiter = rateLimit({
+    windowMs: 60 * 1000,
+    max: 5,
+    standardHeaders: true,
+    legacyHeaders: false,
+    validate: { trustProxy: false },
+    message: { error: "Too many M3U imports, please wait a minute" },
+});
+
 /**
  * POST /api/spotify/import/m3u
  * Upload an M3U file, parse it, match tracks against library, create playlist.
  */
-router.post("/import/m3u", m3uUpload.single("file"), async (req, res) => {
+router.post("/import/m3u", m3uImportLimiter, (req, res, next) => {
+    m3uUpload.single("file")(req, res, (err) => {
+        if (err) {
+            return res.status(400).json({ error: err.message });
+        }
+        next();
+    });
+}, async (req, res) => {
     try {
         if (!req.user) return res.status(401).json({ error: "Unauthorized" });
         if (!req.file) return res.status(400).json({ error: "No file uploaded" });

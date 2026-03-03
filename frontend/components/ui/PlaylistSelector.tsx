@@ -121,6 +121,7 @@ export function PlaylistSelector({
                     new CustomEvent("playlist-updated", { detail: { playlistId } })
                 );
             }
+            onClose();
         } catch (error) {
             console.error("Failed to add to playlists:", error);
         } finally {
