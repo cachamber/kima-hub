@@ -1648,26 +1648,37 @@ class SpotifyImportService {
           `Initial acquisition phase finished for ${albumMbidsToDownload.length} album(s). Checking completion state...`,
         );
 
-        // Check if we can complete immediately
-        await this.checkImportCompletion(job.id);
+        // Poll checkImportCompletion until the job reaches a terminal state.
+        // In-process Soulseek downloads complete inline, but Lidarr downloads
+        // finish asynchronously via webhook. Poll every 15s, timeout at 30min.
+        const POLL_INTERVAL_MS = 15_000;
+        const MAX_WAIT_MS = 30 * 60 * 1000;
+        const pollStart = Date.now();
 
-        // Re-fetch job state after checkImportCompletion may have updated it
-        const updatedJob = await getImportJob(job.id);
-        if (!updatedJob) {
-          logger?.error(
-            `[Spotify Import] Job ${job.id}: Job not found after completion check`,
-          );
-          return;
-        }
+        while (true) {
+          await this.checkImportCompletion(job.id);
 
-        // If still downloading, wait for completion
-        if (updatedJob.status === "downloading") {
-          logger?.debug(
-            `[Spotify Import] Job ${updatedJob.id}: Waiting for downloads to complete...`,
-          );
-          logger?.info(`Waiting for downloads to complete...`);
+          const currentJob = await getImportJob(job.id);
+          if (!currentJob) {
+            logger?.error(`[Spotify Import] Job ${job.id}: not found during completion poll`);
+            return;
+          }
+
+          if (["completed", "failed", "cancelled"].includes(currentJob.status)) {
+            logger?.info(`Import job ${job.id} reached terminal state: ${currentJob.status}`);
+            return;
+          }
+
+          if (Date.now() - pollStart > MAX_WAIT_MS) {
+            logger?.warn(`[Spotify Import] Job ${job.id}: timed out after 30 minutes, forcing completion`);
+            // Force completion with whatever we have
+            await this.checkImportCompletion(job.id);
+            return;
+          }
+
+          logger?.debug(`[Spotify Import] Job ${job.id}: still ${currentJob.status}, polling again in 15s...`);
+          await new Promise(r => setTimeout(r, POLL_INTERVAL_MS));
         }
-        return;
       }
 
       // No downloads needed - all tracks already in library
