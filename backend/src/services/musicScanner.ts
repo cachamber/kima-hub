@@ -579,6 +579,7 @@ export class MusicScannerService {
         const trackNo = metadata.common.track.no || 0;
         const duration = Math.floor(metadata.format.duration || 0);
         const mime = metadata.format.codec || "audio/mpeg";
+        const isrc = metadata.common.isrc?.[0] || null;
 
         // Artist and album info
         // IMPORTANT: Prefer albumartist over artist to keep albums grouped under the primary artist
@@ -997,6 +998,8 @@ export class MusicScannerService {
                 filePath: relativePath,
                 fileModified: stats.mtime,
                 fileSize: stats.size,
+                isrc,
+                isrcSource: isrc ? "id3" : null,
             },
             update: {
                 albumId: album.id,
@@ -1007,6 +1010,7 @@ export class MusicScannerService {
                 fileModified: stats.mtime,
                 fileSize: stats.size,
                 corrupt: false,
+                ...(isrc ? { isrc, isrcSource: "id3" as const } : {}),
             },
         });
 
