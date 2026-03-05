@@ -5,7 +5,7 @@ import { prisma } from "../../utils/db";
 import { subsonicOk, subsonicError, SubsonicError } from "../../utils/subsonicResponse";
 import { getAudioStreamingService } from "../../services/audioStreaming";
 import { config } from "../../config";
-import { bitrateToQuality, wrap } from "./mappers";
+import { bitrateToQuality, firstArtistGenre, mapSong, wrap } from "./mappers";
 import { ListenSource } from "@prisma/client";
 import { normalizeArtistName } from "../../utils/artistNormalization";
 
@@ -191,6 +191,71 @@ playbackRouter.all("/scrobble.view", wrap(async (req, res) => {
     }
 
     return subsonicOk(req, res);
+}));
+
+// ===================== LYRICS =====================
+
+// ===================== PLAY QUEUE =====================
+
+playbackRouter.all("/savePlayQueue.view", wrap(async (req, res) => {
+    const userId = req.user!.id;
+    const ids = [req.query.id].flat().filter(Boolean) as string[];
+    const current = (req.query.current as string) || null;
+    const position = parseInt((req.query.position as string) || "0", 10) || 0;
+    const changedBy = (req.query.c as string) || "";
+
+    await prisma.subsonicPlayQueue.upsert({
+        where: { userId },
+        create: { userId, trackIds: ids, current, position, changedBy, changed: new Date() },
+        update: { trackIds: ids, current, position, changedBy, changed: new Date() },
+    });
+
+    return subsonicOk(req, res);
+}));
+
+playbackRouter.all("/getPlayQueue.view", wrap(async (req, res) => {
+    const userId = req.user!.id;
+    const queue = await prisma.subsonicPlayQueue.findUnique({ where: { userId } });
+
+    if (!queue) {
+        return subsonicOk(req, res, { playQueue: {} });
+    }
+
+    const trackIds = queue.trackIds as string[];
+    if (trackIds.length === 0) {
+        return subsonicOk(req, res, { playQueue: {} });
+    }
+
+    const tracks = await prisma.track.findMany({
+        where: { id: { in: trackIds } },
+        include: { album: { include: { artist: true } } },
+    });
+
+    const trackMap = new Map(tracks.map((t) => [t.id, t]));
+    const orderedEntries = trackIds
+        .map((id) => trackMap.get(id))
+        .filter(Boolean)
+        .map((t) => {
+            const artist = t!.album.artist;
+            return mapSong(
+                t!,
+                t!.album,
+                artist.displayName || artist.name,
+                artist.id,
+                firstArtistGenre(artist.genres, artist.userGenres),
+            );
+        });
+
+    return subsonicOk(req, res, {
+        playQueue: {
+            "@_current": queue.current || undefined,
+            "@_position": queue.position,
+            "@_username": req.user!.username,
+            "@_changed": queue.changed.toISOString(),
+            "@_changedBy": queue.changedBy || undefined,
+            entry: orderedEntries,
+        },
+    });
 }));
 
 // ===================== LYRICS =====================

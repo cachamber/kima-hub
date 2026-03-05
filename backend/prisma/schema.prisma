@@ -726,6 +726,7 @@ model User {
   discoverConfig         UserDiscoverConfig?
   settings               UserSettings?
   shareLinks             ShareLink[]
+  subsonicPlayQueue      SubsonicPlayQueue?
 }
 
 model UserDiscoverConfig {
@@ -836,6 +837,18 @@ model ShareLink {
 
   @@index([entityType, entityId])
   @@map("share_links")
+}
+
+model SubsonicPlayQueue {
+  userId    String   @id
+  current   String?
+  position  Int      @default(0)
+  trackIds  Json     @default("[]")
+  changedBy String   @default("")
+  changed   DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("subsonic_play_queue")
 }
 
 enum AlbumLocation {
