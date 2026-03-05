@@ -197,35 +197,67 @@ export class MusicScannerService {
             }
 
             if (tracksToRemove.length > 0) {
-                // Safety: don't delete tracks referenced by playlists
-                const playlistProtected = await prisma.playlistItem.findMany({
+                // Convert playlist-referenced tracks to pending entries before deletion
+                const playlistItems = await prisma.playlistItem.findMany({
                     where: { trackId: { in: tracksToRemove.map((t) => t.id) } },
-                    select: { trackId: true },
+                    select: {
+                        playlistId: true,
+                        sort: true,
+                        track: {
+                            select: {
+                                title: true,
+                                album: {
+                                    select: {
+                                        title: true,
+                                        artist: { select: { name: true } },
+                                    },
+                                },
+                            },
+                        },
+                    },
                 });
-                const protectedIds = new Set(playlistProtected.map((p) => p.trackId));
 
-                const safeToRemove = tracksToRemove.filter((t) => !protectedIds.has(t.id));
-                const skipped = tracksToRemove.length - safeToRemove.length;
-
-                if (skipped > 0) {
+                if (playlistItems.length > 0) {
                     logger.debug(
-                        `Skipped ${skipped} track(s) from removal (referenced by playlists)`
+                        `Converting ${playlistItems.length} playlist reference(s) to pending entries (missing from disk)`
                     );
+                    for (const item of playlistItems) {
+                        const artistName = item.track.album.artist.name;
+                        const trackTitle = item.track.title;
+                        await prisma.playlistPendingTrack.upsert({
+                            where: {
+                                playlistId_spotifyArtist_spotifyTitle: {
+                                    playlistId: item.playlistId,
+                                    spotifyArtist: artistName,
+                                    spotifyTitle: trackTitle,
+                                },
+                            },
+                            create: {
+                                playlistId: item.playlistId,
+                                spotifyArtist: artistName,
+                                spotifyTitle: trackTitle,
+                                spotifyAlbum: item.track.album.title,
+                                sort: item.sort,
+                                missingFromDisk: true,
+                            },
+                            update: {
+                                missingFromDisk: true,
+                                spotifyAlbum: item.track.album.title,
+                                sort: item.sort,
+                            },
+                        });
+                    }
                 }
 
-                if (safeToRemove.length > 0) {
-                    await prisma.track.deleteMany({
-                        where: { id: { in: safeToRemove.map((t) => t.id) } },
-                    });
-                    result.tracksRemoved = safeToRemove.length;
-                    logger.debug(`Removed ${safeToRemove.length} missing tracks`);
-                }
+                await prisma.track.deleteMany({
+                    where: { id: { in: tracksToRemove.map((t) => t.id) } },
+                });
+                result.tracksRemoved = tracksToRemove.length;
+                logger.debug(`Removed ${tracksToRemove.length} missing tracks`);
             }
         }
 
         // Step 5: Clean up orphaned albums (albums with no tracks)
-        // Note: playlist-referenced tracks are protected in Step 4 above,
-        // so albums here should genuinely have no content
         const orphanedAlbums = await prisma.album.findMany({
             where: {
                 tracks: { none: {} },

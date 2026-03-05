@@ -406,6 +406,7 @@ model PlaylistPendingTrack {
   albumMbid        String?
   artistMbid       String?
   deezerPreviewUrl String?
+  missingFromDisk  Boolean  @default(false)
   sort             Int
   createdAt        DateTime @default(now())
   playlist         Playlist @relation(fields: [playlistId], references: [id], onDelete: Cascade)
