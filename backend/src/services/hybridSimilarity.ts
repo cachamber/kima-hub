@@ -95,17 +95,12 @@ async function findSimilarHybrid(
             c.clap_sim as distance,
             (
                 ${WEIGHTS.clap} * c.clap_sim +
-                CASE WHEN t.energy IS NOT NULL AND s.energy IS NOT NULL
-                    THEN ${WEIGHTS.features.energy} * (1 - ABS(t.energy - s.energy)) ELSE 0 END +
-                CASE WHEN t.valence IS NOT NULL AND s.valence IS NOT NULL
-                    THEN ${WEIGHTS.features.valence} * (1 - ABS(t.valence - s.valence)) ELSE 0 END +
+                ${WEIGHTS.features.energy} * (1 - ABS(COALESCE(t.energy, 0.5) - COALESCE(s.energy, 0.5))) +
+                ${WEIGHTS.features.valence} * (1 - ABS(COALESCE(t.valence, 0.5) - COALESCE(s.valence, 0.5))) +
                 ${WEIGHTS.features.bpm} * bpm_similarity(t.bpm, s.bpm) +
-                CASE WHEN t."danceabilityMl" IS NOT NULL AND s."danceabilityMl" IS NOT NULL
-                    THEN ${WEIGHTS.features.danceability} * (1 - ABS(t."danceabilityMl" - s."danceabilityMl")) ELSE 0 END +
-                CASE WHEN t.acousticness IS NOT NULL AND s.acousticness IS NOT NULL
-                    THEN ${WEIGHTS.features.acousticness} * (1 - ABS(t.acousticness - s.acousticness)) ELSE 0 END +
-                CASE WHEN t.instrumentalness IS NOT NULL AND s.instrumentalness IS NOT NULL
-                    THEN ${WEIGHTS.features.instrumentalness} * (1 - ABS(t.instrumentalness - s.instrumentalness)) ELSE 0 END +
+                ${WEIGHTS.features.danceability} * (1 - ABS(COALESCE(t."danceabilityMl", 0.5) - COALESCE(s."danceabilityMl", 0.5))) +
+                ${WEIGHTS.features.acousticness} * (1 - ABS(COALESCE(t.acousticness, 0.5) - COALESCE(s.acousticness, 0.5))) +
+                ${WEIGHTS.features.instrumentalness} * (1 - ABS(COALESCE(t.instrumentalness, 0.5) - COALESCE(s.instrumentalness, 0.5))) +
                 ${WEIGHTS.features.key} * key_similarity(t.key, t."keyScale", s.key, s."keyScale")
             ) as similarity,
             a.id as "albumId",
@@ -170,17 +165,12 @@ async function findSimilarFeaturesOnly(
             t.title,
             0 as distance,
             (
-                CASE WHEN t.energy IS NOT NULL AND s.energy IS NOT NULL
-                    THEN ${FEATURES_ONLY_WEIGHTS.energy} * (1 - ABS(t.energy - s.energy)) ELSE 0 END +
-                CASE WHEN t.valence IS NOT NULL AND s.valence IS NOT NULL
-                    THEN ${FEATURES_ONLY_WEIGHTS.valence} * (1 - ABS(t.valence - s.valence)) ELSE 0 END +
+                ${FEATURES_ONLY_WEIGHTS.energy} * (1 - ABS(COALESCE(t.energy, 0.5) - COALESCE(s.energy, 0.5))) +
+                ${FEATURES_ONLY_WEIGHTS.valence} * (1 - ABS(COALESCE(t.valence, 0.5) - COALESCE(s.valence, 0.5))) +
                 ${FEATURES_ONLY_WEIGHTS.bpm} * bpm_similarity(t.bpm, s.bpm) +
-                CASE WHEN t."danceabilityMl" IS NOT NULL AND s."danceabilityMl" IS NOT NULL
-                    THEN ${FEATURES_ONLY_WEIGHTS.danceability} * (1 - ABS(t."danceabilityMl" - s."danceabilityMl")) ELSE 0 END +
-                CASE WHEN t.acousticness IS NOT NULL AND s.acousticness IS NOT NULL
-                    THEN ${FEATURES_ONLY_WEIGHTS.acousticness} * (1 - ABS(t.acousticness - s.acousticness)) ELSE 0 END +
-                CASE WHEN t.instrumentalness IS NOT NULL AND s.instrumentalness IS NOT NULL
-                    THEN ${FEATURES_ONLY_WEIGHTS.instrumentalness} * (1 - ABS(t.instrumentalness - s.instrumentalness)) ELSE 0 END +
+                ${FEATURES_ONLY_WEIGHTS.danceability} * (1 - ABS(COALESCE(t."danceabilityMl", 0.5) - COALESCE(s."danceabilityMl", 0.5))) +
+                ${FEATURES_ONLY_WEIGHTS.acousticness} * (1 - ABS(COALESCE(t.acousticness, 0.5) - COALESCE(s.acousticness, 0.5))) +
+                ${FEATURES_ONLY_WEIGHTS.instrumentalness} * (1 - ABS(COALESCE(t.instrumentalness, 0.5) - COALESCE(s.instrumentalness, 0.5))) +
                 ${FEATURES_ONLY_WEIGHTS.key} * key_similarity(t.key, t."keyScale", s.key, s."keyScale")
             ) as similarity,
             a.id as "albumId",
@@ -193,7 +183,6 @@ async function findSimilarFeaturesOnly(
         JOIN "Artist" ar ON a."artistId" = ar.id
         CROSS JOIN source s
         WHERE t.id != ${trackId}
-            AND t.energy IS NOT NULL
         ORDER BY similarity DESC
         LIMIT ${limit}
     `;
