@@ -255,7 +255,9 @@ export function calculateFeatureMatch(
 }
 
 /**
- * Re-rank CLAP candidates using audio features
+ * Re-rank CLAP candidates using audio features.
+ * Intentionally omits BPM and key (used in hybrid similarity) --
+ * those are structural features for DJ-style track matching, not text-to-audio matching.
  */
 export function rerankWithFeatures<T extends {
     id: string;
