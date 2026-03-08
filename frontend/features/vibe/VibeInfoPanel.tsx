@@ -9,6 +9,7 @@ import type { Track } from "@/lib/audio-state-context";
 interface TrackResult {
     id: string;
     title: string;
+    duration?: number;
     similarity?: number;
     album: { id: string; title: string; coverUrl: string | null };
     artist: { id: string; name: string };
@@ -30,7 +31,7 @@ function toPlayable(tracks: TrackResult[]): Track[] {
     return tracks.map(t => ({
         id: t.id,
         title: t.title,
-        duration: 0,
+        duration: t.duration ?? 0,
         album: { id: t.album.id, title: t.album.title, coverArt: t.album.coverUrl ?? undefined },
         artist: { id: t.artist.id, name: t.artist.name },
     }));

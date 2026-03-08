@@ -12,6 +12,7 @@ import { Loader2 } from "lucide-react";
 interface TrackResult {
     id: string;
     title: string;
+    duration?: number;
     similarity?: number;
     album: { id: string; title: string; coverUrl: string | null };
     artist: { id: string; name: string };
