@@ -62,7 +62,7 @@ router.get("/map", requireAuth, async (req, res) => {
     try {
         const mapData = await computeMapProjection();
         res.json(mapData);
-    } catch (error: any) {
+    } catch (error) {
         logger.error("Vibe map error:", error);
         res.status(500).json({ error: "Failed to compute map projection" });
     }
@@ -94,8 +94,8 @@ router.post("/path", requireAuth, async (req, res) => {
         });
 
         res.json(result);
-    } catch (error: any) {
-        if (error.message === "TRACKS_TOO_SIMILAR") {
+    } catch (error) {
+        if (error instanceof Error && error.message === "TRACKS_TOO_SIMILAR") {
             return res.status(400).json({
                 error: "These tracks are too similar for a meaningful journey. Try \"Similar Tracks\" instead.",
             });
@@ -224,7 +224,7 @@ router.post("/alchemy", requireAuth, async (req, res) => {
                 artist: { id: t.artistId, name: t.artistName },
             })),
         });
-    } catch (error: any) {
+    } catch (error) {
         logger.error("Alchemy error:", error);
         res.status(500).json({ error: "Failed to compute alchemy blend" });
     }
@@ -269,7 +269,7 @@ router.get("/similar/:trackId", requireAuth, async (req, res) => {
                 },
             })),
         });
-    } catch (error: any) {
+    } catch (error) {
         logger.error("Hybrid similarity error:", error);
         res.status(500).json({ error: "Failed to find similar tracks" });
     }
@@ -281,8 +281,6 @@ function distanceToSimilarity(distance: number): number {
     return Math.max(0, 1 - distance / 2);
 }
 
-// Minimum similarity threshold for search results
-// 0.65 = 65% match, meaning distance <= 0.7
 const MIN_SEARCH_SIMILARITY = 0.60;
 
 /**
@@ -334,7 +332,7 @@ router.post("/search", requireAuth, async (req, res) => {
             genreConfidence = expansion.genreConfidence;
             matchedTerms = expansion.matchedTerms;
 
-            logger.info(`[VIBE-SEARCH] Query "${safeQuery}" expanded with terms: ${matchedTerms.map(t => t.name).join(", ") || "none"}, genre confidence: ${(genreConfidence * 100).toFixed(0)}%`);
+            logger.debug(`[VIBE-SEARCH] Query "${safeQuery}" expanded with terms: ${matchedTerms.map(t => t.name).join(", ") || "none"}, genre confidence: ${(genreConfidence * 100).toFixed(0)}%`);
         }
 
         const similarTracks = await prisma.$queryRaw<TextSearchResult[]>`
@@ -371,25 +369,18 @@ router.post("/search", requireAuth, async (req, res) => {
             LIMIT ${limit * 3}
         `;
 
-        logger.info(`Vibe search "${safeQuery}": found ${similarTracks.length} candidates above ${Math.round(similarityThreshold * 100)}% similarity (max distance: ${maxDistance.toFixed(2)})`);
+        logger.debug(`[VIBE-SEARCH] "${safeQuery}": ${similarTracks.length} candidates above ${Math.round(similarityThreshold * 100)}%`);
 
         let rankedTracks: typeof similarTracks | ReturnType<typeof rerankWithFeatures<TextSearchResult>> = similarTracks;
         if (vocab && matchedTerms.length > 0) {
             const reranked = rerankWithFeatures(similarTracks, matchedTerms, genreConfidence);
             rankedTracks = reranked.slice(0, limit);
 
-            logger.info(`[VIBE-SEARCH] Re-ranked ${similarTracks.length} candidates, top result: ${rankedTracks[0]?.title || "none"}`);
+            logger.debug(`[VIBE-SEARCH] Re-ranked ${similarTracks.length} candidates, top: ${rankedTracks[0]?.title || "none"}`);
         } else {
             rankedTracks = similarTracks.slice(0, limit);
         }
 
-        if (rankedTracks.length > 0) {
-            const first = rankedTracks[0];
-            const last = rankedTracks[rankedTracks.length - 1];
-            const bestSim = "finalScore" in first ? first.finalScore : distanceToSimilarity(first.distance);
-            const worstSim = "finalScore" in last ? last.finalScore : distanceToSimilarity(last.distance);
-            logger.info(`Vibe search similarity range: ${Math.round(bestSim * 100)}% - ${Math.round(worstSim * 100)}%`);
-        }
 
         const tracks = rankedTracks.map((row) => ({
             id: row.id,
@@ -414,15 +405,10 @@ router.post("/search", requireAuth, async (req, res) => {
             tracks,
             minSimilarity: similarityThreshold,
             totalAboveThreshold: tracks.length,
-            debug: {
-                matchedTerms: matchedTerms.map(t => t.name),
-                genreConfidence,
-                featureWeight: matchedTerms.length > 0 ? 0.2 + (genreConfidence * 0.5) : 0
-            }
         });
-    } catch (error: any) {
+    } catch (error) {
         logger.error("Vibe text search error:", error);
-        if (error.message?.includes("timed out")) {
+        if (error instanceof Error && error.message.includes("timed out")) {
             return res.status(504).json({
                 error: "Text embedding service unavailable",
                 message: "The CLAP analyzer service did not respond in time",
@@ -455,7 +441,7 @@ router.get("/status", requireAuth, async (req, res) => {
             progress,
             isComplete: embeddedCount >= totalTracks && totalTracks > 0,
         });
-    } catch (error: any) {
+    } catch (error) {
         logger.error("Vibe status error:", error);
         res.status(500).json({ error: "Failed to get embedding status" });
     }

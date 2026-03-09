@@ -8,15 +8,7 @@ import { VibeInfoPanel } from "@/features/vibe/VibeInfoPanel";
 import { VibeSongPath } from "@/features/vibe/VibeSongPath";
 import { VibeAlchemy } from "@/features/vibe/VibeAlchemy";
 import { Loader2 } from "lucide-react";
-
-interface TrackResult {
-    id: string;
-    title: string;
-    duration?: number;
-    similarity?: number;
-    album: { id: string; title: string; coverUrl: string | null };
-    artist: { id: string; name: string };
-}
+import type { TrackResult } from "@/features/vibe/types";
 
 export default function VibePage() {
     const {
@@ -30,7 +22,6 @@ export default function VibePage() {
         pathResult,
         selectTrack,
         showSimilar,
-        searchVibe,
         startPathPicking,
         completePathPicking,
         resetMode,
@@ -39,7 +30,6 @@ export default function VibePage() {
     } = useVibeMap();
 
     const [similarTracks, setSimilarTracks] = useState<TrackResult[]>([]);
-    const [searchResults, setSearchResults] = useState<TrackResult[]>([]);
     const [showPathPicker, setShowPathPicker] = useState(false);
     const [showAlchemy, setShowAlchemy] = useState(false);
 
@@ -58,14 +48,27 @@ export default function VibePage() {
         setSimilarTracks(tracks);
     }, [showSimilar]);
 
-    const handleSearch = useCallback(async (query: string) => {
-        const tracks = await searchVibe(query);
-        setSearchResults(tracks);
-    }, [searchVibe]);
-
-    const handleStartPath = useCallback((trackId: string) => {
-        startPathPicking(trackId);
-    }, [startPathPicking]);
+    const handleSearch = useCallback((query: string) => {
+        if (!query || query.length < 2 || !mapData) {
+            setMode((prev) => {
+                if (prev === "search") {
+                    setHighlightedIds(new Set());
+                    return "idle";
+                }
+                return prev;
+            });
+            return;
+        }
+        const lower = query.toLowerCase();
+        const matchIds = new Set<string>();
+        for (const track of mapData.tracks) {
+            if (track.title.toLowerCase().includes(lower) || track.artist.toLowerCase().includes(lower)) {
+                matchIds.add(track.id);
+            }
+        }
+        setMode("search");
+        setHighlightedIds(matchIds);
+    }, [mapData, setMode, setHighlightedIds]);
 
     const handlePathMode = useCallback(() => {
         setShowPathPicker(true);
@@ -84,14 +87,9 @@ export default function VibePage() {
         await completePathPicking(endId, startId);
     }, [completePathPicking]);
 
-    const handleAlchemyHighlight = useCallback((ids: Set<string>) => {
-        setHighlightedIds(ids);
-    }, [setHighlightedIds]);
-
     const handleClose = useCallback(() => {
         resetMode();
         setSimilarTracks([]);
-        setSearchResults([]);
         setShowPathPicker(false);
         setShowAlchemy(false);
     }, [resetMode]);
@@ -102,11 +100,10 @@ export default function VibePage() {
 
     if (isLoading) {
         return (
-            <div className="w-full h-full bg-[#0a0a0a] flex items-center justify-center">
+            <div className="w-full h-full vibe-map-bg flex items-center justify-center">
                 <div className="text-center">
-                    <Loader2 className="w-8 h-8 text-white/30 animate-spin mx-auto mb-3" />
-                    <p className="text-white/50 text-sm">Computing music map...</p>
-                    <p className="text-white/30 text-xs mt-1">This may take a moment for large libraries</p>
+                    <Loader2 className="w-6 h-6 text-[var(--color-ai)] animate-spin mx-auto mb-3 opacity-60" />
+                    <p className="text-white/40 text-sm tracking-wide">Computing music map</p>
                 </div>
             </div>
         );
@@ -114,10 +111,10 @@ export default function VibePage() {
 
     if (error) {
         return (
-            <div className="w-full h-full bg-[#0a0a0a] flex items-center justify-center">
+            <div className="w-full h-full vibe-map-bg flex items-center justify-center">
                 <div className="text-center">
-                    <p className="text-white/50 text-sm">Failed to load music map</p>
-                    <p className="text-white/30 text-xs mt-1">{error instanceof Error ? error.message : "Unknown error"}</p>
+                    <p className="text-white/40 text-sm">Failed to load music map</p>
+                    <p className="text-white/20 text-xs mt-1">{error instanceof Error ? error.message : "Unknown error"}</p>
                 </div>
             </div>
         );
@@ -125,10 +122,10 @@ export default function VibePage() {
 
     if (!mapData || mapData.tracks.length === 0) {
         return (
-            <div className="w-full h-full bg-[#0a0a0a] flex items-center justify-center">
+            <div className="w-full h-full vibe-map-bg flex items-center justify-center">
                 <div className="text-center">
-                    <p className="text-white/50 text-sm">No tracks with vibe analysis yet</p>
-                    <p className="text-white/30 text-xs mt-1">Run enrichment to generate CLAP embeddings for your library</p>
+                    <p className="text-white/40 text-sm">No tracks with vibe analysis yet</p>
+                    <p className="text-white/20 text-xs mt-1">Run enrichment to generate embeddings</p>
                 </div>
             </div>
         );
@@ -164,7 +161,7 @@ export default function VibePage() {
 
             {showAlchemy && (
                 <VibeAlchemy
-                    onHighlight={handleAlchemyHighlight}
+                    onHighlight={setHighlightedIds}
                     onClose={() => { setShowAlchemy(false); resetMode(); }}
                 />
             )}
@@ -173,16 +170,15 @@ export default function VibePage() {
                 mode={mode}
                 selectedTrack={selectedTrack}
                 similarTracks={similarTracks}
-                searchResults={searchResults}
                 pathResult={pathResult}
                 onClose={handleClose}
                 onShowSimilar={handleShowSimilar}
-                onStartPath={handleStartPath}
+                onStartPath={startPathPicking}
                 onTrackSelect={selectTrack}
             />
 
-            <div className="absolute bottom-4 left-4 z-10 text-white/20 text-xs">
-                {mapData.trackCount} tracks mapped
+            <div className="absolute bottom-3 left-3 z-10 text-white/15 text-[10px] tracking-widest uppercase font-medium">
+                {mapData.trackCount} tracks
             </div>
         </div>
     );

@@ -1681,15 +1681,6 @@ class ApiClient {
         });
     }
 
-    async getVibeStatus() {
-        return this.request<{
-            totalTracks: number;
-            embeddedTracks: number;
-            progress: number;
-            isComplete: boolean;
-        }>("/vibe/status");
-    }
-
     async getVibeMap() {
         return this.request<{
             tracks: Array<{
@@ -1703,6 +1694,7 @@ class ApiClient {
                 coverUrl: string | null;
                 dominantMood: string;
                 moodScore: number;
+                moods: Record<string, number>;
                 energy: number | null;
                 valence: number | null;
             }>;

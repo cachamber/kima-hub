@@ -10,21 +10,22 @@ const TIMEOUT_MS = 15000;
 const emitter = new EventEmitter();
 emitter.setMaxListeners(100);
 
-let subscriber: ReturnType<typeof redisClient.duplicate> | null = null;
-let subscriberReady = false;
+let subscriberPromise: Promise<void> | null = null;
 
 async function ensureSubscriber(): Promise<void> {
-    if (subscriberReady) return;
-    if (subscriber) return;
+    if (subscriberPromise) return subscriberPromise;
 
-    subscriber = redisClient.duplicate();
-    await subscriber.connect();
-    await subscriber.pSubscribe(`${RESPONSE_PREFIX}*`, (message, channel) => {
-        const requestId = channel.slice(RESPONSE_PREFIX.length);
-        emitter.emit(requestId, message);
-    });
-    subscriberReady = true;
-    logger.info("[TEXT-EMBED] Shared subscriber connected");
+    subscriberPromise = (async () => {
+        const sub = redisClient.duplicate();
+        await sub.connect();
+        await sub.pSubscribe(`${RESPONSE_PREFIX}*`, (message, channel) => {
+            const requestId = channel.slice(RESPONSE_PREFIX.length);
+            emitter.emit(requestId, message);
+        });
+        logger.info("[TEXT-EMBED] Shared subscriber connected");
+    })();
+
+    return subscriberPromise;
 }
 
 /**

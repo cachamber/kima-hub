@@ -9,14 +9,9 @@ export interface MapTrack {
     coverUrl: string | null;
     dominantMood: string;
     moodScore: number;
+    moods: Record<string, number>;
     energy: number | null;
     valence: number | null;
-}
-
-export interface MapData {
-    tracks: MapTrack[];
-    trackCount: number;
-    computedAt: string;
 }
 
 export interface PathTrack {
@@ -40,6 +35,15 @@ export interface PathResult {
         averageStepSize: number;
         mode: string;
     };
+}
+
+export interface TrackResult {
+    id: string;
+    title: string;
+    duration?: number;
+    similarity?: number;
+    album: { id: string; title: string; coverUrl: string | null };
+    artist: { id: string; name: string };
 }
 
 export type VibeMode = "idle" | "similar" | "search" | "path-picking" | "path-result" | "alchemy";

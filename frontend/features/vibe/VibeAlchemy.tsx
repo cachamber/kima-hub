@@ -114,7 +114,7 @@ export function VibeAlchemy({ onHighlight, onClose }: VibeAlchemyProps) {
         <div className="absolute top-16 left-1/2 -translate-x-1/2 z-20 w-[480px] max-h-[70vh] bg-black/90 backdrop-blur-lg border border-white/10 rounded-xl flex flex-col overflow-hidden">
             <div className="flex items-center justify-between px-4 py-3 border-b border-white/10">
                 <h3 className="text-sm font-medium text-white/90 flex items-center gap-2">
-                    <FlaskConical className="w-4 h-4" /> Song Alchemy
+                    <FlaskConical className="w-4 h-4" /> Blend
                 </h3>
                 <button
                     onClick={onClose}

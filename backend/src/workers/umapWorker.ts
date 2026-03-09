@@ -6,12 +6,18 @@ const { embeddings, nNeighbors } = workerData as {
     nNeighbors: number;
 };
 
-const umap = new UMAP({
-    nComponents: 2,
-    nNeighbors,
-    minDist: 0.1,
-    spread: 1.0,
-});
+try {
+    const umap = new UMAP({
+        nComponents: 2,
+        nNeighbors,
+        minDist: 0.1,
+        spread: 1.0,
+    });
 
-const projection = umap.fit(embeddings);
-parentPort?.postMessage(projection);
+    const projection = umap.fit(embeddings);
+    parentPort?.postMessage(projection);
+} catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    parentPort?.postMessage({ error: message });
+    process.exit(1);
+}

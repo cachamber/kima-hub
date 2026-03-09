@@ -682,3 +682,18 @@ body.scanner-active .scanner-overlay {
         app-region: no-drag;
     }
 }
+
+/* =====================================================
+   Vibe Map Background
+   ===================================================== */
+
+.vibe-map-bg {
+    background-color: #060608;
+    background-image:
+        radial-gradient(ellipse at 30% 40%, rgba(168, 85, 247, 0.03) 0%, transparent 60%),
+        radial-gradient(ellipse at 70% 60%, rgba(252, 162, 0, 0.02) 0%, transparent 50%),
+        linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+    background-size: 100% 100%, 100% 100%, 60px 60px, 60px 60px;
+    background-position: center, center, center, center;
+}

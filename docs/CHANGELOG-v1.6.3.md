@@ -115,6 +115,22 @@ Closes #143, #141.
 - **BRPOP timeout reduced** -- Redis BRPOP timeout reduced from 30s to 5s, improving responsiveness to new work and stop signals
 - **Throttled userStopped warning** -- Enrichment loop logs a single warning when `userStopped=true` with pending tracks, instead of silently skipping every tick
 
+## Vibe System Code Review Fixes
+
+- **Dead code removal** -- Removed `getMoodColorRgb` (never imported), `searchVibe` (unreachable after frontend-only search rewrite), `pathStartId` from hook return
+- **Type consolidation** -- Extracted shared `TrackResult` interface to `types.ts`, removed 3 duplicate definitions across page.tsx, VibeInfoPanel, and VibeAlchemy
+- **Stale prop removal** -- Removed `searchResults` prop from VibeInfoPanel (always passed empty array since search moved to frontend-only)
+- **Unnecessary wrappers** -- Removed `handleStartPath` and `handleAlchemyHighlight` callbacks that just forwarded to `startPathPicking` and `setHighlightedIds`
+- **Comment cleanup** -- Removed 17 unnecessary comments across VibeMap.tsx and mapUtils.ts
+- **Naming consistency** -- Renamed "Song Alchemy" header to "Blend" in VibeAlchemy component
+- **Race condition fix** -- `textEmbeddingBridge` subscriber setup replaced two-flag check (`subscriber`/`subscriberReady`) with single `subscriberPromise` that concurrent callers await
+- **Worker error handling** -- `umapWorker` now catches errors and forwards message to parent instead of crashing silently
+- **Debug leak** -- Removed `debug` object from vibe search API response (exposed `matchedTerms`, `genreConfidence`, `featureWeight` internals)
+- **Logging cleanup** -- Downgraded 3 per-request info-level search logs to debug level
+- **Type safety** -- Replaced all `error: any` catches in vibe routes with `error instanceof Error` checks, replaced `as any` casts in umapProjection with `Record<string, unknown>`
+- **Input validation** -- `parseEmbedding` now throws on empty/non-string input and NaN values instead of silently producing corrupt arrays
+- **Stale comment** -- Removed comment stating threshold was 0.65 when value was 0.60
+
 ## Audit Fixes
 
 - Removed dead `enrichTrackIdentity()` method from enrichment.ts

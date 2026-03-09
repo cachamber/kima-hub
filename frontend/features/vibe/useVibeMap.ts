@@ -3,11 +3,29 @@ import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import type { MapTrack, VibeMode, PathResult } from "./types";
 
+const PATH_STORAGE_KEY = "vibe-path-result";
+
+function loadPersistedPath(): { path: PathResult; highlightedIds: Set<string> } | null {
+    try {
+        const raw = sessionStorage.getItem(PATH_STORAGE_KEY);
+        if (!raw) return null;
+        const path = JSON.parse(raw) as PathResult;
+        const ids = new Set<string>();
+        ids.add(path.startTrack.id);
+        ids.add(path.endTrack.id);
+        for (const t of path.path) ids.add(t.id);
+        return { path, highlightedIds: ids };
+    } catch {
+        return null;
+    }
+}
+
 export function useVibeMap() {
-    const [mode, setMode] = useState<VibeMode>("idle");
+    const persisted = useMemo(() => loadPersistedPath(), []);
+    const [mode, setMode] = useState<VibeMode>(persisted ? "path-result" : "idle");
     const [selectedTrackId, setSelectedTrackId] = useState<string | null>(null);
-    const [highlightedIds, setHighlightedIds] = useState<Set<string>>(new Set());
-    const [pathResult, setPathResult] = useState<PathResult | null>(null);
+    const [highlightedIds, setHighlightedIds] = useState<Set<string>>(persisted?.highlightedIds ?? new Set());
+    const [pathResult, setPathResult] = useState<PathResult | null>(persisted?.path ?? null);
     const [pathStartId, setPathStartId] = useState<string | null>(null);
 
     const { data: mapData, isLoading, error } = useQuery({
@@ -17,14 +35,15 @@ export function useVibeMap() {
         gcTime: 1000 * 60 * 60 * 24,
     });
 
+    const tracks = mapData?.tracks;
     const trackMap = useMemo(() => {
-        if (!mapData?.tracks) return new Map<string, MapTrack>();
+        if (!tracks) return new Map<string, MapTrack>();
         const map = new Map<string, MapTrack>();
-        for (const track of mapData.tracks) {
+        for (const track of tracks) {
             map.set(track.id, track);
         }
         return map;
-    }, [mapData?.tracks]);
+    }, [tracks]);
 
     const selectTrack = useCallback((trackId: string | null) => {
         setSelectedTrackId(trackId);
@@ -52,17 +71,12 @@ export function useVibeMap() {
         }
     }, []);
 
-    const searchVibe = useCallback(async (query: string) => {
-        setMode("search");
-        try {
-            const result = await api.vibeSearch(query, 50);
-            const ids = new Set(result.tracks.map((t: { id: string }) => t.id));
-            setHighlightedIds(ids);
-            return result.tracks;
-        } catch {
-            setMode("idle");
-            setHighlightedIds(new Set());
-            return [];
+    const setPathAndPersist = useCallback((result: PathResult | null) => {
+        setPathResult(result);
+        if (result) {
+            try { sessionStorage.setItem(PATH_STORAGE_KEY, JSON.stringify(result)); } catch {}
+        } else {
+            sessionStorage.removeItem(PATH_STORAGE_KEY);
         }
     }, []);
 
@@ -78,7 +92,7 @@ export function useVibeMap() {
         setMode("path-result");
         try {
             const result = await api.getVibePath(startId, endTrackId);
-            setPathResult(result);
+            setPathAndPersist(result);
             const ids = new Set<string>();
             ids.add(result.startTrack.id);
             ids.add(result.endTrack.id);
@@ -88,18 +102,18 @@ export function useVibeMap() {
         } catch {
             setMode("idle");
             setHighlightedIds(new Set());
-            setPathResult(null);
+            setPathAndPersist(null);
             return null;
         }
-    }, [pathStartId]);
+    }, [pathStartId, setPathAndPersist]);
 
     const resetMode = useCallback(() => {
         setMode("idle");
         setSelectedTrackId(null);
         setHighlightedIds(new Set());
-        setPathResult(null);
+        setPathAndPersist(null);
         setPathStartId(null);
-    }, []);
+    }, [setPathAndPersist]);
 
     return {
         mapData,
@@ -110,10 +124,8 @@ export function useVibeMap() {
         selectedTrackId,
         highlightedIds,
         pathResult,
-        pathStartId,
         selectTrack,
         showSimilar,
-        searchVibe,
         startPathPicking,
         completePathPicking,
         resetMode,

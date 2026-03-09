@@ -19,6 +19,7 @@ interface MapTrack {
     coverUrl: string | null;
     dominantMood: string;
     moodScore: number;
+    moods: Record<string, number>;
     energy: number | null;
     valence: number | null;
 }
@@ -35,15 +36,24 @@ const MOOD_FIELDS = [
     "moodParty", "moodAcoustic", "moodElectronic",
 ] as const;
 
-function getDominantMood(track: Record<string, number | null>): { mood: string; score: number } {
+function getDominantMood(track: Record<string, unknown>): { mood: string; score: number } {
     let best = { mood: "neutral", score: 0 };
     for (const field of MOOD_FIELDS) {
-        const val = track[field];
-        if (val !== null && val !== undefined && val > best.score) {
+        const val = track[field] as number | null | undefined;
+        if (val != null && val > best.score) {
             best = { mood: field, score: val };
         }
     }
     return best;
+}
+
+function getMoodScores(track: Record<string, unknown>): Record<string, number> {
+    const moods: Record<string, number> = {};
+    for (const field of MOOD_FIELDS) {
+        const val = track[field] as number | null | undefined;
+        if (val != null) moods[field] = val;
+    }
+    return moods;
 }
 
 function runUmapInWorker(embeddings: number[][], nNeighbors: number): Promise<number[][]> {
@@ -145,7 +155,7 @@ async function doCompute(cacheKey: string): Promise<MapResponse> {
     if (rows.length < MIN_TRACKS_FOR_UMAP) {
         return {
             tracks: rows.map((r, i) => {
-                const dominant = getDominantMood(r as any);
+                const dominant = getDominantMood(r as Record<string, unknown>);
                 const angle = (2 * Math.PI * i) / rows.length;
                 return {
                     id: r.track_id,
@@ -154,7 +164,8 @@ async function doCompute(cacheKey: string): Promise<MapResponse> {
                     title: r.title,
                     artist: r.artistName, artistId: r.artistId, albumId: r.albumId,
                     coverUrl: r.coverUrl, dominantMood: dominant.mood,
-                    moodScore: dominant.score, energy: r.energy, valence: r.valence,
+                    moodScore: dominant.score, moods: getMoodScores(r as Record<string, unknown>),
+                    energy: r.energy, valence: r.valence,
                 };
             }),
             trackCount: rows.length,
@@ -179,7 +190,7 @@ async function doCompute(cacheKey: string): Promise<MapResponse> {
     const rangeY = maxY - minY || 1;
 
     const tracks: MapTrack[] = rows.map((row, i) => {
-        const dominant = getDominantMood(row as any);
+        const dominant = getDominantMood(row as Record<string, unknown>);
         return {
             id: row.track_id,
             x: (projection[i][0] - minX) / rangeX,
@@ -191,6 +202,7 @@ async function doCompute(cacheKey: string): Promise<MapResponse> {
             coverUrl: row.coverUrl,
             dominantMood: dominant.mood,
             moodScore: dominant.score,
+            moods: getMoodScores(row as Record<string, unknown>),
             energy: row.energy,
             valence: row.valence,
         };

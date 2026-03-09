@@ -1,10 +1,8 @@
 "use client";
 
-import { useState, useCallback, useRef } from "react";
-import { Search, Route, FlaskConical, X, Sparkles } from "lucide-react";
+import { useState, useCallback, useRef, useEffect } from "react";
+import { Search, Waypoints, Blend, X } from "lucide-react";
 import type { VibeMode } from "./types";
-
-const PRESETS = ["Chill", "High Energy", "Acoustic", "Dark", "Party", "Electronic"];
 
 interface VibeToolbarProps {
     mode: VibeMode;
@@ -17,19 +15,17 @@ interface VibeToolbarProps {
 export function VibeToolbar({ mode, onSearch, onPathMode, onAlchemyMode, onReset }: VibeToolbarProps) {
     const [query, setQuery] = useState("");
     const inputRef = useRef<HTMLInputElement>(null);
+    const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+    const onSearchRef = useRef(onSearch);
+    useEffect(() => { onSearchRef.current = onSearch; }, [onSearch]);
 
-    const handleSubmit = useCallback((e: React.FormEvent) => {
-        e.preventDefault();
-        const trimmed = query.trim();
-        if (trimmed.length >= 2) {
-            onSearch(trimmed);
-        }
-    }, [query, onSearch]);
-
-    const handlePreset = useCallback((preset: string) => {
-        setQuery(preset.toLowerCase());
-        onSearch(preset.toLowerCase());
-    }, [onSearch]);
+    useEffect(() => {
+        if (debounceRef.current) clearTimeout(debounceRef.current);
+        debounceRef.current = setTimeout(() => {
+            onSearchRef.current(query.trim());
+        }, 150);
+        return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
+    }, [query]);
 
     const handleClear = useCallback(() => {
         setQuery("");
@@ -39,22 +35,23 @@ export function VibeToolbar({ mode, onSearch, onPathMode, onAlchemyMode, onReset
 
     return (
         <div className="absolute top-4 left-1/2 -translate-x-1/2 z-10 flex items-center gap-2">
-            <form onSubmit={handleSubmit} className="relative">
+            <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40" />
                 <input
                     ref={inputRef}
                     type="text"
                     value={query}
                     onChange={(e) => setQuery(e.target.value)}
-                    placeholder="Search vibes..."
+                    placeholder="Search tracks or artists..."
                     className="w-64 md:w-80 pl-9 pr-8 py-2 bg-white/10 backdrop-blur-md border border-white/10 rounded-lg text-sm text-white placeholder-white/40 focus:outline-none focus:border-white/30"
+                    aria-label="Search tracks or artists"
                 />
                 {query && (
-                    <button type="button" onClick={handleClear} className="absolute right-2 top-1/2 -translate-y-1/2 text-white/40 hover:text-white/70">
+                    <button type="button" onClick={handleClear} className="absolute right-2 top-1/2 -translate-y-1/2 text-white/40 hover:text-white/70" aria-label="Clear search">
                         <X className="w-4 h-4" />
                     </button>
                 )}
-            </form>
+            </div>
 
             <button
                 onClick={onPathMode}
@@ -63,10 +60,10 @@ export function VibeToolbar({ mode, onSearch, onPathMode, onAlchemyMode, onReset
                         ? "bg-white/20 border-white/30 text-white"
                         : "bg-white/10 border-white/10 text-white/60 hover:text-white hover:bg-white/15"
                 }`}
-                title="Song Path"
+                title="Drift -- journey between two tracks"
             >
-                <Route className="w-4 h-4" />
-                <span className="hidden md:inline">Path</span>
+                <Waypoints className="w-4 h-4" />
+                <span className="hidden md:inline">Drift</span>
             </button>
 
             <button
@@ -76,10 +73,10 @@ export function VibeToolbar({ mode, onSearch, onPathMode, onAlchemyMode, onReset
                         ? "bg-white/20 border-white/30 text-white"
                         : "bg-white/10 border-white/10 text-white/60 hover:text-white hover:bg-white/15"
                 }`}
-                title="Song Alchemy"
+                title="Blend -- mix tracks to find new vibes"
             >
-                <FlaskConical className="w-4 h-4" />
-                <span className="hidden md:inline">Alchemy</span>
+                <Blend className="w-4 h-4" />
+                <span className="hidden md:inline">Blend</span>
             </button>
 
             {mode !== "idle" && (
@@ -90,21 +87,6 @@ export function VibeToolbar({ mode, onSearch, onPathMode, onAlchemyMode, onReset
                 >
                     <X className="w-4 h-4" />
                 </button>
-            )}
-
-            {mode === "idle" && (
-                <div className="absolute top-full mt-2 left-0 flex gap-1.5 flex-wrap">
-                    {PRESETS.map(preset => (
-                        <button
-                            key={preset}
-                            onClick={() => handlePreset(preset)}
-                            className="px-3 py-1 text-xs bg-white/8 hover:bg-white/15 border border-white/10 rounded-full text-white/50 hover:text-white/80 transition-colors flex items-center gap-1"
-                        >
-                            <Sparkles className="w-3 h-3" />
-                            {preset}
-                        </button>
-                    ))}
-                </div>
             )}
         </div>
     );
