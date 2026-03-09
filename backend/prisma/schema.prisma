@@ -620,6 +620,8 @@ model Track {
   essentiaGenres              String[]
   lastfmTags                  String[]              @default([])
   analysisStatus              String                   @default("pending")
+  scanStatus                  String                   @default("pending")
+  scanError                   String?
   analysisVersion             String?
   analysisMode                String?
   analyzedAt                  DateTime?
@@ -648,6 +650,7 @@ model Track {
   trackLyrics                 TrackLyrics?
 
   @@index([analysisStatus])
+  @@index([scanStatus])
   @@index([vibeAnalysisStatus])
   @@index([analysisStatus, vibeAnalysisStatus])
   @@index([isrc])
