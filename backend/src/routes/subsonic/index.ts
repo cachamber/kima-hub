@@ -30,6 +30,15 @@ const subsonicLimiter = rateLimit({
 });
 subsonicRouter.use(subsonicLimiter);
 
+// Normalize paths: append .view suffix if missing for client compatibility.
+// Some clients (e.g. Musa) send /rest/ping instead of /rest/ping.view.
+subsonicRouter.use((req: Request, res: Response, next) => {
+    if (!req.path.endsWith(".view")) {
+        req.url = req.path + ".view" + (req.url.includes("?") ? req.url.substring(req.url.indexOf("?")) : "");
+    }
+    next();
+});
+
 // OpenSubsonic tokenInfo is API key based and does not require Subsonic user auth.
 subsonicRouter.all("/tokenInfo.view", async (req: Request, res: Response) => {
     const apiKey = req.query.apiKey as string | undefined;
