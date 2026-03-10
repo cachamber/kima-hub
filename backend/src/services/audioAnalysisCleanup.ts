@@ -95,29 +95,33 @@ class AudioAnalysisCleanupService {
         permanentlyFailed: number;
         recovered: number;
     }> {
-        const cutoff = new Date(
-            Date.now() - STALE_THRESHOLD_MINUTES * 60 * 1000
-        );
-
-        const staleTracks = await prisma.track.findMany({
-            where: {
-                analysisStatus: "processing",
-                OR: [
-                    { analysisStartedAt: { lt: cutoff } },
-                    {
-                        analysisStartedAt: null,
-                        updatedAt: { lt: cutoff },
-                    },
-                ],
-            },
-            include: {
-                album: {
-                    include: {
-                        artist: { select: { name: true } },
-                    },
-                },
-            },
-        });
+        // Raw SQL with server-side NOW() - INTERVAL to avoid Prisma's timezone bug.
+        // analysisStartedAt is `timestamp without time zone` stored as CDT local time
+        // (Python sends tz-aware UTC, PostgreSQL converts to session tz before storing).
+        // Prisma serializes JS Date as naive ISO (no TZ suffix) which PostgreSQL interprets
+        // as local time -- shifting the cutoff by the UTC offset and making every processing
+        // track appear stale. NOW() - INTERVAL stays as timestamptz, and PostgreSQL correctly
+        // casts the naive column via session tz when comparing.
+        const staleTracks = await prisma.$queryRaw<Array<{
+            id: string;
+            analysisRetryCount: bigint | null;
+            analysisStartedAt: Date | null;
+            updatedAt: Date;
+            filePath: string;
+            title: string;
+            artistName: string;
+        }>>`
+            SELECT t.id, t."analysisRetryCount", t."analysisStartedAt", t."updatedAt",
+                   t."filePath", t.title, a.name as "artistName"
+            FROM "Track" t
+            JOIN "Album" al ON t."albumId" = al.id
+            JOIN "Artist" a ON al."artistId" = a.id
+            WHERE t."analysisStatus" = 'processing'
+            AND (
+                t."analysisStartedAt" < NOW() - INTERVAL '15 minutes'
+                OR (t."analysisStartedAt" IS NULL AND t."updatedAt" < NOW() - INTERVAL '15 minutes')
+            )
+        `;
 
         if (staleTracks.length === 0) {
             return { reset: 0, permanentlyFailed: 0, recovered: 0 };
@@ -132,78 +136,94 @@ class AudioAnalysisCleanupService {
         let recoveredCount = 0;
 
         for (const track of staleTracks) {
-            const currentRetryCount = track.analysisRetryCount || 0;
-            const trackName = `${track.album.artist.name} - ${track.title}`;
+            const currentRetryCount = Number(track.analysisRetryCount) || 0;
+            const trackName = `${track.artistName} - ${track.title}`;
 
-            const existingEmbedding = await prisma.$queryRaw<{ count: bigint }[]>`
+            const existingEmbedding = await prisma.$queryRaw<[{ count: bigint }]>`
                 SELECT COUNT(*) as count FROM track_embeddings WHERE track_id = ${track.id}
             `;
 
             if (Number(existingEmbedding[0]?.count) > 0) {
-                await prisma.track.update({
-                    where: { id: track.id },
-                    data: {
-                        analysisStatus: "completed",
-                        analysisError: null,
-                        analysisStartedAt: null,
-                    },
-                });
-
-                logger.info(
-                    `[AudioAnalysisCleanup] Recovered stale track with existing embedding: ${trackName}`
-                );
-
-                recoveredCount++;
+                // Re-check staleness at UPDATE time to avoid resetting a freshly-claimed track
+                const recovered = await prisma.$executeRaw`
+                    UPDATE "Track"
+                    SET "analysisStatus" = 'completed',
+                        "analysisError" = NULL,
+                        "analysisStartedAt" = NULL,
+                        "updatedAt" = NOW() AT TIME ZONE 'UTC'
+                    WHERE id = ${track.id}
+                    AND "analysisStatus" = 'processing'
+                    AND (
+                        "analysisStartedAt" < NOW() - INTERVAL '15 minutes'
+                        OR ("analysisStartedAt" IS NULL AND "updatedAt" < NOW() - INTERVAL '15 minutes')
+                    )
+                `;
+                if (recovered > 0) {
+                    logger.info(
+                        `[AudioAnalysisCleanup] Recovered stale track with existing embedding: ${trackName}`
+                    );
+                    recoveredCount++;
+                }
                 continue;
             }
 
             if (currentRetryCount >= MAX_RETRIES) {
-                await prisma.track.update({
-                    where: { id: track.id },
-                    data: {
-                        analysisStatus: "permanently_failed",
-                        analysisError: `Exceeded ${MAX_RETRIES} retry attempts (stale processing)`,
-                        analysisStartedAt: null,
-                    },
-                });
-
-                await enrichmentFailureService.recordFailure({
-                    entityType: "audio",
-                    entityId: track.id,
-                    entityName: trackName,
-                    errorMessage: `Analysis timed out ${MAX_RETRIES} times - track may be corrupted or unsupported`,
-                    errorCode: "MAX_RETRIES_EXCEEDED",
-                    metadata: {
-                        filePath: track.filePath,
-                        retryCount: currentRetryCount,
-                    },
-                });
-
-                logger.warn(
-                    `[AudioAnalysisCleanup] Permanently failed: ${trackName}`
-                );
-                permanentlyFailedCount++;
+                const errorMsg = `Exceeded ${MAX_RETRIES} retry attempts (stale processing)`;
+                const failed = await prisma.$executeRaw`
+                    UPDATE "Track"
+                    SET "analysisStatus" = 'permanently_failed',
+                        "analysisError" = ${errorMsg},
+                        "analysisStartedAt" = NULL,
+                        "updatedAt" = NOW() AT TIME ZONE 'UTC'
+                    WHERE id = ${track.id}
+                    AND "analysisStatus" = 'processing'
+                    AND (
+                        "analysisStartedAt" < NOW() - INTERVAL '15 minutes'
+                        OR ("analysisStartedAt" IS NULL AND "updatedAt" < NOW() - INTERVAL '15 minutes')
+                    )
+                `;
+                if (failed > 0) {
+                    await enrichmentFailureService.recordFailure({
+                        entityType: "audio",
+                        entityId: track.id,
+                        entityName: trackName,
+                        errorMessage: `Analysis timed out ${MAX_RETRIES} times - track may be corrupted or unsupported`,
+                        errorCode: "MAX_RETRIES_EXCEEDED",
+                        metadata: {
+                            filePath: track.filePath,
+                            retryCount: currentRetryCount,
+                        },
+                    });
+                    logger.warn(
+                        `[AudioAnalysisCleanup] Permanently failed: ${trackName}`
+                    );
+                    permanentlyFailedCount++;
+                }
             } else {
-                await prisma.track.update({
-                    where: { id: track.id },
-                    data: {
-                        analysisStatus: "pending",
-                        analysisStartedAt: null,
-                        analysisError: `Reset after stale processing (attempt ${currentRetryCount}/${MAX_RETRIES})`,
-                    },
-                });
-
-                logger.debug(
-                    `[AudioAnalysisCleanup] Reset for retry (${currentRetryCount}/${MAX_RETRIES}): ${trackName}`
-                );
-                resetCount++;
+                const resetMsg = `Reset after stale processing (attempt ${currentRetryCount}/${MAX_RETRIES})`;
+                const reset = await prisma.$executeRaw`
+                    UPDATE "Track"
+                    SET "analysisStatus" = 'pending',
+                        "analysisStartedAt" = NULL,
+                        "analysisError" = ${resetMsg},
+                        "updatedAt" = NOW() AT TIME ZONE 'UTC'
+                    WHERE id = ${track.id}
+                    AND "analysisStatus" = 'processing'
+                    AND (
+                        "analysisStartedAt" < NOW() - INTERVAL '15 minutes'
+                        OR ("analysisStartedAt" IS NULL AND "updatedAt" < NOW() - INTERVAL '15 minutes')
+                    )
+                `;
+                if (reset > 0) {
+                    logger.debug(
+                        `[AudioAnalysisCleanup] Reset for retry (${currentRetryCount}/${MAX_RETRIES}): ${trackName}`
+                    );
+                    resetCount++;
+                }
             }
         }
 
         if (resetCount > 0) {
-            // Only count stale active tracks as circuit breaker failures.
-            // Permanently failing a track is expected cleanup behavior,
-            // not a sign that the analyzer is broken.
             this.onFailure(resetCount, permanentlyFailedCount);
         }
 

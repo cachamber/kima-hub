@@ -1454,11 +1454,8 @@ class AnalysisWorker:
     def _run_db_reconciliation(self) -> bool:
         """
         Check database for pending/queued tracks that may have been missed by Redis queue.
-        Handles edge cases: manual DB edits, crash recovery, queue loss.
-        Marks tracks as 'processing' in DB first (prevents backend double-queuing),
-        then pushes them into the Redis queue so BRPOP picks them up.
-
-        Returns True if pending work was found, False if nothing to do.
+        Pushes tracks into the Redis queue only -- does NOT pre-mark as 'processing'.
+        _mark_track_processing() atomically claims each track when BRPOP dequeues it.
         """
         if self.is_paused or self._is_gate_closed():
             return False
@@ -1476,15 +1473,7 @@ class AnalysisWorker:
 
             tracks = cursor.fetchall()
             if tracks:
-                logger.info(f"DB reconciliation found {len(tracks)} pending/queued tracks, queuing...")
-                track_ids = [t['id'] for t in tracks]
-                cursor.execute("""
-                    UPDATE "Track"
-                    SET "analysisStatus" = 'processing',
-                        "analysisStartedAt" = %s
-                    WHERE id = ANY(%s)
-                """, (datetime.now(timezone.utc), track_ids))
-                self.db.commit()
+                logger.info(f"DB reconciliation found {len(tracks)} pending/queued tracks, pushing to queue...")
                 pipe = self.redis.pipeline()
                 for t in tracks:
                     pipe.rpush(ANALYSIS_QUEUE, json.dumps({
@@ -1693,7 +1682,7 @@ class AnalysisWorker:
                 UPDATE "Track"
                 SET "analysisStatus" = 'processing',
                     "analysisStartedAt" = %s
-                WHERE id = %s AND "analysisStatus" != 'processing'
+                WHERE id = %s AND "analysisStatus" IN ('pending', 'queued')
             """, (datetime.now(timezone.utc), track_id))
             self.db.commit()
             return cursor.rowcount > 0
