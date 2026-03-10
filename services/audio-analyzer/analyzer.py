@@ -1119,6 +1119,7 @@ class AnalysisWorker:
         self.running = False
         self.executor = None
         self.pool_active = False
+        self.scan_executor = None  # Separate lightweight pool for scan validation
         self.consecutive_empty = 0
         self.is_paused = False  # Enrichment control: pause state
         self.pubsub = None  # Redis pub/sub for control signals
@@ -1290,6 +1291,13 @@ class AnalysisWorker:
             logger.warning(f"Error during pool shutdown: {e}")
         self.executor = None
         self.pool_active = False
+        # Also shut down scan pool when idle
+        if self.scan_executor:
+            try:
+                self.scan_executor.shutdown(wait=False)
+            except Exception:
+                pass
+            self.scan_executor = None
         gc.collect()
         # Force glibc to return freed pages to OS (Python/PyTorch hold RSS otherwise)
         try:
@@ -1676,8 +1684,9 @@ class AnalysisWorker:
         self._process_tracks_parallel(queued_jobs)
         return True
     
-    def _mark_track_processing(self, track_id: str):
-        """Mark a single track as processing just before its worker starts."""
+    def _mark_track_processing(self, track_id: str) -> bool:
+        """Mark a single track as processing just before its worker starts.
+        Returns True if successfully claimed, False if already claimed or error."""
         cursor = self.db.get_cursor()
         try:
             cursor.execute("""
@@ -1687,9 +1696,11 @@ class AnalysisWorker:
                 WHERE id = %s AND "analysisStatus" != 'processing'
             """, (datetime.now(timezone.utc), track_id))
             self.db.commit()
+            return cursor.rowcount > 0
         except Exception as e:
             logger.error(f"Failed to mark track {track_id} as processing: {e}")
             self.db.rollback()
+            return False
         finally:
             cursor.close()
 
@@ -1708,7 +1719,9 @@ class AnalysisWorker:
 
         futures = {}
         for t in tracks:
-            self._mark_track_processing(t[0])
+            if not self._mark_track_processing(t[0]):
+                logger.debug(f"Track {t[0]} already claimed, skipping")
+                continue
             futures[self.executor.submit(_analyze_track_in_process, t)] = t
 
         try:
@@ -1919,8 +1932,16 @@ class AnalysisWorker:
             cursor.close()
 
 
+    def _ensure_scan_pool(self):
+        """Ensure the lightweight scan validation pool is running."""
+        if self.scan_executor is None:
+            self.scan_executor = ProcessPoolExecutor(
+                max_workers=2,
+                max_tasks_per_child=100,
+            )
+
     def process_scan_queue(self):
-        """Process scan validation requests via the worker pool (non-blocking)."""
+        """Process scan validation requests via a separate lightweight pool (non-blocking)."""
         if self.is_paused or self._is_gate_closed():
             return False
 
@@ -1936,12 +1957,12 @@ class AnalysisWorker:
                 break
             jobs.append(json.loads(more))
 
-        self._ensure_pool()
+        self._ensure_scan_pool()
         futures = {}
         for job in jobs:
             tid = job['trackId']
             fp = job.get('filePath', '')
-            futures[self.executor.submit(_validate_track_in_process, (tid, fp))] = tid
+            futures[self.scan_executor.submit(_validate_track_in_process, (tid, fp))] = tid
 
         cursor = self.db.get_cursor()
         try:
@@ -1994,7 +2015,12 @@ class AnalysisWorker:
                     """, (tid,))
             self.db.commit()
             logger.error("Scan pool crash/timeout -- reset remaining tracks to pending")
-            self._recreate_pool()
+            try:
+                if self.scan_executor:
+                    self.scan_executor.shutdown(wait=False)
+            except Exception:
+                pass
+            self.scan_executor = None
         except Exception as e:
             logger.error(f"Scan validation failed: {e}")
             self.db.rollback()

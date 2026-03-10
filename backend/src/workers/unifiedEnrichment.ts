@@ -946,12 +946,17 @@ async function queueAudioAnalysis(): Promise<number> {
             );
 
             // Mark as queued — Python sets "processing" + analysisStartedAt when it dequeues
-            await prisma.track.update({
-                where: { id: track.id },
+            // Guard: only update if still pending (Python may have already claimed it via BRPOP)
+            const result = await prisma.track.updateMany({
+                where: { id: track.id, analysisStatus: "pending" },
                 data: {
                     analysisStatus: "queued",
                 },
             });
+            if (result.count === 0) {
+                queued--;
+                continue;
+            }
 
             queued++;
         } catch (error) {
