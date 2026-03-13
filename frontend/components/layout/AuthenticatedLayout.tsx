@@ -136,7 +136,7 @@ export function AuthenticatedLayout({ children }: { children: ReactNode }) {
                             }}
                         >
                             <GalaxyBackground />
-                            <div>{children}</div>
+                            <div className="h-full">{children}</div>
                         </main>
 
                         {/* Mini Player - fixed, positioned above bottom nav */}
