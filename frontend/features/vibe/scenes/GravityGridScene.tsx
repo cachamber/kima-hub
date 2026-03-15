@@ -75,6 +75,79 @@ function computeWorldPositions(tracks: MapTrack[]): Float32Array {
 }
 
 // ---------------------------------------------------------------------------
+// Space Grid -- sparse axis lines + per-star vertical depth ticks
+// ---------------------------------------------------------------------------
+
+function SpaceGrid({
+    centerX = 0,
+    centerY = 0,
+    spread = WORLD_SCALE,
+    starPositions,
+}: {
+    centerX?: number;
+    centerY?: number;
+    spread?: number;
+    starPositions: Float32Array;
+}) {
+    const { gridGeo, tickGeo } = useMemo(() => {
+        const half = spread * 1.2;
+        const step = spread * 0.25;
+        const lines: number[] = [];
+
+        // XY grid -- horizontal and vertical lines across the plane
+        for (let v = -half; v <= half + 0.01; v += step) {
+            // horizontal line (along X)
+            lines.push(centerX - half, centerY + v, 0,  centerX + half, centerY + v, 0);
+            // vertical line (along Y)
+            lines.push(centerX + v, centerY - half, 0,  centerX + v, centerY + half, 0);
+        }
+
+        // Z axis lines at grid intersections
+        const zHalf = spread * 0.5;
+        for (let xi = -half; xi <= half + 0.01; xi += step * 2) {
+            for (let yi = -half; yi <= half + 0.01; yi += step * 2) {
+                lines.push(centerX + xi, centerY + yi, -zHalf,  centerX + xi, centerY + yi, zHalf);
+            }
+        }
+
+        const gridArr = new Float32Array(lines);
+        const gGeo = new THREE.BufferGeometry();
+        gGeo.setAttribute("position", new THREE.BufferAttribute(gridArr, 3));
+
+        // Per-star vertical depth ticks -- short line from (x,y,0) to (x,y,z)
+        const ticks: number[] = [];
+        const count = starPositions.length / 3;
+        for (let i = 0; i < count; i++) {
+            const x = starPositions[i * 3];
+            const y = starPositions[i * 3 + 1];
+            const z = starPositions[i * 3 + 2];
+            if (Math.abs(z) < 1) continue;
+            ticks.push(x, y, 0,  x, y, z);
+        }
+        const tickArr = new Float32Array(ticks);
+        const tGeo = new THREE.BufferGeometry();
+        tGeo.setAttribute("position", new THREE.BufferAttribute(tickArr, 3));
+
+        return { gridGeo: gGeo, tickGeo: tGeo };
+    }, [centerX, centerY, spread, starPositions]);
+
+    useEffect(() => {
+        return () => { gridGeo.dispose(); tickGeo.dispose(); };
+    }, [gridGeo, tickGeo]);
+
+    return (
+        <>
+            <lineSegments geometry={gridGeo}>
+                <lineBasicMaterial color="#ffffff" transparent opacity={0.025} depthWrite={false} />
+            </lineSegments>
+            <lineSegments geometry={tickGeo}>
+                <lineBasicMaterial color="#ffffff" transparent opacity={0.015} depthWrite={false} />
+            </lineSegments>
+        </>
+    );
+}
+
+// ---------------------------------------------------------------------------
 // Background Stars -- depth and atmosphere
 // ---------------------------------------------------------------------------
 
@@ -100,10 +173,10 @@ function BackgroundStars({
             pos[i * 3 + 1] = centerY + (rng() - 0.5) * halfSpread * 2;
             pos[i * 3 + 2] = (rng() - 0.5) * halfSpread * 2;
 
-            const warmth = 0.5 + rng() * 0.5;
-            col[i * 3] = 0.7 * warmth;
-            col[i * 3 + 1] = 0.7 * warmth;
-            col[i * 3 + 2] = 0.75 + rng() * 0.25;
+            const brightness = 0.3 + rng() * 0.4;
+            col[i * 3] = brightness * (0.6 + rng() * 0.2);     // slight red/violet
+            col[i * 3 + 1] = brightness * (0.5 + rng() * 0.2); // muted green
+            col[i * 3 + 2] = brightness * (0.9 + rng() * 0.1); // strong blue
         }
         return { positions: pos, colors: col };
     }, [count, centerX, centerY, spread]);
@@ -116,207 +189,11 @@ function BackgroundStars({
             </bufferGeometry>
             <pointsMaterial
                 vertexColors
-                size={1.5}
+                size={0.8}
                 sizeAttenuation
                 transparent
-                opacity={0.4}
+                opacity={0.09}
                 depthWrite={false}
-            />
-        </points>
-    );
-}
-
-// ---------------------------------------------------------------------------
-// Orbital particles -- tiny pixels orbiting each track (solar systems)
-// Uses a single Points geometry updated via custom vertex shader for perf.
-// ---------------------------------------------------------------------------
-
-const MAX_ORBITERS_PER_TRACK = 2;
-
-const ORBITER_PALETTE: ReadonlyArray<readonly [number, number, number]> = [
-    [0.4, 0.5, 0.8],   // cool blue
-    [0.7, 0.7, 0.75],  // cool white
-    [0.3, 0.55, 0.7],  // pale cyan
-    [0.8, 0.4, 0.3],   // faint red
-    [0.5, 0.6, 0.9],   // periwinkle
-    [0.6, 0.65, 0.7],  // silver
-    [0.7, 0.5, 0.4],   // dusty rose
-    [0.4, 0.7, 0.6],   // teal
-];
-
-const ORBIT_VERT = /* glsl */ `
-attribute vec3 center;
-attribute float orbitRadius;
-attribute float orbitSpeed;
-attribute float orbitPhase;
-attribute float orbitTilt;
-attribute float brightness;
-attribute vec3 orbiterColor;
-
-uniform float time;
-uniform float uPixelRatio;
-uniform bool uIsOrtho;
-uniform float uOrthoZoom;
-
-varying float vBrightness;
-varying vec3 vColor;
-
-void main() {
-    float angle = time * orbitSpeed + orbitPhase;
-
-    float cosT = cos(orbitTilt);
-    float sinT = sin(orbitTilt);
-    vec3 offset = vec3(
-        cos(angle) * orbitRadius,
-        sin(angle) * orbitRadius * cosT,
-        sin(angle) * orbitRadius * sinT
-    );
-
-    vec3 worldPos = center + offset;
-    vec4 mvPos = modelViewMatrix * vec4(worldPos, 1.0);
-    gl_Position = projectionMatrix * mvPos;
-
-    float size;
-    if (uIsOrtho) {
-        size = max(1.0, 2.5 * uOrthoZoom * 0.5);
-    } else {
-        size = max(2.0, 4.0 * (400.0 / -mvPos.z));
-    }
-    gl_PointSize = size * uPixelRatio;
-
-    vBrightness = brightness;
-    vColor = orbiterColor;
-}
-`;
-
-const ORBIT_FRAG = /* glsl */ `
-varying float vBrightness;
-varying vec3 vColor;
-
-void main() {
-    float d = length(gl_PointCoord - vec2(0.5));
-    if (d > 0.5) discard;
-    float alpha = smoothstep(0.5, 0.1, d) * vBrightness * 0.5;
-    gl_FragColor = vec4(vColor * 0.7, alpha);
-}
-`;
-
-function OrbitalParticles({
-    tracks,
-    worldPositions,
-    is3D,
-    animated,
-}: {
-    tracks: MapTrack[];
-    worldPositions: Float32Array;
-    is3D: boolean;
-    animated: boolean;
-}) {
-    const matRef = useRef<THREE.ShaderMaterial>(null);
-
-    const geometry = useMemo(() => {
-        const rng = seededRandom(99);
-
-        // First pass: determine per-track orbiter count (0-MAX)
-        const perTrack = new Uint8Array(tracks.length);
-        let totalParticles = 0;
-        for (let t = 0; t < tracks.length; t++) {
-            const n = Math.floor(rng() * (MAX_ORBITERS_PER_TRACK + 1));
-            perTrack[t] = n;
-            totalParticles += n;
-        }
-
-        const geo = new THREE.BufferGeometry();
-        const centers = new Float32Array(totalParticles * 3);
-        const radii = new Float32Array(totalParticles);
-        const speeds = new Float32Array(totalParticles);
-        const phases = new Float32Array(totalParticles);
-        const tilts = new Float32Array(totalParticles);
-        const brightness = new Float32Array(totalParticles);
-        const orbiterColors = new Float32Array(totalParticles * 3);
-        const positions = new Float32Array(totalParticles * 3);
-
-        let i = 0;
-        for (let t = 0; t < tracks.length; t++) {
-            const px = worldPositions[t * 3];
-            const py = worldPositions[t * 3 + 1];
-            const pz = worldPositions[t * 3 + 2];
-            const energy = tracks[t].energy ?? 0.5;
-
-            for (let p = 0; p < perTrack[t]; p++) {
-                centers[i * 3] = px;
-                centers[i * 3 + 1] = py;
-                centers[i * 3 + 2] = pz;
-
-                radii[i] = 8 + rng() * 22 + energy * 10;
-
-                speeds[i] = 0.08 + rng() * 0.25;
-                if (rng() > 0.5) speeds[i] *= -1;
-
-                phases[i] = rng() * Math.PI * 2;
-                tilts[i] = (rng() - 0.5) * Math.PI * 0.8;
-                brightness[i] = 0.3 + rng() * 0.7;
-
-                const c = ORBITER_PALETTE[Math.floor(rng() * ORBITER_PALETTE.length)];
-                orbiterColors[i * 3] = c[0];
-                orbiterColors[i * 3 + 1] = c[1];
-                orbiterColors[i * 3 + 2] = c[2];
-
-                positions[i * 3] = px;
-                positions[i * 3 + 1] = py;
-                positions[i * 3 + 2] = pz;
-                i++;
-            }
-        }
-
-        geo.setAttribute("position", new THREE.BufferAttribute(positions, 3));
-        geo.setAttribute("center", new THREE.BufferAttribute(centers, 3));
-        geo.setAttribute("orbitRadius", new THREE.BufferAttribute(radii, 1));
-        geo.setAttribute("orbitSpeed", new THREE.BufferAttribute(speeds, 1));
-        geo.setAttribute("orbitPhase", new THREE.BufferAttribute(phases, 1));
-        geo.setAttribute("orbitTilt", new THREE.BufferAttribute(tilts, 1));
-        geo.setAttribute("brightness", new THREE.BufferAttribute(brightness, 1));
-        geo.setAttribute("orbiterColor", new THREE.BufferAttribute(orbiterColors, 3));
-
-        return geo;
-    }, [tracks, worldPositions]);
-
-    const uniforms = useMemo(() => ({
-        time: { value: 0 },
-        uPixelRatio: { value: typeof window !== "undefined" ? window.devicePixelRatio : 1 },
-        uIsOrtho: { value: !is3D },
-        uOrthoZoom: { value: 1.0 },
-    }), []); // eslint-disable-line react-hooks/exhaustive-deps
-
-    useFrame((state) => {
-        const mat = matRef.current;
-        if (!mat) return;
-        if (animated) {
-            mat.uniforms.time.value = state.clock.elapsedTime;
-            state.invalidate();
-        }
-        const cam = state.camera;
-        const isOrtho = !!(cam as THREE.OrthographicCamera).isOrthographicCamera;
-        mat.uniforms.uIsOrtho.value = isOrtho;
-        if (isOrtho) {
-            mat.uniforms.uOrthoZoom.value = (cam as THREE.OrthographicCamera).zoom;
-        }
-    });
-
-    useEffect(() => {
-        return () => { geometry.dispose(); };
-    }, [geometry]);
-
-    return (
-        <points geometry={geometry}>
-            <shaderMaterial
-                ref={matRef}
-                vertexShader={ORBIT_VERT}
-                fragmentShader={ORBIT_FRAG}
-                uniforms={uniforms}
-                transparent
-                depthWrite={false}
-                blending={THREE.AdditiveBlending}
             />
         </points>
     );
@@ -362,9 +239,10 @@ function QueueConnectors({
             positions[i * 6 + 5] = b.z;
 
             const isPast = playingIdx >= 0 && i < playingIdx;
-            const r = isPast ? 0.06 : 0.15;
-            const g = isPast ? 0.04 : 0.11;
-            const bCol = isPast ? 0.02 : 0.05;
+            // Upcoming: brand amber (#fca200). Past: dimmed.
+            const r = isPast ? 0.15 : 0.988;
+            const g = isPast ? 0.10 : 0.635;
+            const bCol = isPast ? 0.04 : 0.0;
             colors[i * 6] = r; colors[i * 6 + 1] = g; colors[i * 6 + 2] = bCol;
             colors[i * 6 + 3] = r; colors[i * 6 + 4] = g; colors[i * 6 + 5] = bCol;
         }
@@ -386,7 +264,7 @@ function QueueConnectors({
             <lineBasicMaterial
                 vertexColors
                 transparent
-                opacity={0.06}
+                opacity={0.7}
                 depthWrite={false}
             />
         </lineSegments>
@@ -955,7 +833,7 @@ function SceneContent({
     activeOperation,
     showLabels = true,
     is3D,
-    animated,
+    animated: _animated,
     onLockChange,
     onTrackClick,
     onTrackDoubleClick,
@@ -1081,20 +959,19 @@ function SceneContent({
 
             <CameraPersistence is3D={is3D} />
 
+            <SpaceGrid
+                centerX={worldCenterX}
+                centerY={worldCenterY}
+                spread={span * WORLD_SCALE}
+                starPositions={worldPositions}
+            />
+
             <BackgroundStars
+                count={300}
                 centerX={worldCenterX}
                 centerY={worldCenterY}
                 spread={span * WORLD_SCALE}
             />
-
-            {tracks.length > 0 && (
-                <OrbitalParticles
-                    tracks={tracks}
-                    worldPositions={worldPositions}
-                    is3D={is3D}
-                    animated={animated}
-                />
-            )}
 
             {queueTrackIds && queueTrackIds.length >= 2 && (
                 <QueueConnectors
@@ -1199,7 +1076,7 @@ export function GravityGridScene({
                     outputColorSpace: THREE.SRGBColorSpace,
                     powerPreference: "high-performance",
                 }}
-                style={{ background: "#020204" }}
+                style={{ background: "#000000" }}
                 onPointerMissed={onBackgroundClick}
             >
                 <Suspense fallback={null}>
