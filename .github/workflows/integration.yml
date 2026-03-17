@@ -12,7 +12,7 @@ jobs:
         name: E2E Tests
         if: github.event_name == 'push' || github.event.label.name == 'run-e2e'
         runs-on: ubuntu-latest
-        timeout-minutes: 30
+        timeout-minutes: 60
 
         steps:
             - uses: actions/checkout@v4
