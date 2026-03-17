@@ -17,6 +17,12 @@ CONTAINER="${KIMA_CONTAINER:-kima-test}"
 TEST_USER="${KIMA_TEST_USERNAME:-kima_e2e}"
 TEST_PASS="${KIMA_TEST_PASSWORD:-$(openssl rand -hex 20)}"
 
+# Validate username to prevent SQL injection via the heredoc
+if [[ ! "${TEST_USER}" =~ ^[a-zA-Z0-9_]{3,32}$ ]]; then
+    echo "[e2e setup] ERROR: KIMA_TEST_USERNAME must be 3-32 alphanumeric/underscore characters" >&2
+    exit 1
+fi
+
 echo "[e2e setup] Creating test user '${TEST_USER}' in container '${CONTAINER}'..."
 
 # Generate bcrypt hash inside the container where bcrypt is installed.
@@ -48,7 +54,3 @@ ENDSQL
 '
 
 echo "[e2e setup] Test user '${TEST_USER}' ready."
-echo ""
-echo "Set these env vars before running Playwright:"
-echo "  export KIMA_TEST_USERNAME=${TEST_USER}"
-echo "  export KIMA_TEST_PASSWORD=${TEST_PASS}"

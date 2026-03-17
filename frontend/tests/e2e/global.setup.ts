@@ -19,7 +19,7 @@ async function globalSetup(): Promise<void> {
     if (!username || !password) {
         throw new Error(
             "E2E test user credentials not set.\n" +
-            "Set KIMA_TEST_USERNAME and KIMA_TEST_PASSWORD before running E2E tests.\n" +
+            "Set KIMA_TEST_USERNAME and KIMA_TEST_PASSWORD in .env.test or export them before running E2E tests.\n" +
             "To create a test user, run: bash scripts/create-e2e-user.sh"
         );
     }

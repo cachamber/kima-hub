@@ -761,7 +761,7 @@ class SpotifyService {
                 description: playlist.description,
                 owner: playlist.owner?.display_name || "Unknown",
                 imageUrl: playlist.images?.[0]?.url || null,
-                trackCount: playlist.tracks?.total || tracks.length,
+                trackCount: tracks.length,
                 tracks,
                 isPublic: playlist.public ?? true,
             };

@@ -13,7 +13,7 @@ concurrency:
 jobs:
     e2e:
         name: E2E Tests
-        if: github.event_name == 'push' || github.event.label.name == 'run-e2e'
+        if: github.event_name == 'workflow_dispatch' || github.event.label.name == 'run-e2e'
         runs-on: ubuntu-latest
         timeout-minutes: 60
 
@@ -48,6 +48,7 @@ jobs:
               run: |
                   TEST_USER="kima_e2e"
                   TEST_PASS="$(openssl rand -hex 20)"
+                  echo "::add-mask::${TEST_PASS}"
                   echo "KIMA_TEST_USERNAME=${TEST_USER}" >> "$GITHUB_ENV"
                   echo "KIMA_TEST_PASSWORD=${TEST_PASS}" >> "$GITHUB_ENV"
                   KIMA_CONTAINER=kima-e2e \

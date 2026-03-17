@@ -56,21 +56,16 @@ test.describe("Vibe", () => {
 
     // ---- Page load ----------------------------------------------------------
 
-    test("vibe page renders canvas or no-data state", async ({ page }) => {
+    test("vibe page renders map or no-data state", async ({ page }) => {
         await page.goto("/vibe", { waitUntil: "domcontentloaded" });
 
-        // Either a canvas (map rendered) or the no-data placeholder must appear
-        const canvas = page.locator("canvas");
-        const noData = page.locator("text=/No tracks with vibe|Computing music map/i");
+        // Wait for loading to settle: either the track count appears (map loaded with data)
+        // or the no-data placeholder appears (library has no vibe embeddings yet).
+        // "Computing music map" is a transient loading state -- do not assert on it.
+        const trackCount = page.locator("text=/ tracks$/");
+        const noData = page.locator("text=/No tracks with vibe/i");
 
-        await Promise.race([
-            canvas.waitFor({ timeout: 35_000 }),
-            noData.waitFor({ timeout: 35_000 }),
-        ]);
-
-        const hasCanvas = (await canvas.count()) > 0;
-        const hasNoData = (await noData.count()) > 0;
-        expect(hasCanvas || hasNoData).toBe(true);
+        await expect(trackCount.or(noData)).toBeVisible({ timeout: 35_000 });
     });
 
     test("toolbar buttons are present when map loads", async ({ page }) => {

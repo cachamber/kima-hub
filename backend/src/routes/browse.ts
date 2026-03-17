@@ -137,7 +137,7 @@ router.get("/playlists/:id", async (req, res) => {
  * GET /api/browse/radios
  * Get all radio stations (mood/theme based mixes)
  */
-router.get("/radios", async (req, res) => {
+router.get("/radios", async (_req, res) => {
     try {
         logger.debug("[Browse] Fetching radio stations...");
         const radios = await deezerService.getRadioStations();
@@ -156,7 +156,7 @@ router.get("/radios", async (req, res) => {
  * GET /api/browse/radios/by-genre
  * Get radio stations organized by genre
  */
-router.get("/radios/by-genre", async (req, res) => {
+router.get("/radios/by-genre", async (_req, res) => {
     try {
         logger.debug("[Browse] Fetching radios by genre...");
         const genresWithRadios = await deezerService.getRadiosByGenre();
@@ -207,7 +207,7 @@ router.get("/radios/:id", async (req, res) => {
  * GET /api/browse/genres
  * Get all available genres
  */
-router.get("/genres", async (req, res) => {
+router.get("/genres", async (_req, res) => {
     try {
         logger.debug("[Browse] Fetching genres...");
         const genres = await deezerService.getGenres();
@@ -311,8 +311,31 @@ router.post("/playlists/parse", async (req, res) => {
             });
         }
 
-        return res.status(400).json({ 
-            error: "Invalid or unsupported URL. Please provide a Spotify or Deezer playlist URL." 
+        // Try YouTube / YouTube Music -- extract list= query param as playlist ID
+        try {
+            const parsed = new URL(url);
+            const hostname = parsed.hostname.toLowerCase();
+            const isYouTube =
+                hostname.includes("youtube.com") ||
+                hostname.includes("youtu.be") ||
+                hostname.includes("music.youtube.com");
+            if (isYouTube) {
+                const listId = parsed.searchParams.get("list");
+                if (listId) {
+                    return res.json({
+                        source: "youtube",
+                        type: "playlist",
+                        id: listId,
+                        url,
+                    });
+                }
+            }
+        } catch {
+            // Invalid URL -- fall through to error
+        }
+
+        return res.status(400).json({
+            error: "Invalid or unsupported URL. Please provide a Spotify, Deezer, or YouTube playlist URL."
         });
     } catch (error) {
         safeError(res, "Parse URL", error);
@@ -324,7 +347,7 @@ router.post("/playlists/parse", async (req, res) => {
  * Get a combined view of featured content (playlists, genres)
  * Note: Radio stations are now internal (library-based), not from Deezer
  */
-router.get("/all", async (req, res) => {
+router.get("/all", async (_req, res) => {
     try {
         logger.debug("[Browse] Fetching browse content (playlists + genres)...");
 

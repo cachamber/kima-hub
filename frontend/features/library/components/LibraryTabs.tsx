@@ -20,7 +20,7 @@ export function LibraryTabs({ activeTab, onTabChange }: LibraryTabsProps) {
       <div className="absolute -inset-x-4 -inset-y-2 bg-[#0a0a0a]/60 backdrop-blur-xl rounded-2xl border border-white/5" />
 
       {/* Tab buttons */}
-      <div className="relative flex gap-2 p-2">
+      <div className="relative flex justify-center gap-2 p-2">
         {tabs.map((tab, index) => {
           const isActive = activeTab === tab.id;
           const Icon = tab.icon;
@@ -62,10 +62,9 @@ export function LibraryTabs({ activeTab, onTabChange }: LibraryTabsProps) {
               {!isActive && (
                 <div
                   className={cn(
-                    "absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-gradient-to-r",
+                    "absolute inset-0 opacity-0 group-hover:opacity-10 transition-opacity duration-300 bg-gradient-to-r",
                     tab.gradient
                   )}
-                  style={{ opacity: 0.1 }}
                 />
               )}
             </button>

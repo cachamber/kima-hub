@@ -68,40 +68,22 @@ export const getApiBaseUrl = () => {
         return process.env.BACKEND_URL || "http://127.0.0.1:3006";
     }
 
-    // Explicit env var takes precedence
+    // Explicit env var: used for reverse proxies where the API is on a different origin
     if (process.env.NEXT_PUBLIC_API_URL) {
         return process.env.NEXT_PUBLIC_API_URL;
     }
 
-    // Docker all-in-one mode: Use relative URLs (Next.js rewrites will proxy)
-    // This is detected by checking if we're on the same port as the frontend
-    const frontendPort =
-        window.location.port ||
-        (window.location.protocol === "https:" ? "443" : "80");
-    if (
-        frontendPort === "3030" ||
-        frontendPort === "443" ||
-        frontendPort === "80"
-    ) {
-        // Use relative paths - Next.js rewrites will proxy to backend
-        return "";
-    }
-
-    // Development mode: Backend on separate port
-    const currentHost = window.location.hostname;
-    const apiPort = "3006";
-    return `${window.location.protocol}//${currentHost}:${apiPort}`;
+    // Default: relative URLs so Next.js rewrites proxy to the backend.
+    // Works for any host port mapping (e.g. -p 9000:3030) because the browser
+    // origin matches whatever port the user mapped -- no hardcoded port needed.
+    return "";
 };
 
 class ApiClient {
-    private baseUrl: string;
     private token: string | null = null;
     private tokenInitialized: boolean = false;
 
-    constructor(baseUrl?: string) {
-        // Don't set baseUrl in constructor - determine it dynamically on each request
-        this.baseUrl = baseUrl || "";
-
+    constructor() {
         // Try to load token synchronously
         if (typeof window !== "undefined") {
             this.token = localStorage.getItem(AUTH_TOKEN_KEY);
@@ -172,11 +154,7 @@ class ApiClient {
         }
     }
 
-    // Get the base URL dynamically to support switching between localhost and IP
     private getBaseUrl(): string {
-        if (this.baseUrl) {
-            return this.baseUrl;
-        }
         return getApiBaseUrl();
     }
 

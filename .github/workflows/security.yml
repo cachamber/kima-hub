@@ -65,6 +65,7 @@ jobs:
               run: |
                   TEST_USER="kima_e2e"
                   TEST_PASS="$(openssl rand -hex 20)"
+                  echo "::add-mask::${TEST_PASS}"
                   echo "KIMA_TEST_USERNAME=${TEST_USER}" >> "$GITHUB_ENV"
                   echo "KIMA_TEST_PASSWORD=${TEST_PASS}" >> "$GITHUB_ENV"
                   KIMA_CONTAINER=kima-security \

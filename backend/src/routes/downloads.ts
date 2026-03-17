@@ -158,7 +158,7 @@ router.post("/", async (req, res) => {
         // Single album download - verify artist name before proceeding
         let verifiedArtistName = artistName;
         if (type === "album" && artistName) {
-            const verification = await verifyArtistName(artistName, mbid);
+            const verification = await verifyArtistName(artistName);
             if (verification.wasCorrected) {
                 logger.debug(
                     `[DOWNLOAD] Artist name verified: "${artistName}" → "${verification.verifiedName}" (source: ${verification.source})`
@@ -241,7 +241,6 @@ router.post("/", async (req, res) => {
             type,
             mbid,
             subject,
-            rootFolderPath,
             verifiedArtistName,
             albumTitle
         ).catch((error) => {
@@ -486,7 +485,6 @@ async function processArtistDownload(
                 "album",
                 albumMbid,
                 albumSubject,
-                rootFolderPath,
                 artistName,
                 albumTitle
             ).catch((error) => {
@@ -508,7 +506,6 @@ async function processDownload(
     type: string,
     mbid: string,
     subject: string,
-    rootFolderPath: string,
     artistName?: string,
     albumTitle?: string
 ) {
@@ -576,7 +573,7 @@ router.delete("/clear-all", async (req, res) => {
 });
 
 // POST /downloads/clear-lidarr-queue - Clear stuck/failed items from Lidarr's queue
-router.post("/clear-lidarr-queue", async (req, res) => {
+router.post("/clear-lidarr-queue", async (_req, res) => {
     try {
         const result = await simpleDownloadManager.clearLidarrQueue();
         res.json({
