@@ -42,11 +42,15 @@ jobs:
                   timeout 90 bash -c 'until curl -sf http://localhost:3030/api/health; do sleep 3; done'
 
             - name: Create E2E test user
-              run: bash scripts/create-e2e-user.sh
-              env:
-                  KIMA_CONTAINER: kima-e2e
-                  KIMA_TEST_USERNAME: ${{ secrets.KIMA_TEST_USERNAME || 'kima_e2e' }}
-                  KIMA_TEST_PASSWORD: ${{ secrets.KIMA_TEST_PASSWORD || 'KimaE2ETest2026!' }}
+              run: |
+                  TEST_USER="kima_e2e"
+                  TEST_PASS="$(openssl rand -hex 20)"
+                  echo "KIMA_TEST_USERNAME=${TEST_USER}" >> "$GITHUB_ENV"
+                  echo "KIMA_TEST_PASSWORD=${TEST_PASS}" >> "$GITHUB_ENV"
+                  KIMA_CONTAINER=kima-e2e \
+                  KIMA_TEST_USERNAME="${TEST_USER}" \
+                  KIMA_TEST_PASSWORD="${TEST_PASS}" \
+                  bash scripts/create-e2e-user.sh
 
             - uses: actions/setup-node@v4
               with:
@@ -64,8 +68,8 @@ jobs:
               working-directory: frontend
               run: npm run test:predeploy
               env:
-                  KIMA_TEST_USERNAME: ${{ secrets.KIMA_TEST_USERNAME || 'kima_e2e' }}
-                  KIMA_TEST_PASSWORD: ${{ secrets.KIMA_TEST_PASSWORD || 'KimaE2ETest2026!' }}
+                  KIMA_TEST_USERNAME: ${{ env.KIMA_TEST_USERNAME }}
+                  KIMA_TEST_PASSWORD: ${{ env.KIMA_TEST_PASSWORD }}
                   KIMA_UI_BASE_URL: http://127.0.0.1:3030
 
             - name: Run functional tests
@@ -80,8 +84,8 @@ jobs:
                     tests/e2e/full-ux-audit.spec.ts \
                     --reporter=list
               env:
-                  KIMA_TEST_USERNAME: ${{ secrets.KIMA_TEST_USERNAME || 'kima_e2e' }}
-                  KIMA_TEST_PASSWORD: ${{ secrets.KIMA_TEST_PASSWORD || 'KimaE2ETest2026!' }}
+                  KIMA_TEST_USERNAME: ${{ env.KIMA_TEST_USERNAME }}
+                  KIMA_TEST_PASSWORD: ${{ env.KIMA_TEST_PASSWORD }}
                   KIMA_UI_BASE_URL: http://127.0.0.1:3030
 
             - name: Upload test results on failure

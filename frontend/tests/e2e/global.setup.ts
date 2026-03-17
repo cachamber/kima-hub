@@ -12,11 +12,17 @@
 import { chromium } from "@playwright/test";
 
 async function globalSetup(): Promise<void> {
-    // Fall back to the same defaults used by scripts/create-e2e-user.sh so the
-    // nightly CI job works without secrets configured.
-    const username = process.env.KIMA_TEST_USERNAME || "kima_e2e";
-    const password = process.env.KIMA_TEST_PASSWORD || "KimaE2ETest2026!";
+    const username = process.env.KIMA_TEST_USERNAME;
+    const password = process.env.KIMA_TEST_PASSWORD;
     const baseUrl = process.env.KIMA_UI_BASE_URL || "http://127.0.0.1:3030";
+
+    if (!username || !password) {
+        throw new Error(
+            "E2E test user credentials not set.\n" +
+            "Set KIMA_TEST_USERNAME and KIMA_TEST_PASSWORD before running E2E tests.\n" +
+            "To create a test user, run: bash scripts/create-e2e-user.sh"
+        );
+    }
 
     // Verify the test user can log in via browser (also saves auth state)
     const browser = await chromium.launch();
