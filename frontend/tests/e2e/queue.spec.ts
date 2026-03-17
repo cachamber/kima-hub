@@ -123,18 +123,28 @@ test.describe("Queue", () => {
             return;
         }
 
-        // Walk up to the row container from the Move up button
-        const targetRow = moveUpButtons.first().locator("xpath=ancestor::div[contains(@class,'flex') and contains(@class,'items-center')][1]");
-        const titleTarget = await targetRow.locator("h3").first().textContent() ?? "";
+        // Grab the track titles from "Next Up" before the reorder.
+        // The first item's Move up button is always disabled, so the first
+        // ENABLED button belongs to index 1 -- that's the track we'll move.
+        const nextUpSection = page.locator("section").filter({
+            has: page.locator("h2", { hasText: "Next Up" }),
+        });
+        const titlesBefore = await nextUpSection.locator("h3").allTextContents();
 
+        if (titlesBefore.length < 2) {
+            test.skip(); // Need at least 2 items to verify reorder
+            return;
+        }
+        const targetTitle = titlesBefore[1]; // the one that will move to index 0
+
+        // Hover the target row and click Move up
+        const targetRow = moveUpButtons.first().locator("xpath=ancestor::div[contains(@class,'flex') and contains(@class,'items-center')][1]");
         await targetRow.hover();
         await targetRow.getByTitle("Move up").click();
 
-        // Queue state update is synchronous via context -- just verify no error
-        await page.waitForTimeout(300);
-        await expect(page.getByText(/Next Up|Now Playing|No tracks/)).toBeVisible();
-
-        void titleTarget; // suppress unused var
+        // After the move, targetTitle should now be the first item in Next Up
+        const titlesAfter = await nextUpSection.locator("h3").allTextContents();
+        expect(titlesAfter[0]).toBe(targetTitle);
     });
 
     test("Clear Queue empties the up-next list", async ({ page }) => {

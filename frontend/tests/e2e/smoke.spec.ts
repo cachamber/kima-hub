@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { skipIfEmptyLibrary } from "./fixtures/test-helpers";
+import { skipIfEmptyLibrary, getAudioCurrentTime } from "./fixtures/test-helpers";
 
 const username = process.env.KIMA_TEST_USERNAME || "predeploy";
 const password = process.env.KIMA_TEST_PASSWORD || "predeploy-password";
@@ -37,6 +37,12 @@ test("core smoke: login → play album → play/pause/next/prev", async ({ page 
     await expect(playPause).toHaveAttribute("title", "Play");
     await playPause.click();
     await expect(playPause).toHaveAttribute("title", "Pause");
+
+    // Verify the audio element is actually advancing -- not stalled at 0
+    const t0 = await getAudioCurrentTime(page);
+    await page.waitForTimeout(2_000);
+    const t1 = await getAudioCurrentTime(page);
+    expect(t1).toBeGreaterThan(t0);
 
     // Next/Previous should be available for tracks (library content)
     const nextBtn = page.getByLabel("Next track");
