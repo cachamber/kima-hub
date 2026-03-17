@@ -44,10 +44,6 @@ export function useSystemSettings() {
     );
     const [isLoading, setIsLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
-    const [changedServices, setChangedServices] = useState<string[]>([]);
-    const [originalSettings, setOriginalSettings] = useState<SystemSettings>(
-        defaultSystemSettings
-    );
 
     const isAdmin = user?.role === "admin";
 
@@ -86,7 +82,6 @@ export function useSystemSettings() {
             };
 
             setSystemSettings(combinedSettings);
-            setOriginalSettings(combinedSettings);
         } catch (error) {
             console.error("Failed to load system settings:", error);
             // No toast - error will be visible in the UI if settings fail to load
@@ -95,52 +90,16 @@ export function useSystemSettings() {
         }
     };
 
-    const saveSystemSettings = async (settingsToSave: SystemSettings, _showToast = false) => {
+    const saveSystemSettings = async (settingsToSave: SystemSettings) => {
         try {
             setIsSaving(true);
-
-            // Save system settings
             await api.updateSystemSettings(settingsToSave);
-
-            // Also save user cache setting
             await api.updateSettings({
                 maxCacheSizeMb: settingsToSave.maxCacheSizeMb,
             });
-
-            // Determine which services changed
-            const changed: string[] = [];
-            if (
-                originalSettings.lidarrEnabled !==
-                    settingsToSave.lidarrEnabled ||
-                originalSettings.lidarrUrl !== settingsToSave.lidarrUrl ||
-                originalSettings.lidarrApiKey !== settingsToSave.lidarrApiKey
-            ) {
-                changed.push("Lidarr");
-            }
-            if (
-                originalSettings.soulseekUsername !== settingsToSave.soulseekUsername ||
-                originalSettings.soulseekPassword !== settingsToSave.soulseekPassword
-            ) {
-                changed.push("Soulseek");
-            }
-            if (
-                originalSettings.audiobookshelfEnabled !==
-                    settingsToSave.audiobookshelfEnabled ||
-                originalSettings.audiobookshelfUrl !==
-                    settingsToSave.audiobookshelfUrl ||
-                originalSettings.audiobookshelfApiKey !==
-                    settingsToSave.audiobookshelfApiKey
-            ) {
-                changed.push("Audiobookshelf");
-            }
-
-            setChangedServices(changed);
-            setOriginalSettings(settingsToSave);
-
-            return changed; // Return changed services
         } catch (error) {
             console.error("Failed to save system settings:", error);
-            throw error; // Caller handles the error display
+            throw error;
         } finally {
             setIsSaving(false);
         }
@@ -210,7 +169,6 @@ export function useSystemSettings() {
         systemSettings,
         isLoading,
         isSaving,
-        changedServices,
         setSystemSettings,
         updateSystemSettings,
         saveSystemSettings,

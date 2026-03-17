@@ -3,7 +3,6 @@
 import { useEffect, useState, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
-import { RestartModal } from "@/components/ui/RestartModal";
 import { useSettingsData } from "@/features/settings/hooks/useSettingsData";
 import { useSystemSettings } from "@/features/settings/hooks/useSystemSettings";
 import { GradientSpinner } from "@/components/ui/GradientSpinner";
@@ -47,7 +46,6 @@ export default function SettingsPage() {
     const { isAuthenticated, isLoading: authLoading, user } = useAuth();
     useSearchParams();
     const [isSaving, setIsSaving] = useState(false);
-    const [showRestartModal, setShowRestartModal] = useState(false);
     const [testingServices, setTestingServices] = useState<Record<string, boolean>>({});
     const saveStatus = useInlineStatus();
 
@@ -63,7 +61,6 @@ export default function SettingsPage() {
     // System settings hook (only used if admin)
     const {
         systemSettings,
-        changedServices,
         updateSystemSettings,
         saveSystemSettings,
         testService,
@@ -89,7 +86,6 @@ export default function SettingsPage() {
         setIsSaving(true);
         saveStatus.setLoading();
         let hasError = false;
-        let changedSystemServices: string[] = [];
 
         try {
             await saveUserSettings(userSettings);
@@ -100,7 +96,7 @@ export default function SettingsPage() {
 
         if (isAdmin) {
             try {
-                changedSystemServices = await saveSystemSettings(systemSettings) || [];
+                await saveSystemSettings(systemSettings);
             } catch (error) {
                 console.error("Failed to save system settings:", error);
                 hasError = true;
@@ -113,9 +109,6 @@ export default function SettingsPage() {
             saveStatus.setError("Failed to save");
         } else {
             saveStatus.setSuccess("Saved");
-            if (changedSystemServices.length > 0) {
-                setShowRestartModal(true);
-            }
         }
     }, [userSettings, systemSettings, isAdmin, saveUserSettings, saveSystemSettings, saveStatus]);
 
@@ -142,8 +135,7 @@ export default function SettingsPage() {
     }
 
     return (
-        <>
-            <SettingsLayout sidebarItems={sidebarItems} isAdmin={isAdmin}>
+        <SettingsLayout sidebarItems={sidebarItems} isAdmin={isAdmin}>
                 {/* Account Section */}
                 <AccountSection />
 
@@ -236,14 +228,6 @@ export default function SettingsPage() {
                         </div>
                     </div>
                 </div>
-            </SettingsLayout>
-
-            {/* Restart Modal */}
-            <RestartModal
-                isOpen={showRestartModal}
-                onClose={() => setShowRestartModal(false)}
-                changedServices={changedServices}
-            />
-        </>
+        </SettingsLayout>
     );
 }
