@@ -5,6 +5,20 @@ All notable changes to Kima will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.7.2] - 2026-03-18
+
+### Fixed
+
+- **Multi-container docker-compose: fresh install shows login instead of setup wizard (#158)**: Next.js rewrites were compiled at build time with `127.0.0.1:3006` baked in because `NEXT_PUBLIC_BACKEND_URL` was never passed as a build arg. In multi-container mode the frontend container can't reach `127.0.0.1:3006` (that's the backend container). Fix: added `NEXT_PUBLIC_BACKEND_URL` as a Dockerfile build arg, defaulting to `http://backend:3006` in docker-compose.yml. The reporter's CORS issue was a secondary symptom -- once the proxy works, all requests are same-origin.
+- **Audiobookshelf sync silently skips books**: Books with no title returned early without throwing, but `syncAll` counted them as synced. Now `syncAudiobook` returns a boolean; skipped books increment `result.skipped` instead of `result.synced`.
+- **Audiobookshelf sync notification hides failures**: The "Synced N audiobooks" notification now includes failed/skipped counts when non-zero.
+- **Audiobookshelf cover download can hang indefinitely**: `downloadCover()` had no fetch timeout. Added `AbortSignal.timeout(10_000)` to prevent a single slow cover from stalling the entire sync.
+- **Audiobookshelf book size includes non-audio files**: Changed `book.size` to `book.media?.size` for audio-only size.
+
+### Added
+
+- **Sync button on audiobooks page**: Users can now sync audiobooks directly from the audiobooks page without going through settings or triggering a full enrichment cycle. Shows synced/failed/skipped counts in a toast and refreshes the grid automatically.
+
 ## [1.7.1] - 2026-03-17
 
 ### Fixed

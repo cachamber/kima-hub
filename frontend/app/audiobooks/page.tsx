@@ -9,7 +9,8 @@ import { api } from "@/lib/api";
 import { useAudioState, useAudioControls } from "@/lib/audio-context";
 import { useAuth } from "@/lib/auth-context";
 import { useToast } from "@/lib/toast-context";
-import { useAudiobooksQuery } from "@/hooks/useQueries";
+import { useAudiobooksQuery, queryKeys } from "@/hooks/useQueries";
+import { useQueryClient } from "@tanstack/react-query";
 import {
     Book,
     ListTree,
@@ -17,6 +18,7 @@ import {
     ChevronLeft,
     ChevronRight,
     ArrowUpDown,
+    RefreshCw,
 } from "lucide-react";
 import { shuffleArray } from "@/utils/shuffle";
 
@@ -66,7 +68,9 @@ export default function AudiobooksPage() {
     const { currentAudiobook } = useAudioState();
     const { pause } = useAudioControls();
 
+    const queryClient = useQueryClient();
     const { data: audiobooksData, isLoading, error } = useAudiobooksQuery();
+    const [isSyncing, setIsSyncing] = useState(false);
 
     const [filter, setFilter] = useState<FilterType>("all");
     const [sortBy, setSortBy] = useState<SortType>("title");
@@ -233,6 +237,24 @@ export default function AudiobooksPage() {
         }
     };
 
+    const handleSync = async () => {
+        if (isSyncing) return;
+        setIsSyncing(true);
+        try {
+            const res = await api.post<{ result: { synced: number; failed: number; skipped: number } }>("/audiobooks/sync", {});
+            const result = res?.result;
+            const parts = [`Synced ${result?.synced ?? 0} audiobooks`];
+            if (result?.failed) parts.push(`${result.failed} failed`);
+            if (result?.skipped) parts.push(`${result.skipped} skipped`);
+            toast.success(parts.join(", "));
+            queryClient.invalidateQueries({ queryKey: queryKeys.audiobooks() });
+        } catch {
+            toast.error("Audiobook sync failed");
+        } finally {
+            setIsSyncing(false);
+        }
+    };
+
     if (isLoading) {
         return (
             <div className="flex items-center justify-center min-h-screen bg-[#0a0a0a]">
@@ -374,6 +396,16 @@ export default function AudiobooksPage() {
                             >
                                 <Shuffle className="w-3.5 h-3.5" />
                                 <span className="hidden sm:inline">Random</span>
+                            </button>
+
+                            <button
+                                onClick={handleSync}
+                                disabled={isSyncing}
+                                className="flex items-center gap-2 px-4 py-2 rounded-lg bg-white/5 text-white/50 hover:bg-white/10 hover:text-white border border-white/10 hover:border-white/20 font-black text-xs uppercase tracking-wider transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                                title="Sync audiobooks from Audiobookshelf"
+                            >
+                                <RefreshCw className={`w-3.5 h-3.5 ${isSyncing ? "animate-spin" : ""}`} />
+                                <span className="hidden sm:inline">{isSyncing ? "Syncing..." : "Sync"}</span>
                             </button>
 
                             <span className="hidden md:inline text-xs font-mono text-white/30 ml-auto uppercase tracking-wider">

@@ -22,11 +22,13 @@ COPY --from=deps /app/package*.json ./
 # Copy source code
 COPY . .
 
-# Accept build args for environment variables
+# Build args for environment variables
 ARG NEXT_PUBLIC_API_URL
 ARG NEXT_PUBLIC_BUILD_TYPE=nightly
+ARG NEXT_PUBLIC_BACKEND_URL
 ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
 ENV NEXT_PUBLIC_BUILD_TYPE=$NEXT_PUBLIC_BUILD_TYPE
+ENV NEXT_PUBLIC_BACKEND_URL=$NEXT_PUBLIC_BACKEND_URL
 
 # Build Next.js application
 RUN npm run build

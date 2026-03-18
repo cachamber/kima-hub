@@ -7,7 +7,7 @@ import { audiobookshelfService } from "../services/audiobookshelf";
 import { audiobookCacheService } from "../services/audiobookCache";
 import { prisma } from "../utils/db";
 import { requireAuthOrToken } from "../middleware/auth";
-import { imageLimiter, apiLimiter } from "../middleware/rateLimiter";
+import { apiLimiter } from "../middleware/rateLimiter";
 import { getSystemSettings } from "../utils/systemSettings";
 import { notificationService } from "../services/notificationService";
 import { config } from "../config";
@@ -96,7 +96,7 @@ router.post("/sync", requireAuthOrToken, apiLimiter, async (req, res) => {
             await notificationService.notifySystem(
                 req.user.id,
                 "Audiobook Sync Complete",
-                `Synced ${result.synced || 0} audiobooks (${seriesCount} with series)`
+                `Synced ${result.synced || 0} audiobooks (${seriesCount} with series)${result.failed ? `, ${result.failed} failed` : ""}${result.skipped ? `, ${result.skipped} skipped` : ""}`
             );
         }
 
@@ -114,7 +114,7 @@ router.post("/sync", requireAuthOrToken, apiLimiter, async (req, res) => {
  * Debug endpoint to see raw series data from Audiobookshelf
  */
 // Debug endpoint for series data
-router.get("/debug-series", requireAuthOrToken, async (req, res) => {
+router.get("/debug-series", requireAuthOrToken, async (_req, res) => {
     if (process.env.NODE_ENV === "production") {
         return res.status(404).json({ error: "Not found" });
     }

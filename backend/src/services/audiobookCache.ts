@@ -74,23 +74,20 @@ export class AudiobookCacheService {
 
             for (const book of audiobooks) {
                 try {
-                    await this.syncAudiobook(book);
-                    result.synced++;
-                    // Extract title and author from nested structure for logging
-                    const metadata = book.media?.metadata || book;
-                    const title =
-                        metadata.title || book.title || "Unknown Title";
-                    const author =
-                        metadata.authorName ||
-                        metadata.author ||
-                        book.author ||
-                        "Unknown Author";
-                    logger.debug(`  Synced: ${title} by ${author}`);
+                    const synced = await this.syncAudiobook(book);
+                    if (synced) {
+                        result.synced++;
+                        const metadata = book.media?.metadata || book;
+                        const title = metadata.title || book.title || "Unknown Title";
+                        const author = metadata.authorName || metadata.author || book.author || "Unknown Author";
+                        logger.debug(`  Synced: ${title} by ${author}`);
+                    } else {
+                        result.skipped++;
+                    }
                 } catch (error: any) {
                     result.failed++;
                     const metadata = book.media?.metadata || book;
-                    const title =
-                        metadata.title || book.title || "Unknown Title";
+                    const title = metadata.title || book.title || "Unknown Title";
                     const errorMsg = `Failed to sync ${title}: ${error.message}`;
                     result.errors.push(errorMsg);
                     logger.error(` ${errorMsg}`);
@@ -117,13 +114,13 @@ export class AudiobookCacheService {
     /**
      * Sync a single audiobook
      */
-    private async syncAudiobook(book: any): Promise<void> {
+    private async syncAudiobook(book: any): Promise<boolean> {
         const metadata = book.media?.metadata || book;
         const title = metadata.title || book.title;
 
         if (!title) {
             logger.warn(`  Skipping audiobook ${book.id} - missing title`);
-            return;
+            return false;
         }
 
         const author = metadata.authorName || metadata.author || null;
@@ -141,7 +138,7 @@ export class AudiobookCacheService {
         const duration = book.media?.duration || null;
         const numTracks = book.media?.numTracks || null;
         const numChapters = book.media?.numChapters || null;
-        const size = book.size ? BigInt(book.size) : null;
+        const size = book.media?.size ? BigInt(book.media.size) : null;
         const libraryId = book.libraryId || null;
 
         const coverPath = book.media?.coverPath || null;
@@ -265,6 +262,8 @@ export class AudiobookCacheService {
                 lastSyncedAt: new Date(),
             },
         });
+
+        return true;
     }
 
     /**
@@ -322,6 +321,7 @@ export class AudiobookCacheService {
                 headers: {
                     Authorization: `Bearer ${settings.audiobookshelfApiKey}`,
                 },
+                signal: AbortSignal.timeout(10_000),
             });
 
             if (!response.ok) {
@@ -434,5 +434,5 @@ export class AudiobookCacheService {
     }
 }
 
-// Export singleton instance
+// Singleton instance
 export const audiobookCacheService = new AudiobookCacheService();

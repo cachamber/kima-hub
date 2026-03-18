@@ -77,6 +77,9 @@ services:
                 NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-}
                 # Build type: "nightly" for dev builds, unset/empty for tagged releases
                 NEXT_PUBLIC_BUILD_TYPE: ${NEXT_PUBLIC_BUILD_TYPE:-nightly}
+                # Backend URL for Next.js rewrites (compiled at build time).
+                # In multi-container mode, frontend proxies to the backend service.
+                NEXT_PUBLIC_BACKEND_URL: ${NEXT_PUBLIC_BACKEND_URL:-http://backend:3006}
         container_name: kima_frontend
         environment:
             NODE_ENV: ${NODE_ENV:-production}
