@@ -12,7 +12,7 @@ const MetadataEditor = lazy(() => import("@/components/MetadataEditor").then(mod
 
 interface ArtistHeroProps {
     artist: Artist;
-    source: ArtistSource;
+    source: ArtistSource | null;
     albums: Album[];
     heroImage: string | null;
     backgroundImage?: string | null;
@@ -118,10 +118,10 @@ export function ArtistHero({
                                         id={artist.id}
                                         currentData={{
                                             name: displayData.name,
-                                            bio: displayData.summary,
+                                            bio: displayData.summary ?? undefined,
                                             genres: displayData.genres,
                                             mbid: artist.mbid,
-                                            heroUrl: displayData.heroUrl,
+                                            heroUrl: displayData.heroUrl ?? undefined,
                                             // Pass originals for reset comparison
                                             _originalName: artist.name,
                                             _originalBio:

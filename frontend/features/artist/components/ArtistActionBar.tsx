@@ -8,7 +8,7 @@ import type { ColorPalette } from "@/hooks/useImageColor";
 interface ArtistActionBarProps {
     artist: Artist;
     albums: Album[];
-    source: ArtistSource;
+    source: ArtistSource | null;
     colors: ColorPalette | null;
     onPlayAll: () => void;
     onShuffle: () => void;

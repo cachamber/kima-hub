@@ -18,7 +18,7 @@ export function LibraryAlbumsGrid({ albums }: LibraryAlbumsGridProps) {
                     subtitle={album.artist?.name || ""}
                     imageUrl={
                         album.coverUrl || album.albumId
-                            ? api.getCoverArtUrl(album.coverUrl || album.albumId, 200)
+                            ? api.getCoverArtUrl((album.coverUrl || album.albumId)!, 200)
                             : null
                     }
                     fallbackIcon={Disc3}

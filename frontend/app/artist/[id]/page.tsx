@@ -115,7 +115,7 @@ export default function ArtistPage() {
         }));
 
         const startIndex = formattedTracks.findIndex(
-            (t) => t.id === track.id,
+            (t: { id: string }) => t.id === track.id,
         );
         playTracks(formattedTracks, Math.max(0, startIndex));
     }

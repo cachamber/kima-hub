@@ -50,7 +50,7 @@ export default function AlbumPage({ params }: AlbumPageProps) {
     const { previewTrack, previewPlaying, handlePreview } = useTrackPreview();
 
     const combinedTracks = useMemo<AlbumTrack[]>(() => {
-        const ownedTracks = (album?.tracks || []).map((track) => ({
+        const ownedTracks = (album?.tracks || []).map((track: AlbumTrack) => ({
             ...track,
             trackNumber: track.trackNumber ?? track.trackNo,
             isMissing: false,
@@ -81,14 +81,14 @@ export default function AlbumPage({ params }: AlbumPageProps) {
         });
 
         const numberedMissing = missingTracks
-            .filter((track) => typeof track.trackNumber === "number")
+            .filter((track: AlbumTrack) => typeof track.trackNumber === "number")
             .sort(
-                (a, b) =>
+                (a: AlbumTrack, b: AlbumTrack) =>
                     (a.trackNumber as number) - (b.trackNumber as number)
             );
 
         const unnumberedMissing = missingTracks.filter(
-            (track) => typeof track.trackNumber !== "number"
+            (track: AlbumTrack) => typeof track.trackNumber !== "number"
         );
 
         const merged: AlbumTrack[] = [];

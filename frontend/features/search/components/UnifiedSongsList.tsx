@@ -64,7 +64,7 @@ export function UnifiedSongsList({
             album: {
                 id: t.album.id,
                 title: t.album.title,
-                coverArt: t.album.coverUrl,
+                coverArt: t.album.coverUrl ?? undefined,
             },
         }));
 

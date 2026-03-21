@@ -1165,7 +1165,7 @@ export function CacheSection({ settings, onUpdate }: CacheSectionProps) {
                             ? "Cleaning..."
                             : "Cleanup Stale Jobs"}
                     </button>
-                    {(enrichmentProgress?.audioAnalysis?.failed > 0 || enrichmentProgress?.audioAnalysis?.permanentlyFailed > 0) && (
+                    {((enrichmentProgress?.audioAnalysis?.failed ?? 0) > 0 || (enrichmentProgress?.audioAnalysis?.permanentlyFailed ?? 0) > 0) && (
                         <button
                             onClick={handleRetryFailedAnalysis}
                             disabled={retryingFailed || isEnrichmentActive}
@@ -1173,7 +1173,7 @@ export function CacheSection({ settings, onUpdate }: CacheSectionProps) {
                         >
                             {retryingFailed
                                 ? "Retrying..."
-                                : `Retry Failed Analysis (${(enrichmentProgress.audioAnalysis.failed || 0) + (enrichmentProgress.audioAnalysis.permanentlyFailed || 0)})`}
+                                : `Retry Failed Analysis (${(enrichmentProgress?.audioAnalysis?.failed || 0) + (enrichmentProgress?.audioAnalysis?.permanentlyFailed || 0)})`}
                         </button>
                     )}
                     {retryResult && (

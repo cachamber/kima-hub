@@ -122,10 +122,10 @@ export function AlbumHero({
                                         id={album.id}
                                         currentData={{
                                             title: displayData.title,
-                                            year: displayData.year,
+                                            year: displayData.year ?? undefined,
                                             genres: displayData.genres,
                                             mbid: album.mbid,
-                                            coverUrl: displayData.coverUrl,
+                                            coverUrl: displayData.coverUrl ?? undefined,
                                             // Pass originals for reset comparison
                                             _originalTitle: album.title,
                                             _originalYear: album.year,

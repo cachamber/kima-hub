@@ -41,7 +41,7 @@ export function useDiscoverData() {
       ]);
 
       setPlaylist(playlistData);
-      setConfig(configData);
+      setConfig(configData as DiscoverConfig | null);
     } catch (error) {
       console.error('Failed to load discover data:', error);
     }

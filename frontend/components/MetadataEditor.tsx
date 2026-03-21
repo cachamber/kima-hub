@@ -386,8 +386,8 @@ export function MetadataEditor({
                                     <div className="mt-2">
                                         <Image
                                             src={
-                                                formData.heroUrl ||
-                                                formData.coverUrl
+                                                (formData.heroUrl ||
+                                                formData.coverUrl)!
                                             }
                                             alt="Preview"
                                             width={128}

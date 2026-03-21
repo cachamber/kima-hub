@@ -57,7 +57,7 @@ export function useArtistActions() {
       }));
 
       // Sort tracks within album by track number
-      formattedTracks.sort((a, b) => a.trackNumber - b.trackNumber);
+      formattedTracks.sort((a: FormattedTrack, b: FormattedTrack) => a.trackNumber - b.trackNumber);
       allTracks.push(...formattedTracks);
     });
 

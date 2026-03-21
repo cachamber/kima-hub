@@ -11,7 +11,7 @@ import { SectionHeader } from "@/features/home/components/SectionHeader";
 interface AvailableAlbumsProps {
     albums: Album[];
     artistName: string;
-    source: ArtistSource;
+    source: ArtistSource | null;
     colors: ColorPalette | null;
     onDownloadAlbum: (album: Album, e: React.MouseEvent) => void;
     isPendingDownload: (mbid: string) => boolean;
@@ -27,7 +27,7 @@ function LazyAlbumCard({
     index,
 }: {
     album: Album;
-    source: ArtistSource;
+    source: ArtistSource | null;
     colors: ColorPalette | null;
     onDownloadAlbum: (album: Album, e: React.MouseEvent) => void;
     isPendingDownload: (mbid: string) => boolean;
