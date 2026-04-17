@@ -127,6 +127,15 @@ export async function computeMapProjection(): Promise<MapResponse> {
         return JSON.parse(cached);
     }
 
+    // Try DB hydrate path: if every embedding has a persisted map position,
+    // we can skip the expensive UMAP worker entirely and just hydrate metadata.
+    const dbResult = await hydrateFromDb();
+    if (dbResult) {
+        await cacheResult(dbResult, dbResult.tracks.map(t => t.id));
+        logger.info(`[VIBE-MAP] Hydrated ${dbResult.trackCount} tracks from DB positions`);
+        return dbResult;
+    }
+
     if (computePromise) {
         logger.info("[VIBE-MAP] Waiting for in-progress computation");
         return computePromise;
@@ -137,6 +146,102 @@ export async function computeMapProjection(): Promise<MapResponse> {
         return await computePromise;
     } finally {
         computePromise = null;
+    }
+}
+
+// Bulk persist normalized UMAP positions back to the embedding table. Uses
+// UNNEST of three parallel arrays so 8-15k rows go in a single statement.
+async function persistPositions(ids: string[], xs: number[], ys: number[]): Promise<void> {
+    if (ids.length === 0) return;
+    try {
+        await prisma.$executeRaw`
+            UPDATE track_embeddings AS te
+            SET map_x = u.x, map_y = u.y
+            FROM UNNEST(
+                ${ids}::text[],
+                ${xs}::float8[],
+                ${ys}::float8[]
+            ) AS u(tid, x, y)
+            WHERE te.track_id = u.tid
+        `;
+    } catch (e) {
+        logger.warn("[VIBE-MAP] Failed to persist positions:", (e as Error).message);
+    }
+}
+
+// Attempt to serve the map from persisted DB positions without running UMAP.
+// Returns null if coverage is incomplete (new tracks enriched since last run,
+// positions never computed, etc.) so the caller falls through to doCompute().
+async function hydrateFromDb(): Promise<MapResponse | null> {
+    try {
+        const coverage = await prisma.$queryRaw<Array<{ total: bigint; covered: bigint }>>`
+            SELECT
+                COUNT(*) AS total,
+                COUNT(*) FILTER (WHERE map_x IS NOT NULL AND map_y IS NOT NULL) AS covered
+            FROM track_embeddings
+        `;
+        const total = Number(coverage[0]?.total ?? 0n);
+        const covered = Number(coverage[0]?.covered ?? 0n);
+        if (total === 0 || covered < total) return null;
+
+        const rows = await prisma.$queryRaw<Array<TrackRow & { map_x: number; map_y: number }>>`
+            SELECT
+                te.track_id,
+                te.map_x,
+                te.map_y,
+                t.title,
+                ar.name as "artistName",
+                ar.id as "artistId",
+                a.id as "albumId",
+                a."coverUrl",
+                t.energy,
+                t.valence,
+                t."moodHappy",
+                t."moodSad",
+                t."moodRelaxed",
+                t."moodAggressive",
+                t."moodParty",
+                t."moodAcoustic",
+                t."moodElectronic"
+            FROM track_embeddings te
+            JOIN "Track" t ON te.track_id = t.id
+            JOIN "Album" a ON t."albumId" = a.id
+            JOIN "Artist" ar ON a."artistId" = ar.id
+            WHERE te.map_x IS NOT NULL AND te.map_y IS NOT NULL
+            LIMIT ${MAX_EMBEDDINGS}
+        `;
+
+        if (rows.length === 0) return null;
+
+        const sampled = rows.length === MAX_EMBEDDINGS;
+        const tracks: MapTrack[] = rows.map(row => {
+            const dominant = getDominantMood(row as Record<string, unknown>);
+            return {
+                id: row.track_id,
+                x: row.map_x,
+                y: row.map_y,
+                title: row.title,
+                artist: row.artistName,
+                artistId: row.artistId,
+                albumId: row.albumId,
+                coverUrl: row.coverUrl,
+                dominantMood: dominant.mood,
+                moodScore: dominant.score,
+                moods: getMoodScores(row as Record<string, unknown>),
+                energy: row.energy,
+                valence: row.valence,
+            };
+        });
+
+        return {
+            tracks,
+            trackCount: tracks.length,
+            ...(sampled && { sampled: true }),
+            computedAt: new Date().toISOString(),
+        };
+    } catch (e) {
+        logger.warn("[VIBE-MAP] DB hydrate failed:", (e as Error).message);
+        return null;
     }
 }
 
@@ -262,12 +367,18 @@ async function doCompute(): Promise<MapResponse> {
     const rangeY = maxY - minY || 1;
 
     const trackIds = rows.map(r => r.track_id);
+    const xs = new Array<number>(rows.length);
+    const ys = new Array<number>(rows.length);
     const tracks: MapTrack[] = rows.map((row, i) => {
         const dominant = getDominantMood(row as Record<string, unknown>);
+        const nx = (projection[i][0] - minX) / rangeX;
+        const ny = (projection[i][1] - minY) / rangeY;
+        xs[i] = nx;
+        ys[i] = ny;
         return {
             id: row.track_id,
-            x: (projection[i][0] - minX) / rangeX,
-            y: (projection[i][1] - minY) / rangeY,
+            x: nx,
+            y: ny,
             title: row.title,
             artist: row.artistName,
             artistId: row.artistId,
@@ -288,6 +399,7 @@ async function doCompute(): Promise<MapResponse> {
         computedAt: new Date().toISOString(),
     };
 
+    await persistPositions(trackIds, xs, ys);
     await cacheResult(result, trackIds);
 
     const elapsed = Date.now() - startTime;
@@ -405,6 +517,9 @@ export async function appendTrackToProjection(trackId: string): Promise<boolean>
         pipeline.setex(CACHE_KEY, CACHE_TTL, JSON.stringify(projection));
         pipeline.sadd(TRACK_IDS_KEY, trackId);
         await pipeline.exec();
+
+        // Persist so it survives Redis expiry and feeds hydrateFromDb().
+        await persistPositions([trackId], [newX], [newY]);
 
         logger.debug(`[VIBE-MAP] Appended track ${trackId} via KNN interpolation (${validNeighbors.length} neighbors)`);
         return true;
