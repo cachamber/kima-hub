@@ -819,13 +819,20 @@ function FPSControls({
 // Camera persistence -- save/restore view position across reloads
 // ---------------------------------------------------------------------------
 
-const GALAXY_CAM_KEY = "kima_galaxy_camera";
+// Per-mode keys: restoring a 3D flight position + zoom=1 into the ortho
+// camera produces a black screen, since ortho needs orthoZoom (~1.8-3x).
+const GALAXY_CAM_KEY_2D = "kima_galaxy_camera_2d";
+const GALAXY_CAM_KEY_3D = "kima_galaxy_camera_3d";
+const GALAXY_CAM_KEY_LEGACY = "kima_galaxy_camera";
 
 interface SavedCameraState {
     px: number; py: number; pz: number;
     qx: number; qy: number; qz: number; qw: number;
     zoom: number;
-    is3D: boolean;
+}
+
+function camKey(is3D: boolean) {
+    return is3D ? GALAXY_CAM_KEY_3D : GALAXY_CAM_KEY_2D;
 }
 
 function saveCameraState(camera: THREE.Camera, is3D: boolean) {
@@ -834,14 +841,13 @@ function saveCameraState(camera: THREE.Camera, is3D: boolean) {
         qx: camera.quaternion.x, qy: camera.quaternion.y,
         qz: camera.quaternion.z, qw: camera.quaternion.w,
         zoom: (camera as THREE.OrthographicCamera).zoom ?? 1,
-        is3D,
     };
-    try { sessionStorage.setItem(GALAXY_CAM_KEY, JSON.stringify(state)); } catch { /* noop */ }
+    try { sessionStorage.setItem(camKey(is3D), JSON.stringify(state)); } catch { /* noop */ }
 }
 
-function loadCameraState(): SavedCameraState | null {
+function loadCameraState(is3D: boolean): SavedCameraState | null {
     try {
-        const raw = sessionStorage.getItem(GALAXY_CAM_KEY);
+        const raw = sessionStorage.getItem(camKey(is3D));
         return raw ? JSON.parse(raw) : null;
     } catch { return null; }
 }
@@ -852,7 +858,8 @@ function CameraPersistence({ is3D }: { is3D: boolean }) {
     const lastSavedPos = useRef<THREE.Vector3>(new THREE.Vector3(Infinity, Infinity, Infinity));
 
     useLayoutEffect(() => {
-        const saved = loadCameraState();
+        try { sessionStorage.removeItem(GALAXY_CAM_KEY_LEGACY); } catch { /* noop */ }
+        const saved = loadCameraState(is3D);
         if (!saved) return;
         camera.position.set(saved.px, saved.py, saved.pz);
         if (is3D) {
