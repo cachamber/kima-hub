@@ -2,11 +2,114 @@ import { Router } from "express";
 import { prisma } from "../../utils/db";
 import { subsonicOk, subsonicError, SubsonicError } from "../../utils/subsonicResponse";
 import { wrap } from "./mappers";
+import { logger } from "../../utils/logger";
+import { lrclibService } from "../../services/lrclib";
+import { rateLimiter } from "../../services/rateLimiter";
 
 export const lyricsRouter = Router();
 
+function hasLyrics(lyrics: { plain_lyrics: string | null; synced_lyrics: string | null } | null | undefined) {
+    return Boolean(lyrics && ((lyrics.plain_lyrics && lyrics.plain_lyrics.trim()) || (lyrics.synced_lyrics && lyrics.synced_lyrics.trim())));
+}
+
+async function fetchAndStoreLyricsForTrack(track: {
+    id: string;
+    title: string;
+    duration: number;
+    album: {
+        title: string;
+        artist: { name: string };
+    };
+}) {
+    const result = await rateLimiter.execute("lrclib", () =>
+        lrclibService.fetchLyrics(
+            track.title,
+            track.album.artist.name || "",
+            track.album.title || "",
+            track.duration || 0
+        )
+    );
+
+    if (!result) {
+        await prisma.trackLyrics.upsert({
+            where: { track_id: track.id },
+            create: {
+                track_id: track.id,
+                source: "none",
+            },
+            update: {
+                source: "none",
+                fetched_at: new Date(),
+            },
+        });
+
+        return null;
+    }
+
+    return prisma.trackLyrics.upsert({
+        where: { track_id: track.id },
+        create: {
+            track_id: track.id,
+            plain_lyrics: result.plainLyrics,
+            synced_lyrics: result.syncedLyrics,
+            source: "lrclib",
+            lrclib_id: result.id,
+        },
+        update: {
+            plain_lyrics: result.plainLyrics,
+            synced_lyrics: result.syncedLyrics,
+            source: "lrclib",
+            lrclib_id: result.id,
+            fetched_at: new Date(),
+        },
+    });
+}
+
+async function resolveLyricsForTrack(track: {
+    id: string;
+    title: string;
+    duration: number;
+    album: {
+        title: string;
+        artist: { name: string };
+    };
+}, existing: any) {
+    if (hasLyrics(existing)) return existing;
+
+    if (existing && existing.source === "none") {
+        const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+        if (existing.fetched_at && existing.fetched_at > thirtyDaysAgo) {
+            return null;
+        }
+    }
+
+    try {
+        return await fetchAndStoreLyricsForTrack(track);
+    } catch (error) {
+        logger.error("[SubsonicLyrics] LRCLIB fetch failed", error);
+        return existing;
+    }
+}
+
+async function findFallbackLyricsByTrackMetadata(trackId: string, title: string, artistId: string) {
+    return prisma.trackLyrics.findFirst({
+        where: {
+            track_id: { not: trackId },
+            OR: [
+                { plain_lyrics: { not: null } },
+                { synced_lyrics: { not: null } },
+            ],
+            track: {
+                title: { equals: title, mode: "insensitive" },
+                album: { artistId },
+            },
+        },
+    });
+}
+
 lyricsRouter.all("/getLyricsBySongId.view", wrap(async (req, res) => {
     const id = req.query.id as string | undefined;
+    const requestId = res.locals.subsonicRequestId as string | undefined;
     if (!id) {
         return subsonicError(req, res, SubsonicError.MISSING_PARAM, "Required parameter is missing: id");
     }
@@ -25,7 +128,35 @@ lyricsRouter.all("/getLyricsBySongId.view", wrap(async (req, res) => {
         prisma.trackLyrics.findUnique({ where: { track_id: id } }),
     ]);
 
-    if (!track || !lyrics) {
+    if (!track) {
+        logger.debug("[SubsonicLyrics] Track not found for getLyricsBySongId", { requestId, trackId: id });
+        return subsonicOk(req, res, { lyricsList: {} });
+    }
+
+    let resolvedLyrics = lyrics;
+    if (!hasLyrics(resolvedLyrics)) {
+        resolvedLyrics = await findFallbackLyricsByTrackMetadata(
+            track.id,
+            track.title,
+            track.album.artistId
+        );
+    }
+
+    if (!hasLyrics(resolvedLyrics)) {
+        resolvedLyrics = await resolveLyricsForTrack(track, lyrics);
+    }
+
+    if (!hasLyrics(resolvedLyrics)) {
+        logger.debug("[SubsonicLyrics] No lyrics found for getLyricsBySongId", {
+            requestId,
+            trackId: id,
+            title: track.title,
+            artistId: track.album.artistId,
+        });
+        return subsonicOk(req, res, { lyricsList: {} });
+    }
+
+    if (!resolvedLyrics) {
         return subsonicOk(req, res, { lyricsList: {} });
     }
 
@@ -34,8 +165,8 @@ lyricsRouter.all("/getLyricsBySongId.view", wrap(async (req, res) => {
 
     const structuredLyrics: Array<Record<string, unknown>> = [];
 
-    if (lyrics.synced_lyrics && lyrics.synced_lyrics.trim()) {
-        const lines = lyrics.synced_lyrics
+    if (resolvedLyrics.synced_lyrics && resolvedLyrics.synced_lyrics.trim()) {
+        const lines = resolvedLyrics.synced_lyrics
             .split("\n")
             .map((line) => line.trim())
             .filter(Boolean)
@@ -66,8 +197,8 @@ lyricsRouter.all("/getLyricsBySongId.view", wrap(async (req, res) => {
         }
     }
 
-    if (lyrics.plain_lyrics && lyrics.plain_lyrics.trim()) {
-        const lines = lyrics.plain_lyrics
+    if (resolvedLyrics.plain_lyrics && resolvedLyrics.plain_lyrics.trim()) {
+        const lines = resolvedLyrics.plain_lyrics
             .split("\n")
             .map((line) => line.trim())
             .filter(Boolean)
@@ -92,6 +223,7 @@ lyricsRouter.all("/getLyricsBySongId.view", wrap(async (req, res) => {
 lyricsRouter.all("/getLyrics.view", wrap(async (req, res) => {
     const title = req.query.title as string | undefined;
     const artist = req.query.artist as string | undefined;
+    const requestId = res.locals.subsonicRequestId as string | undefined;
 
     if (!title && !artist) {
         return subsonicOk(req, res, { lyrics: {} });
@@ -123,11 +255,19 @@ lyricsRouter.all("/getLyrics.view", wrap(async (req, res) => {
     });
 
     if (!track) {
+        logger.debug("[SubsonicLyrics] No track matched getLyrics query", { requestId, title, artist });
         return subsonicOk(req, res, { lyrics: {} });
     }
 
-    const lyrics = await prisma.trackLyrics.findUnique({ where: { track_id: track.id } });
-    if (!lyrics || (!lyrics.plain_lyrics && !lyrics.synced_lyrics)) {
+    const existingLyrics = await prisma.trackLyrics.findUnique({ where: { track_id: track.id } });
+    const lyrics = await resolveLyricsForTrack(track, existingLyrics);
+
+    if (!hasLyrics(lyrics)) {
+        logger.debug("[SubsonicLyrics] Matched track without lyrics for getLyrics", {
+            requestId,
+            trackId: track.id,
+            title: track.title,
+        });
         return subsonicOk(req, res, { lyrics: {} });
     }
 
